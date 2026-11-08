@@ -7,6 +7,7 @@ import {
   pickupSlots,
   RULES,
   splitPassValue,
+  upgradeIsCharged,
 } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
@@ -164,7 +165,9 @@ export default function ShopScreen() {
             </Row>
             {split.upgradeCents > 0 && (
               <Text variant="small" color={colors.pecan}>
-                Charged to your card on file at pickup, at the shop’s menu price.
+                {upgradeIsCharged(split.upgradeCents)
+                  ? "Charged to your card on file at pickup, at the shop’s menu price."
+                  : `Upgrades under ${formatCents(RULES.minUpgradeChargeCents, { showZeroCents: true })} are on us.`}
               </Text>
             )}
             <Text variant="small">
@@ -200,7 +203,7 @@ export default function ShopScreen() {
             {blocker && total > 0 && <ErrorNote message={blocker} />}
             {error && <ErrorNote message={error} />}
             <Button
-              label={split.upgradeCents > 0 ? `Use pass + pay ${formatCents(split.upgradeCents, { showZeroCents: true })}` : "Use today's pass"}
+              label={upgradeIsCharged(split.upgradeCents) ? `Use pass + pay ${formatCents(split.upgradeCents, { showZeroCents: true })}` : "Use today's pass"}
               onPress={place}
               loading={busy}
               disabled={total === 0 || Boolean(blocker) || slots.length === 0}

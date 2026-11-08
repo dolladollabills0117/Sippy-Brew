@@ -109,6 +109,12 @@ describe("drinks above the max are split between pass value and upgrade", () => 
     // Two drinks on one pass: $3.25 + $4.25 = $7.50 against a $6.00 max.
     expect(splitPassValue(325 + 425, 600)).toEqual({ totalCents: 750, passValueCents: 600, upgradeCents: 150 });
   });
+  it("waives upgrades below the minimum card charge", async () => {
+    const { upgradeIsCharged, RULES } = await import("../src");
+    expect(RULES.minUpgradeChargeCents).toBe(50);
+    expect(upgradeIsCharged(49)).toBe(false);
+    expect(upgradeIsCharged(50)).toBe(true);
+  });
   it("includes upgrades in the shop total and the 12% commission", () => {
     const e = monthEconomics(getTier("casual"), [675]);
     expect(e).toMatchObject({ coveredCents: 600, upgradeCents: 75, shopCents: 594 }); // 88% of $6.75 = $5.94

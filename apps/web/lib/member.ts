@@ -6,6 +6,7 @@ import {
   isOpenAt,
   issueQr,
   passBalance,
+  upgradeIsCharged,
   RULES,
   validateOrder,
   type PassLedgerEntry,
@@ -192,7 +193,7 @@ export async function placeOrder(s: Session, input: { shopId: string; items: Ord
   if (!result.ok) throw new AppError(result.code === "PASS_USED_TODAY" || result.code === "NO_PASSES_LEFT" ? 409 : 400, result.code, result.message);
 
   let paymentIntent: string | null = null;
-  if (result.upgradeCents > 0) {
+  if (upgradeIsCharged(result.upgradeCents)) {
     paymentIntent = await authorizeUpgrade(s.userId, sub!, result.upgradeCents, { shop_id: shop.id, pass_day: result.passDay });
   }
 

@@ -52,7 +52,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </div>
           {order.upgradeCents > 0 && (
             <div className="flex justify-between">
-              <dt className="text-pecan">Upgrade {order.upgradeStatus === "captured" ? "charged" : order.upgradeStatus === "voided" ? "released" : "(charged at pickup)"}</dt>
+              <dt className="text-pecan">Upgrade {order.upgradeStatus === "captured" ? "charged" : order.upgradeStatus === "voided" ? "released" : order.upgradeStatus === "waived" ? "(on us)" : "(charged at pickup)"}</dt>
               <dd><Money cents={order.upgradeCents} /></dd>
             </div>
           )}

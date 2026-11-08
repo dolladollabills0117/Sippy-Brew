@@ -96,9 +96,14 @@ select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 700, 600, 100, 600, '2026-11-05',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":700}]',
-      now() + interval '10 minutes', null) as second_order \gset
+      now() + interval '10 minutes', 'pi_test_authorized') as second_order \gset
 do $$ begin
   assert (select upgrade_status from orders where pass_day = '2026-11-05') = 'authorized';
+end $$;
+
+-- An upgrade below the minimum charge has no PaymentIntent and is recorded as waived.
+do $$ begin
+  assert (select count(*) from orders where upgrade_status = 'waived') = 0;
 end $$;
 
 -- Day 3: both passes used, so the allowance is exhausted.

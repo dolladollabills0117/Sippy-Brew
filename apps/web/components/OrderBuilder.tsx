@@ -6,6 +6,7 @@ import {
   pickupSlots,
   RULES,
   splitPassValue,
+  upgradeIsCharged,
   type MemberSummary,
   type MenuItem,
   type Shop,
@@ -125,7 +126,9 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
           </dl>
           {split.upgradeCents > 0 && (
             <p className="mt-2 text-sm text-pecan">
-              Charged to your card on file at pickup, at the shop&apos;s menu price. Released if the order is cancelled.
+              {upgradeIsCharged(split.upgradeCents)
+                ? "Charged to your card on file at pickup, at the shop's menu price. Released if the order is cancelled."
+                : `Upgrades under ${formatCents(RULES.minUpgradeChargeCents, { showZeroCents: true })} are on us.`}
             </p>
           )}
           <p className="mt-3 text-sm text-pecan">
@@ -156,7 +159,7 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
             {blocker && total > 0 && <Alert tone="error">{blocker}</Alert>}
             {error && <Alert tone="error">{error}</Alert>}
             <Button disabled={busy || total === 0 || Boolean(blocker) || !pickup} onClick={submit}>
-              {busy ? "Placing order…" : split.upgradeCents > 0 ? `Use pass + pay ${formatCents(split.upgradeCents, { showZeroCents: true })}` : "Use today's pass"}
+              {busy ? "Placing order…" : upgradeIsCharged(split.upgradeCents) ? `Use pass + pay ${formatCents(split.upgradeCents, { showZeroCents: true })}` : "Use today's pass"}
             </Button>
           </div>
         </Card>

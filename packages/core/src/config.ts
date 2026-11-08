@@ -19,6 +19,8 @@ export interface Tier {
 
 export interface Rules {
   passesPerDay: number;
+  /** Upgrades below this aren't charged (Stripe's minimum card charge); the platform absorbs them. */
+  minUpgradeChargeCents: number;
   commissionBps: number;
   qrTtlSeconds: number;
   timeZone: string;

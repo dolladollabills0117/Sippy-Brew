@@ -12,7 +12,7 @@ create type public.user_role as enum ('member', 'shop_owner', 'admin');
 create type public.tier_id as enum ('casual', 'routine', 'daily_ritual');
 create type public.subscription_status as enum ('active', 'trialing', 'past_due', 'canceled', 'incomplete', 'unpaid');
 create type public.pass_ledger_type as enum ('grant', 'use', 'release', 'expire');
-create type public.upgrade_status as enum ('none', 'authorized', 'captured', 'voided', 'failed');
+create type public.upgrade_status as enum ('none', 'authorized', 'captured', 'voided', 'failed', 'waived');
 create type public.shop_status as enum ('pending', 'active', 'paused');
 create type public.coffee_category as enum ('espresso', 'brewed', 'cold', 'specialty');
 create type public.order_status as enum ('received', 'preparing', 'ready', 'picked_up', 'cancelled');
@@ -322,7 +322,9 @@ begin
   insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_value, upgrade, pass_day, pickup_time,
                       upgrade_payment_intent, upgrade_status)
     values (p_member, p_shop, p_subscription, p_period_start, p_total, p_pass_value, p_upgrade, p_pass_day, p_pickup,
-            p_upgrade_payment_intent, case when p_upgrade > 0 then 'authorized'::upgrade_status else 'none'::upgrade_status end)
+            p_upgrade_payment_intent, case when p_upgrade = 0 then 'none'::upgrade_status
+                 when p_upgrade_payment_intent is null then 'waived'::upgrade_status
+                 else 'authorized'::upgrade_status end)
     returning id into v_order;
 
   insert into order_items (order_id, menu_item_id, name, size, quantity, unit_price)

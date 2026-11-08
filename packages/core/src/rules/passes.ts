@@ -132,6 +132,14 @@ export function splitPassValue(totalCents: number, maxPassValueCents: number): P
   return { totalCents, passValueCents, upgradeCents: totalCents - passValueCents };
 }
 
+/**
+ * Upgrades under the minimum card charge (Stripe: $0.50) are waived for the member. The shop is
+ * still paid on the full order value; the platform absorbs the difference.
+ */
+export function upgradeIsCharged(upgradeCents: number, minChargeCents: number = RULES.minUpgradeChargeCents): boolean {
+  return upgradeCents >= minChargeCents;
+}
+
 // ---------------------------------------------------------------------------
 // Economics for one member-month
 // ---------------------------------------------------------------------------

@@ -78,7 +78,7 @@ export interface OrderItem {
   unitPriceCents: number;
 }
 
-export type UpgradeStatus = "none" | "authorized" | "captured" | "voided" | "failed";
+export type UpgradeStatus = "none" | "authorized" | "captured" | "voided" | "failed" | "waived";
 
 export interface Order {
   id: string;
