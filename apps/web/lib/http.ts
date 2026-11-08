@@ -17,9 +17,10 @@ export const notFound = (what = "That") => new AppError(404, "NOT_FOUND", `${wha
 
 /** Friendly messages for errors raised inside the database functions. */
 const DB_ERRORS: Record<string, [number, string]> = {
-  DAILY_LIMIT: [409, "That would go over today's $8 limit."],
-  CREDIT_CAP: [409, "Not enough credit left this month."],
+  PASS_USED_TODAY: [409, "You've already used today's pass. See you tomorrow!"],
+  NO_PASSES_LEFT: [409, "You've used all your Daily Passes this month."],
   ORDER_TOTAL_MISMATCH: [400, "Order total didn't match the menu. Please try again."],
+  PASS_VALUE_MISMATCH: [400, "Order total didn't match your plan. Please try again."],
   EXPIRED: [410, "This code expired. Ask the member to refresh their QR."],
   ALREADY_REDEEMED: [409, "This code was already redeemed."],
   WRONG_SHOP: [403, "This order belongs to a different shop."],

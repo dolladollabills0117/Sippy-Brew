@@ -1,4 +1,5 @@
 "use client";
+import type { TierId } from "@sippy/core";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { TierCards } from "./TierCards";
@@ -13,7 +14,7 @@ export function PlanPicker({ preselect }: { preselect?: string }) {
     setBusy(tier);
     setError(null);
     try {
-      const { url } = await api.checkout(tier as "sip" | "regular" | "daily", `${window.location.origin}/account`);
+      const { url } = await api.checkout(tier as TierId, `${window.location.origin}/account`);
       window.location.assign(url);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't start checkout. Please try again.");

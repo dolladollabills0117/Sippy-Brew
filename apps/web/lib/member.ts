@@ -1,15 +1,14 @@
 import "server-only";
 import {
-  creditBalance,
-  dayBounds,
+  dayKey,
   distanceMiles,
   getTier,
   isOpenAt,
   issueQr,
+  passBalance,
   RULES,
-  spentToday,
   validateOrder,
-  type LedgerEntry,
+  type PassLedgerEntry,
   type MemberSummary,
   type OrderLineInput,
   type QrTicket,
@@ -18,6 +17,7 @@ import {
   type Subscription,
 } from "@sippy/core";
 import type { Session } from "./auth";
+import { authorizeUpgrade, voidUpgrade } from "./billing";
 import { mapMenuItem, mapOrder, mapPost, mapShop, mapSubscription, ORDER_SELECT } from "./db";
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { notifyShopNewOrder } from "./notify";
@@ -37,27 +37,22 @@ export async function getLiveSubscription(memberId: string): Promise<Subscriptio
   return data ? mapSubscription(data) : null;
 }
 
-export async function getCreditBalance(memberId: string, sub: Subscription | null): Promise<number> {
-  if (!sub) return 0;
-  const { data } = await supabaseAdmin()
-    .from("credit_ledger")
-    .select("amount, type, period_start")
-    .eq("member_id", memberId)
-    .eq("subscription_id", sub.id)
-    .eq("period_start", sub.currentPeriodStart);
-  const entries: LedgerEntry[] = (data ?? []).map((r) => ({ amountCents: r.amount, type: r.type, periodStart: r.period_start }));
-  return creditBalance(entries, sub.currentPeriodStart);
+/** The member's tier allowance for the current period (snapshot on the subscription, else config). */
+export function periodAllowance(sub: Subscription) {
+  const tier = getTier(sub.tier);
+  return { tier, passesPerMonth: sub.periodPasses ?? tier.passesPerMonth, maxPassValueCents: sub.periodMaxPassValue ?? tier.maxPassValueCents };
 }
 
-export async function getSpentToday(memberId: string, now = new Date()): Promise<number> {
-  const { start, end } = dayBounds(now, RULES.timeZone);
-  const { data } = await supabaseAdmin()
-    .from("orders")
-    .select("total, created_at, status")
-    .eq("member_id", memberId)
-    .gte("created_at", start.toISOString())
-    .lt("created_at", end.toISOString());
-  return spentToday((data ?? []).map((o) => ({ totalCents: o.total, createdAt: o.created_at, status: o.status })), now);
+/** Passes left this period and the days a pass was already used (any shop). */
+export async function getPassState(memberId: string, sub: Subscription | null): Promise<{ passesLeft: number; passDaysUsed: string[] }> {
+  if (!sub) return { passesLeft: 0, passDaysUsed: [] };
+  const db = supabaseAdmin();
+  const [{ data: ledger }, { data: orders }] = await Promise.all([
+    db.from("pass_ledger").select("passes, type, period_start").eq("member_id", memberId).eq("subscription_id", sub.id).eq("period_start", sub.currentPeriodStart),
+    db.from("orders").select("pass_day").eq("member_id", memberId).neq("status", "cancelled").gte("pass_day", dayKey(new Date(Date.now() - 2 * 864e5), RULES.timeZone)),
+  ]);
+  const entries: PassLedgerEntry[] = (ledger ?? []).map((r) => ({ passes: r.passes, type: r.type, periodStart: r.period_start }));
+  return { passesLeft: passBalance(entries, sub.currentPeriodStart), passDaysUsed: (orders ?? []).map((o) => o.pass_day) };
 }
 
 export async function getAreas(memberId: string): Promise<SavedArea[]> {
@@ -67,17 +62,18 @@ export async function getAreas(memberId: string): Promise<SavedArea[]> {
 
 export async function getMemberSummary(s: Session): Promise<MemberSummary> {
   const sub = await getLiveSubscription(s.userId);
-  const [balance, spent, areas] = await Promise.all([getCreditBalance(s.userId, sub), getSpentToday(s.userId), getAreas(s.userId)]);
-  const tier = sub ? getTier(sub.tier) : null;
+  const [passes, areas] = await Promise.all([getPassState(s.userId, sub), getAreas(s.userId)]);
+  const allowance = sub ? periodAllowance(sub) : null;
+  const today = dayKey(new Date(), RULES.timeZone);
   return {
     profile: s.profile,
     subscription: sub,
-    tierName: tier?.name ?? null,
-    monthlyCreditCents: tier?.creditCents ?? 0,
-    creditBalanceCents: balance,
-    spentTodayCents: spent,
-    dailyLimitCents: RULES.dailyLimitCents,
-    dailyRemainingCents: Math.max(0, RULES.dailyLimitCents - spent),
+    tierName: allowance?.tier.name ?? null,
+    passesPerMonth: allowance?.passesPerMonth ?? 0,
+    passesLeft: passes.passesLeft,
+    maxPassValueCents: allowance?.maxPassValueCents ?? 0,
+    passUsedToday: passes.passDaysUsed.includes(today),
+    passDaysUsed: passes.passDaysUsed,
     areas,
   };
 }
@@ -163,7 +159,11 @@ export async function getShopDetail(id: string, s: Session | null) {
   };
 }
 
-/** Place an order. Rules run in packages/core, then the database re-checks them atomically. */
+/**
+ * Place a Daily Pass order. Rules run in packages/core, then the database re-checks them
+ * atomically. If the order is above the tier's max, the difference is authorized on the
+ * member's card on file now and captured when the shop scans the QR.
+ */
 export async function placeOrder(s: Session, input: { shopId: string; items: OrderLineInput[]; pickupAt: string }) {
   if (!input?.shopId || !Array.isArray(input.items)) throw badRequest("BAD_ORDER", "Pick a shop and at least one coffee.");
   const pickupAt = new Date(input.pickupAt);
@@ -176,27 +176,37 @@ export async function placeOrder(s: Session, input: { shopId: string; items: Ord
     getLiveSubscription(s.userId),
   ]);
   if (!shop) throw notFound("Shop");
-  const [balance, spent] = await Promise.all([getCreditBalance(s.userId, sub), getSpentToday(s.userId, now)]);
+  const passes = await getPassState(s.userId, sub);
+  const allowance = sub ? periodAllowance(sub) : null;
 
   const result = validateOrder(input.items, {
     shop: { id: shop.id, status: shop.status, hours: shop.hours ?? {} },
     subscription: sub,
     menu: (menu ?? []).map((m) => mapMenuItem(m, now)),
-    creditBalanceCents: balance,
-    spentTodayCents: spent,
+    passesLeft: passes.passesLeft,
+    passDaysUsed: passes.passDaysUsed,
+    maxPassValueCents: allowance?.maxPassValueCents ?? 0,
     pickupAt,
     now,
   });
-  if (!result.ok) throw new AppError(result.code === "DAILY_LIMIT" || result.code === "CREDIT_CAP" ? 409 : 400, result.code, result.message);
+  if (!result.ok) throw new AppError(result.code === "PASS_USED_TODAY" || result.code === "NO_PASSES_LEFT" ? 409 : 400, result.code, result.message);
+
+  let paymentIntent: string | null = null;
+  if (result.upgradeCents > 0) {
+    paymentIntent = await authorizeUpgrade(s.userId, sub!, result.upgradeCents, { shop_id: shop.id, pass_day: result.passDay });
+  }
 
   const sizes = new Map((menu ?? []).map((m) => [m.id, m.size as string]));
-  const { start, end } = dayBounds(now, RULES.timeZone);
   const { data: orderId, error } = await db.rpc("place_order", {
     p_member: s.userId,
     p_shop: shop.id,
     p_subscription: sub!.id,
     p_period_start: sub!.currentPeriodStart,
     p_total: result.totalCents,
+    p_pass_value: result.passValueCents,
+    p_upgrade: result.upgradeCents,
+    p_max_pass_value: allowance!.maxPassValueCents,
+    p_pass_day: result.passDay,
     p_items: result.lines.map((l) => ({
       menu_item_id: l.menuItemId,
       name: l.name,
@@ -205,11 +215,12 @@ export async function placeOrder(s: Session, input: { shopId: string; items: Ord
       unit_price: l.unitPriceCents,
     })),
     p_pickup: pickupAt.toISOString(),
-    p_day_start: start.toISOString(),
-    p_day_end: end.toISOString(),
-    p_daily_limit: RULES.dailyLimitCents,
+    p_upgrade_payment_intent: paymentIntent,
   });
-  if (error) throw fromDbError(error);
+  if (error) {
+    if (paymentIntent) await voidUpgrade(paymentIntent).catch(() => {});
+    throw fromDbError(error);
+  }
 
   const order = await getOrder(orderId as string);
   void notifyShopNewOrder(order).catch((e) => console.error("notify failed", e));

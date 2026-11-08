@@ -1,4 +1,4 @@
-import { formatCents, getTier, monthBounds, RULES } from "@sippy/core";
+import { formatCents, getTier, monthBounds, RULES, TIERS } from "@sippy/core";
 import { AdminShopActions } from "@/components/AdminShopActions";
 import { Badge, Card, EmptyState, PageTitle, SectionTitle, Stat } from "@/components/ui";
 import { requirePageSession } from "@/lib/auth";
@@ -24,7 +24,7 @@ export default async function AdminPage() {
   ]);
 
   const live = (subs ?? []).filter((x) => x.status === "active" || x.status === "trialing");
-  const byTier = Object.fromEntries(["sip", "regular", "daily"].map((t) => [t, live.filter((x) => x.tier === t).length]));
+  const tierCounts = TIERS.map((t) => `${t.name} ${live.filter((x) => x.tier === t.id).length}`).join(" · ");
   const mrr = live.reduce((sum, x) => sum + getTier(x.tier).priceCents, 0);
   const commission = (monthOrders ?? []).reduce((sum, o) => sum + (o.commission ?? 0), 0);
   const subByMember = new Map((subs ?? []).map((x) => [x.member_id, x]));
@@ -33,7 +33,7 @@ export default async function AdminPage() {
     <>
       <PageTitle kicker="Platform">Admin</PageTitle>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Active subscriptions" value={live.length} sub={`Sip ${byTier.sip} · Regular ${byTier.regular} · Daily ${byTier.daily}`} />
+        <Stat label="Active subscriptions" value={live.length} sub={tierCounts} />
         <Stat label="Monthly revenue" value={formatCents(mrr)} sub="From active plans" />
         <Stat label="Commission this month" value={formatCents(commission, { showZeroCents: true })} sub={`${monthOrders?.length ?? 0} redemptions`} />
         <Stat label="Failed payments" value={failures?.length ?? 0} sub="Most recent 25" />

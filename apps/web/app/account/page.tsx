@@ -1,4 +1,4 @@
-import { CreditSummary } from "@/components/CreditSummary";
+import { PassSummary } from "@/components/PassSummary";
 import { AreasForm } from "@/components/AreasForm";
 import { ManagePlanButton } from "@/components/ManagePlanButton";
 import { OrderList } from "@/components/OrderList";
@@ -22,7 +22,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     <>
       <PageTitle>Account</PageTitle>
       {checkout === "success" && !sub && <Alert tone="success">Payment received. Your plan will appear in a few seconds — refresh if it doesn&apos;t.</Alert>}
-      {checkout === "success" && sub && <Alert tone="success">You&apos;re all set. Your credit is ready.</Alert>}
+      {checkout === "success" && sub && <Alert tone="success">You&apos;re all set. Your Daily Passes are ready.</Alert>}
 
       <SectionTitle>Plan</SectionTitle>
       <Card className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -34,7 +34,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
               {sub.cancelAtPeriodEnd && <Badge tone="latte">Ends {dateFmt.format(new Date(sub.currentPeriodEnd))}</Badge>}
             </p>
             <p className="text-pecan">
-              {formatCents(tier.priceCents)}/month · {formatCents(tier.creditCents)} credit · renews {dateFmt.format(new Date(sub.currentPeriodEnd))}
+              {formatCents(tier.priceCents)}/month · {tier.passesPerMonth} Daily Passes up to {formatCents(tier.maxPassValueCents, { showZeroCents: true })} · renews {dateFmt.format(new Date(sub.currentPeriodEnd))}
             </p>
             {sub.status === "past_due" && <p className="mt-1 font-bold text-danger">Your last payment failed. Update your card to keep ordering.</p>}
           </div>
@@ -47,7 +47,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       {sub && (
         <>
           <SectionTitle>This month</SectionTitle>
-          <CreditSummary summary={summary} />
+          <PassSummary summary={summary} />
         </>
       )}
 

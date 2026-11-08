@@ -12,7 +12,7 @@ export default async function OrderPage({ params }: { params: Promise<{ shopId: 
   const [{ shop, menu }, summary] = await Promise.all([getShopDetail(shopId, s), getMemberSummary(s)]);
   return (
     <>
-      <PageTitle kicker="Order for pickup" sub="Coffee only. Up to $8 a day from your monthly credit.">
+      <PageTitle kicker="Order for pickup" sub="Coffee only. One Daily Pass per day.">
         {shop.name}
       </PageTitle>
       <OrderBuilder shop={shop} menu={menu} summary={summary} />

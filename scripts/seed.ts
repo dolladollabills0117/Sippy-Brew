@@ -17,6 +17,7 @@ import {
   previousWeekBounds,
   RULES,
   splitOrder,
+  splitPassValue,
   summarizePayout,
   zonedTimeToUtc,
   zonedParts,
@@ -109,9 +110,9 @@ const SHOPS = [
 ] as const;
 
 const MEMBERS: { email: string; name: string; tier: TierId }[] = [
-  { email: "sip@demo.sippybrew.test", name: "Sam Rivera", tier: "sip" },
-  { email: "regular@demo.sippybrew.test", name: "Riley Okafor", tier: "regular" },
-  { email: "daily@demo.sippybrew.test", name: "Dana Kowalski", tier: "daily" },
+  { email: "casual@demo.sippybrew.test", name: "Sam Rivera", tier: "casual" },
+  { email: "routine@demo.sippybrew.test", name: "Riley Okafor", tier: "routine" },
+  { email: "ritual@demo.sippybrew.test", name: "Dana Kowalski", tier: "daily_ritual" },
 ];
 const ADMIN = { email: "admin@demo.sippybrew.test", name: "Avery Admin" };
 
@@ -133,7 +134,7 @@ async function removeDemoUsers() {
   if (!ids.length) return;
   // Orders and payouts restrict deletes, so clear demo rows first.
   const shopIds = (await must(db.from("shops").select("id").in("owner_id", ids), "shops")).map((s: { id: string }) => s.id);
-  await db.from("credit_ledger").delete().in("member_id", ids);
+  await db.from("pass_ledger").delete().in("member_id", ids);
   await db.from("orders").delete().in("member_id", ids);
   if (shopIds.length) {
     await db.from("orders").delete().in("shop_id", shopIds);
@@ -192,7 +193,7 @@ async function main() {
   // One item sold out today, to show the flag.
   await db.from("menu_items").update({ sold_out_on: dayKey(new Date(), TZ) }).eq("id", shops[1]!.menu[5]!.id);
 
-  console.log("Creating members, subscriptions and credit…");
+  console.log("Creating members, subscriptions and Daily Passes…");
   const periodStart = localTime(13, 6, 0);
   const periodEnd = new Date(periodStart.getTime() + 30 * 864e5);
   const prevStart = new Date(periodStart.getTime() - 30 * 864e5);
@@ -203,27 +204,38 @@ async function main() {
     const sub = await must(
       db
         .from("subscriptions")
-        .insert({ member_id: memberId, tier: m.tier, status: "active", current_period_start: periodStart.toISOString(), current_period_end: periodEnd.toISOString(), stripe_subscription_id: `sub_demo_${m.tier}` })
+        .insert({
+          member_id: memberId,
+          tier: m.tier,
+          status: "active",
+          current_period_start: periodStart.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          period_passes: tier.passesPerMonth,
+          period_max_pass_value: tier.maxPassValueCents,
+          stripe_subscription_id: `sub_demo_${m.tier}`,
+        })
         .select("id")
         .single(),
       "subscription",
     );
-    // Last period: granted, partly spent, then expired at renewal (shows no rollover in the ledger).
-    const prevSpend = Math.min(tier.creditCents, 1800);
+    // Last period: granted, 3 used, the rest expired at renewal (shows no rollover in the ledger).
+    const prevUsed = 3;
     const renewal = planRenewal({
       previousEntries: [
-        { type: "grant", amountCents: tier.creditCents, periodStart: prevStart },
-        { type: "spend", amountCents: -prevSpend, periodStart: prevStart },
+        { type: "grant", passes: tier.passesPerMonth, periodStart: prevStart },
+        { type: "use", passes: -prevUsed, periodStart: prevStart },
       ],
       previousPeriodStart: prevStart,
       newPeriodStart: periodStart,
       tier,
     });
     await mustOk(
-      db.from("credit_ledger").insert([
-        { member_id: memberId, subscription_id: sub.id, period_start: prevStart.toISOString(), amount: tier.creditCents, type: "grant", note: "Demo: last month", created_at: prevStart.toISOString() },
-        { member_id: memberId, subscription_id: sub.id, period_start: prevStart.toISOString(), amount: -prevSpend, type: "spend", note: "Demo: last month's coffee", created_at: new Date(prevStart.getTime() + 5 * 864e5).toISOString() },
-        ...renewal.map((e) => ({ member_id: memberId, subscription_id: sub.id, period_start: new Date(e.periodStart).toISOString(), amount: e.amountCents, type: e.type, note: e.note, created_at: periodStart.toISOString() })),
+      db.from("pass_ledger").insert([
+        { member_id: memberId, subscription_id: sub.id, period_start: prevStart.toISOString(), passes: tier.passesPerMonth, type: "grant", note: "Demo: last month", created_at: prevStart.toISOString() },
+        ...Array.from({ length: prevUsed }, (_, k) => ({
+          member_id: memberId, subscription_id: sub.id, period_start: prevStart.toISOString(), passes: -1, type: "use", note: "Demo: last month", created_at: new Date(prevStart.getTime() + (k + 2) * 864e5).toISOString(),
+        })),
+        ...renewal.map((e) => ({ member_id: memberId, subscription_id: sub.id, period_start: new Date(e.periodStart).toISOString(), passes: e.passes, type: e.type, note: e.note, created_at: periodStart.toISOString() })),
       ]),
       "ledger",
     );
@@ -235,17 +247,16 @@ async function main() {
     ]);
     await db.from("saved_shops").insert([{ member_id: memberId, shop_id: shops[mi % 3]!.id }, { member_id: memberId, shop_id: shops[(mi + 1) % 3]!.id }]);
 
-    // Sample orders: picked up on past days, plus one open order today for the Daily member.
-    const visits = m.tier === "sip" ? [11, 8, 4, 2] : m.tier === "regular" ? [11, 10, 9, 7, 6, 5, 3, 2, 1] : [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-    for (const [vi, daysAgo] of visits.entries()) {
+    // Sample orders: one pass per day, leaving at least one pass for today. Some are upgrades.
+    const visitsBy: Record<TierId, number[]> = { casual: [11, 8, 4], routine: [11, 9, 7, 5, 3, 1], daily_ritual: [12, 11, 10, 9, 8, 6, 5, 3, 2, 1] };
+    for (const [vi, daysAgo] of visitsBy[m.tier].entries()) {
       const shop = shops[(mi + vi) % 3]!;
       const item = shop.menu[(vi * 2 + mi) % shop.menu.length]!;
-      if (item.price > RULES.dailyLimitCents) continue;
-      await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [item], at: localTime(daysAgo, 7 + ((vi + mi) % 4), 10 + vi * 3), redeemed: true });
+      await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [item], at: localTime(daysAgo, 7 + ((vi + mi) % 4), 10 + vi * 3), redeemed: true, maxPassValue: tier.maxPassValueCents });
     }
-    if (m.tier === "daily") {
+    if (m.tier === "daily_ritual") {
       const shop = shops[0]!;
-      await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [shop.menu[2]!], at: new Date(Date.now() - 4 * 60_000), redeemed: false });
+      await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [shop.menu[2]!], at: new Date(Date.now() - 4 * 60_000), redeemed: false, maxPassValue: tier.maxPassValueCents });
     }
   }
 
@@ -283,8 +294,10 @@ async function insertOrder(o: {
   items: { id: string; name: string; size: string; price: number }[];
   at: Date;
   redeemed: boolean;
+  maxPassValue: number;
 }) {
   const total = o.items.reduce((s, i) => s + i.price, 0);
+  const pass = splitPassValue(total, o.maxPassValue);
   const split = splitOrder(total);
   const order = await must(
     db
@@ -296,6 +309,11 @@ async function insertOrder(o: {
         period_start: o.periodStart.toISOString(),
         status: o.redeemed ? "picked_up" : "received",
         total,
+        pass_value: pass.passValueCents,
+        upgrade: pass.upgradeCents,
+        // Demo upgrades are marked captured; real ones go through Stripe.
+        upgrade_status: pass.upgradeCents > 0 ? (o.redeemed ? "captured" : "authorized") : "none",
+        pass_day: dayKey(o.at, TZ),
         commission: o.redeemed ? split.commissionCents : null,
         net: o.redeemed ? split.netCents : null,
         pickup_time: new Date(o.at.getTime() + 10 * 60_000).toISOString(),
@@ -308,8 +326,8 @@ async function insertOrder(o: {
   );
   await mustOk(db.from("order_items").insert(o.items.map((i) => ({ order_id: order.id, menu_item_id: i.id, name: i.name, size: i.size, quantity: 1, unit_price: i.price }))), "order items");
   await mustOk(
-    db.from("credit_ledger").insert({ member_id: o.memberId, subscription_id: o.subId, period_start: o.periodStart.toISOString(), amount: -total, type: "spend", order_id: order.id, note: "Order", created_at: o.at.toISOString() }),
-    "spend",
+    db.from("pass_ledger").insert({ member_id: o.memberId, subscription_id: o.subId, period_start: o.periodStart.toISOString(), passes: -1, type: "use", order_id: order.id, note: "Daily Pass", created_at: o.at.toISOString() }),
+    "pass use",
   );
 }
 

@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  canRefund,
+  canReleasePass,
   canTransition,
   checkCanPost,
   checkRedeemable,
@@ -20,6 +20,7 @@ import {
   type ShopHours,
 } from "@sippy/core";
 import type { Session } from "./auth";
+import { captureUpgrade, voidUpgrade } from "./billing";
 import { mapMenuItem, mapOrder, mapPayout, mapPost, mapShop, ORDER_SELECT } from "./db";
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { getLiveSubscription, getOrder } from "./member";
@@ -66,6 +67,19 @@ export async function saveShop(
 
 // ---- Orders ----
 
+/** Cancel: return the pass (if still in the current period) and release any upgrade hold. */
+export async function cancelOrderRow(row: { id: string; member_id: string; subscription_id: string; period_start: string; upgrade_payment_intent: string | null; upgrade_status: string }) {
+  const db = supabaseAdmin();
+  const sub = await getLiveSubscription(row.member_id);
+  const release = Boolean(sub && sub.id === row.subscription_id && canReleasePass(row.period_start, sub.currentPeriodStart));
+  const { error } = await db.rpc("cancel_order", { p_order: row.id, p_refund: release });
+  if (error) throw fromDbError(error);
+  if (row.upgrade_payment_intent && row.upgrade_status === "authorized") {
+    const ok = await voidUpgrade(row.upgrade_payment_intent).then(() => true, () => false);
+    await db.from("orders").update({ upgrade_status: ok ? "voided" : "failed" }).eq("id", row.id);
+  }
+}
+
 export async function shopOrders(s: Session, scope: "active" | "today") {
   const shop = await getOwnerShopRow(s);
   let q = supabaseAdmin().from("orders").select(ORDER_SELECT).eq("shop_id", shop.id);
@@ -88,10 +102,7 @@ export async function setOrderStatus(s: Session, orderId: string, status: OrderS
   if (!canTransition(row.status, status)) throw new AppError(409, "INVALID_TRANSITION", "That status change isn't allowed.");
 
   if (status === "cancelled") {
-    const sub = await getLiveSubscription(row.member_id);
-    const refund = Boolean(sub && sub.id === row.subscription_id && canRefund(row.period_start, sub.currentPeriodStart));
-    const { error } = await db.rpc("cancel_order", { p_order: orderId, p_refund: refund });
-    if (error) throw fromDbError(error);
+    await cancelOrderRow(row);
   } else {
     const { error } = await db.from("orders").update({ status }).eq("id", orderId).eq("status", row.status);
     if (error) throw fromDbError(error);
@@ -140,6 +151,14 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
     p_net: split.netCents,
   });
   if (error) throw fromDbError(error);
+
+  // The drink is handed over: collect any upgrade the member authorized at order time.
+  const { data: paid } = await db.from("orders").select("upgrade_payment_intent, upgrade_status").eq("id", r.order_id).single();
+  if (paid?.upgrade_payment_intent && paid.upgrade_status === "authorized") {
+    const ok = await captureUpgrade(paid.upgrade_payment_intent);
+    await db.from("orders").update({ upgrade_status: ok ? "captured" : "failed" }).eq("id", r.order_id);
+  }
+
   const order = await getOrder(r.order_id);
   void notifyMemberOrderStatus(order).catch(() => {});
   return order;

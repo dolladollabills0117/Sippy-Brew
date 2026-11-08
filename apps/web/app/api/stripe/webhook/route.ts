@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         break;
       }
       case "invoice.paid": {
-        // Renewal: Stripe has moved the period forward. Expire leftovers, grant fresh credit.
+        // Renewal: Stripe has moved the period forward. Expire unused passes, grant fresh ones.
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null; parent?: { subscription_details?: { subscription?: string } } };
         const subId = invoice.parent?.subscription_details?.subscription ?? invoice.subscription;
         if (subId) await syncSubscription(await stripe().subscriptions.retrieve(String(subId)), { grant: true });

@@ -28,7 +28,7 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
   }, [load]);
 
   async function advance(o: Order, to: Order["status"]) {
-    if (to === "cancelled" && !window.confirm(`Cancel ${o.memberFirstName}'s order? Their credit will be refunded.`)) return;
+    if (to === "cancelled" && !window.confirm(`Cancel ${o.memberFirstName}'s order? Their pass will be returned.`)) return;
     setBusy(o.id);
     try {
       const { order } = await api.setOrderStatus(o.id, to);
@@ -71,7 +71,7 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
                 ))}
               </ul>
               <p className="text-sm text-pecan">
-                <Money cents={o.totalCents} /> paid with credit
+                <Money cents={o.totalCents} /> · Daily Pass{o.upgradeCents > 0 ? <> + <Money cents={o.upgradeCents} /> upgrade</> : null}
               </p>
               <div className="mt-auto flex flex-wrap gap-2">
                 {next && next !== "picked_up" && (

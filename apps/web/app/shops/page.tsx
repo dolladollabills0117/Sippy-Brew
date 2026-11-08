@@ -11,7 +11,7 @@ export default async function ShopsPage() {
   const [{ shops }, areas] = await Promise.all([listShops(s), s ? getAreas(s.userId) : Promise.resolve([])]);
   return (
     <>
-      <PageTitle sub="Redeem your credit at any of them.">Participating shops</PageTitle>
+      <PageTitle sub="Use your Daily Pass at any of them.">Participating shops</PageTitle>
       <ShopsBrowser initial={shops} areas={areas} signedIn={Boolean(s)} />
     </>
   );

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CreditSummary } from "@/components/CreditSummary";
+import { PassSummary } from "@/components/PassSummary";
 import { ShopCard } from "@/components/ShopCard";
 import { Badge, ButtonLink, Card, EmptyState, PageTitle, SectionTitle } from "@/components/ui";
 import { requirePageSession } from "@/lib/auth";
@@ -23,11 +23,11 @@ export default async function MemberHome() {
 
       {!summary.subscription ? (
         <Card className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-lg text-espresso">Pick a plan to load your coffee credit.</p>
+          <p className="text-lg text-espresso">Pick a plan to get your Daily Passes.</p>
           <ButtonLink href="/plans">Choose a plan</ButtonLink>
         </Card>
       ) : (
-        <CreditSummary summary={summary} />
+        <PassSummary summary={summary} />
       )}
 
       {active && (

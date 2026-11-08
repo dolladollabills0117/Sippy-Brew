@@ -1,10 +1,9 @@
-import { formatCents, RULES } from "@sippy/core";
 import { TierCards } from "@/components/TierCards";
 import { ButtonLink, Card, SectionTitle } from "@/components/ui";
 
 const STEPS = [
-  { n: "1", title: "Pick a plan", body: "Choose Sip, Regular, or Daily. Your coffee credit loads right away." },
-  { n: "2", title: "Order ahead", body: "Find a neighborhood shop, choose your coffee, and pick a pickup time." },
+  { n: "1", title: "Pick a plan", body: "Choose Casual Brew, Routine, or Daily Ritual. Your Daily Passes load right away." },
+  { n: "2", title: "Order ahead", body: "Use one pass a day at any shop. Want something fancier? Pay just the difference in the app." },
   { n: "3", title: "Scan and sip", body: "Show your QR code at the counter. The shop scans it and hands you your cup." },
 ];
 
@@ -18,7 +17,7 @@ export default function Landing() {
           </p>
           <h1 className="glow text-5xl leading-[1.05] text-espresso sm:text-7xl">Your neighborhood, every morning</h1>
           <p className="mt-5 max-w-xl text-lg font-semibold text-espresso sm:text-xl">
-            A monthly coffee credit you can spend at any participating local shop. Order ahead, skip the line, and keep your
+            Daily Passes for your neighborhood&apos;s independent coffee shops. Order ahead, skip the line, and keep your
             favorite baristas in business.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -54,19 +53,21 @@ export default function Landing() {
         )}
       />
       <p className="mt-6 text-sm text-pecan">
-        Coffee only — food isn&apos;t sold through the app. Spend up to {formatCents(RULES.dailyLimitCents)} a day. Unused credit
-        expires at renewal.
+        Coffee only — food isn&apos;t sold through the app. One pass per day. Drinks above your pass value are an upgrade you pay
+        for in the app. Unused passes expire at renewal.
       </p>
 
       <SectionTitle>Own a coffee shop?</SectionTitle>
       <Card className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-xl text-espresso">
-          Get new regulars, pickup orders and weekly payouts. You keep {100 - RULES.commissionBps / 100}% of every order members pay
-          for with credit.
-        </p>
-        <ButtonLink href="/signup?role=shop" variant="secondary">
-          List your shop
-        </ButtonLink>
+        <p className="max-w-xl text-espresso">Get new regulars, pickup orders from members nearby, and weekly payouts to your bank.</p>
+        <div className="flex flex-wrap gap-2">
+          <ButtonLink href="/for-shops" variant="secondary">
+            How it works for shops
+          </ButtonLink>
+          <ButtonLink href="/signup?role=shop" variant="secondary">
+            List your shop
+          </ButtonLink>
+        </div>
       </Card>
     </>
   );

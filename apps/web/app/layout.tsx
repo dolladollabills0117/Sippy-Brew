@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <footer className="mx-auto max-w-6xl px-4 pb-10 text-sm text-pecan sm:px-6">
-          <p>© {new Date().getFullYear()} Sippy Brew · Coffee only. Credit resets monthly and does not roll over.</p>
+          <p>© {new Date().getFullYear()} Sippy Brew · Coffee only. Daily Passes reset monthly and do not roll over.</p>
         </footer>
       </body>
     </html>

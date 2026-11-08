@@ -1,7 +1,7 @@
 -- Sippy Brew schema.
 -- Money is integer cents everywhere. Business rules live in packages/core; the functions at the
--- bottom of this file re-check the daily limit, credit cap and QR single-use atomically so two
--- requests racing each other can't get around them.
+-- bottom of this file re-check one-pass-per-day, the monthly pass allowance and QR single-use
+-- atomically so two requests racing each other can't get around them.
 
 create extension if not exists pgcrypto;
 
@@ -9,9 +9,10 @@ create extension if not exists pgcrypto;
 -- Enums
 -- ---------------------------------------------------------------------------
 create type public.user_role as enum ('member', 'shop_owner', 'admin');
-create type public.tier_id as enum ('sip', 'regular', 'daily');
+create type public.tier_id as enum ('casual', 'routine', 'daily_ritual');
 create type public.subscription_status as enum ('active', 'trialing', 'past_due', 'canceled', 'incomplete', 'unpaid');
-create type public.ledger_type as enum ('grant', 'spend', 'refund', 'expire');
+create type public.pass_ledger_type as enum ('grant', 'use', 'release', 'expire');
+create type public.upgrade_status as enum ('none', 'authorized', 'captured', 'voided', 'failed');
 create type public.shop_status as enum ('pending', 'active', 'paused');
 create type public.coffee_category as enum ('espresso', 'brewed', 'cold', 'specialty');
 create type public.order_status as enum ('received', 'preparing', 'ready', 'picked_up', 'cancelled');
@@ -39,6 +40,10 @@ create table public.subscriptions (
   current_period_start timestamptz not null,
   current_period_end timestamptz not null,
   cancel_at_period_end boolean not null default false,
+  -- Snapshot of the tier's allowance for the current period, set when the period's passes are
+  -- granted, so editing config/tiers.json mid-period doesn't change a member's current month.
+  period_passes integer,
+  period_max_pass_value integer,
   stripe_subscription_id text unique,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -49,26 +54,27 @@ create index subscriptions_member_idx on public.subscriptions (member_id, create
 create unique index subscriptions_one_live_idx on public.subscriptions (member_id)
   where status in ('active', 'trialing', 'past_due', 'incomplete');
 
--- Credit ledger. grant/refund > 0, spend/expire < 0. period_start ties every entry to the
--- subscription period it belongs to; the balance is the sum for the current period only.
-create table public.credit_ledger (
+-- Daily Pass ledger, in passes. grant/release > 0, use/expire < 0. period_start ties every
+-- entry to the subscription period it belongs to; the balance is the sum for the current
+-- period only, so unused passes can never roll over.
+create table public.pass_ledger (
   id uuid primary key default gen_random_uuid(),
   member_id uuid not null references public.profiles (id) on delete cascade,
   subscription_id uuid not null references public.subscriptions (id) on delete cascade,
   period_start timestamptz not null,
-  amount integer not null,
-  type public.ledger_type not null,
+  passes integer not null,
+  type public.pass_ledger_type not null,
   order_id uuid,
   note text,
   created_at timestamptz not null default now(),
-  check (amount <> 0),
-  check ((type in ('grant', 'refund') and amount > 0) or (type in ('spend', 'expire') and amount < 0))
+  check ((type in ('grant', 'release') and passes > 0) or (type in ('use', 'expire') and passes < 0))
 );
-create index credit_ledger_member_period_idx on public.credit_ledger (member_id, period_start);
+create index pass_ledger_member_period_idx on public.pass_ledger (member_id, period_start);
 -- Webhook retries must not double-grant or double-expire a period.
-create unique index credit_ledger_one_grant_idx on public.credit_ledger (subscription_id, period_start) where type = 'grant';
-create unique index credit_ledger_one_expire_idx on public.credit_ledger (subscription_id, period_start) where type = 'expire';
-create unique index credit_ledger_one_refund_idx on public.credit_ledger (order_id) where type = 'refund';
+create unique index pass_ledger_one_grant_idx on public.pass_ledger (subscription_id, period_start) where type = 'grant';
+create unique index pass_ledger_one_expire_idx on public.pass_ledger (subscription_id, period_start) where type = 'expire';
+create unique index pass_ledger_one_use_idx on public.pass_ledger (order_id) where type = 'use';
+create unique index pass_ledger_one_release_idx on public.pass_ledger (order_id) where type = 'release';
 
 create table public.shops (
   id uuid primary key default gen_random_uuid(),
@@ -112,7 +118,14 @@ create table public.orders (
   subscription_id uuid not null references public.subscriptions (id),
   period_start timestamptz not null,
   status public.order_status not null default 'received',
+  -- total = full value at menu prices = pass_value (covered by the Daily Pass) + upgrade
+  -- (paid by the member). Commission is 12% of total.
   total integer not null check (total > 0),
+  pass_value integer not null check (pass_value >= 0),
+  upgrade integer not null default 0 check (upgrade >= 0),
+  pass_day date not null,
+  upgrade_payment_intent text,
+  upgrade_status public.upgrade_status not null default 'none',
   -- Locked in at redemption with the commission rate in force (packages/core splitOrder).
   commission integer,
   net integer,
@@ -121,14 +134,17 @@ create table public.orders (
   payout_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check ((commission is null and net is null) or (commission + net = total))
+  check ((commission is null and net is null) or (commission + net = total)),
+  check (pass_value + upgrade = total)
 );
 create index orders_member_created_idx on public.orders (member_id, created_at desc);
 create index orders_shop_created_idx on public.orders (shop_id, created_at desc);
+-- One Daily Pass per member per calendar day, across all shops.
+create unique index orders_one_pass_per_day_idx on public.orders (member_id, pass_day) where status <> 'cancelled';
 create index orders_unpaid_idx on public.orders (shop_id, redeemed_at) where status = 'picked_up' and payout_id is null;
 
-alter table public.credit_ledger
-  add constraint credit_ledger_order_fk foreign key (order_id) references public.orders (id) on delete set null;
+alter table public.pass_ledger
+  add constraint pass_ledger_order_fk foreign key (order_id) references public.orders (id) on delete set null;
 
 create table public.order_items (
   id uuid primary key default gen_random_uuid(),
@@ -259,24 +275,25 @@ create trigger subscriptions_touch before update on public.subscriptions for eac
 -- Atomic writes (called by apps/web with the service role only)
 -- ---------------------------------------------------------------------------
 
--- Place an order. The API validates with packages/core first (for friendly messages), then
--- this function re-checks the daily limit and credit balance under a per-member lock and
--- writes the order, items and ledger spend in one transaction.
+-- Place a pass order. The API validates with packages/core first (for friendly messages), then
+-- this function re-checks one pass per day and the pass balance under a per-member lock and
+-- writes the order, items and the pass use in one transaction.
 create or replace function public.place_order(
   p_member uuid,
   p_shop uuid,
   p_subscription uuid,
   p_period_start timestamptz,
   p_total integer,
+  p_pass_value integer,
+  p_upgrade integer,
+  p_max_pass_value integer,
+  p_pass_day date,          -- local calendar day from packages/core dayKey()
   p_items jsonb,            -- [{menu_item_id, name, size, quantity, unit_price}]
   p_pickup timestamptz,
-  p_day_start timestamptz,  -- local calendar day bounds from packages/core dayBounds()
-  p_day_end timestamptz,
-  p_daily_limit integer
+  p_upgrade_payment_intent text
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
-  v_spent integer;
   v_balance integer;
   v_items_total integer;
   v_order uuid;
@@ -285,32 +302,35 @@ begin
 
   select coalesce(sum((i ->> 'quantity')::int * (i ->> 'unit_price')::int), 0) into v_items_total
     from jsonb_array_elements(p_items) i;
-  if v_items_total <> p_total or p_total <= 0 then
+  if v_items_total <> p_total or p_total <= 0 or p_pass_value + p_upgrade <> p_total then
     raise exception 'ORDER_TOTAL_MISMATCH' using errcode = 'P0001';
   end if;
-
-  select coalesce(sum(total), 0) into v_spent from orders
-    where member_id = p_member and status <> 'cancelled' and created_at >= p_day_start and created_at < p_day_end;
-  if v_spent + p_total > p_daily_limit then
-    raise exception 'DAILY_LIMIT' using errcode = 'P0001';
+  if p_pass_value <> least(p_total, p_max_pass_value) then
+    raise exception 'PASS_VALUE_MISMATCH' using errcode = 'P0001';
   end if;
 
-  select coalesce(sum(amount), 0) into v_balance from credit_ledger
+  if exists (select 1 from orders where member_id = p_member and pass_day = p_pass_day and status <> 'cancelled') then
+    raise exception 'PASS_USED_TODAY' using errcode = 'P0001';
+  end if;
+
+  select coalesce(sum(passes), 0) into v_balance from pass_ledger
     where member_id = p_member and subscription_id = p_subscription and period_start = p_period_start;
-  if p_total > v_balance then
-    raise exception 'CREDIT_CAP' using errcode = 'P0001';
+  if v_balance < 1 then
+    raise exception 'NO_PASSES_LEFT' using errcode = 'P0001';
   end if;
 
-  insert into orders (member_id, shop_id, subscription_id, period_start, total, pickup_time)
-    values (p_member, p_shop, p_subscription, p_period_start, p_total, p_pickup)
+  insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_value, upgrade, pass_day, pickup_time,
+                      upgrade_payment_intent, upgrade_status)
+    values (p_member, p_shop, p_subscription, p_period_start, p_total, p_pass_value, p_upgrade, p_pass_day, p_pickup,
+            p_upgrade_payment_intent, case when p_upgrade > 0 then 'authorized'::upgrade_status else 'none'::upgrade_status end)
     returning id into v_order;
 
   insert into order_items (order_id, menu_item_id, name, size, quantity, unit_price)
     select v_order, (i ->> 'menu_item_id')::uuid, i ->> 'name', i ->> 'size', (i ->> 'quantity')::int, (i ->> 'unit_price')::int
     from jsonb_array_elements(p_items) i;
 
-  insert into credit_ledger (member_id, subscription_id, period_start, amount, type, order_id, note)
-    values (p_member, p_subscription, p_period_start, -p_total, 'spend', v_order, 'Order');
+  insert into pass_ledger (member_id, subscription_id, period_start, passes, type, order_id, note)
+    values (p_member, p_subscription, p_period_start, -1, 'use', v_order, 'Daily Pass');
 
   return v_order;
 end $$;
@@ -344,7 +364,7 @@ begin
   return o.id;
 end $$;
 
--- Cancel an order and refund its credit if it's still in the current period.
+-- Cancel an order and give its pass back if it's still in the current period.
 create or replace function public.cancel_order(p_order uuid, p_refund boolean) returns void
 language plpgsql security definer set search_path = public as $$
 declare o orders%rowtype;
@@ -355,8 +375,8 @@ begin
   update orders set status = 'cancelled' where id = o.id;
   update redemptions set expires_at = least(expires_at, now()) where order_id = o.id and redeemed_at is null;
   if p_refund then
-    insert into credit_ledger (member_id, subscription_id, period_start, amount, type, order_id, note)
-      values (o.member_id, o.subscription_id, o.period_start, o.total, 'refund', o.id, 'Order cancelled')
+    insert into pass_ledger (member_id, subscription_id, period_start, passes, type, order_id, note)
+      values (o.member_id, o.subscription_id, o.period_start, 1, 'release', o.id, 'Order cancelled')
       on conflict do nothing;
   end if;
 end $$;
@@ -379,11 +399,11 @@ begin
   return v_id;
 end $$;
 
-revoke execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, jsonb, timestamptz, timestamptz, timestamptz, integer) from public, anon, authenticated;
+revoke execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, integer, integer, integer, date, jsonb, timestamptz, text) from public, anon, authenticated;
 revoke execute on function public.redeem_qr(uuid, uuid, uuid, integer, integer) from public, anon, authenticated;
 revoke execute on function public.cancel_order(uuid, boolean) from public, anon, authenticated;
 revoke execute on function public.create_payout(uuid, timestamptz, timestamptz, uuid[], integer, integer, integer) from public, anon, authenticated;
-grant execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, jsonb, timestamptz, timestamptz, timestamptz, integer) to service_role;
+grant execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, integer, integer, integer, date, jsonb, timestamptz, text) to service_role;
 grant execute on function public.redeem_qr(uuid, uuid, uuid, integer, integer) to service_role;
 grant execute on function public.cancel_order(uuid, boolean) to service_role;
 grant execute on function public.create_payout(uuid, timestamptz, timestamptz, uuid[], integer, integer, integer) to service_role;
@@ -399,7 +419,7 @@ $$;
 
 alter table public.profiles enable row level security;
 alter table public.subscriptions enable row level security;
-alter table public.credit_ledger enable row level security;
+alter table public.pass_ledger enable row level security;
 alter table public.shops enable row level security;
 alter table public.menu_items enable row level security;
 alter table public.orders enable row level security;
@@ -420,7 +440,7 @@ revoke update on public.profiles from authenticated;
 grant update (name) on public.profiles to authenticated;
 
 create policy subscriptions_own on public.subscriptions for select using (member_id = auth.uid() or public.is_admin());
-create policy ledger_own on public.credit_ledger for select using (member_id = auth.uid() or public.is_admin());
+create policy ledger_own on public.pass_ledger for select using (member_id = auth.uid() or public.is_admin());
 
 create policy shops_public on public.shops for select using (status = 'active' or owner_id = auth.uid() or public.is_admin());
 create policy menu_public on public.menu_items for select using (

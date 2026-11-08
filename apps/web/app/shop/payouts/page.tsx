@@ -13,7 +13,7 @@ export default async function PayoutsPage() {
   const payouts = await shopPayouts(session);
   return (
     <>
-      <PageTitle sub={`Paid weekly to your bank through Stripe. Sippy Brew keeps ${RULES.commissionBps / 100}% of each order paid with credit.`}>Payouts</PageTitle>
+      <PageTitle sub={`Paid weekly to your bank through Stripe. Sippy Brew keeps ${RULES.commissionBps / 100}% of each order redeemed with a Daily Pass, including upgrades.`}>Payouts</PageTitle>
       {payouts.length === 0 ? (
         <EmptyState title="No payouts yet">Your first payout is sent the Monday after your first redemption.</EmptyState>
       ) : (

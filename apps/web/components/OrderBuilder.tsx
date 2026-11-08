@@ -1,11 +1,11 @@
 "use client";
 import {
-  checkCreditCap,
-  checkDailyLimit,
+  checkPassAvailable,
   formatCents,
   MAX_QUANTITY_PER_LINE,
   pickupSlots,
   RULES,
+  splitPassValue,
   type MemberSummary,
   type MenuItem,
   type Shop,
@@ -13,12 +13,12 @@ import {
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import { Alert, Button, Card, EmptyState, Meter, Money, cx } from "./ui";
+import { Alert, Button, Card, EmptyState, Money } from "./ui";
 
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: RULES.timeZone });
 
 /**
- * Pick coffees, see the daily limit and remaining credit update live, choose a pickup time.
+ * Pick coffees, see what today's pass covers and any upgrade, choose a pickup time.
  * The same core checks run again on the server when the order is placed.
  */
 export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuItem[]; summary: MemberSummary }) {
@@ -31,9 +31,9 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
 
   const available = menu.filter((m) => m.available && !m.soldOutToday);
   const total = available.reduce((sum, m) => sum + (qty[m.id] ?? 0) * m.priceCents, 0);
-  const daily = checkDailyLimit(summary.spentTodayCents, total, summary.dailyLimitCents);
-  const credit = checkCreditCap(summary.creditBalanceCents, total);
-  const blocker = !daily.ok ? daily.message : !credit.ok ? credit.message : null;
+  const pass = checkPassAvailable({ passesLeft: summary.passesLeft, passDaysUsed: summary.passDaysUsed, now: new Date() });
+  const split = splitPassValue(total, summary.maxPassValueCents);
+  const blocker = !pass.ok ? pass.message : null;
   const noPlan = !summary.subscription || !["active", "trialing"].includes(summary.subscription.status);
 
   function bump(id: string, delta: number) {
@@ -58,7 +58,7 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
   if (noPlan) {
     return (
       <EmptyState title="Choose a plan to order" action={<a className="font-bold text-burnt-sugar-ink underline" href="/plans">See plans</a>}>
-        Your monthly credit pays for coffee at every participating shop.
+        Your Daily Passes work at every participating shop.
       </EmptyState>
     );
   }
@@ -103,29 +103,34 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
       <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
         <Card>
           <h2 className="text-2xl text-espresso">Your order</h2>
-          <dl className="mt-4 space-y-3">
+          <dl className="mt-4 space-y-2">
             <div className="flex justify-between">
-              <dt className="text-pecan">Total</dt>
-              <dd className="text-2xl font-extrabold text-espresso">
+              <dt className="text-pecan">Order value</dt>
+              <dd className="font-bold text-espresso">
                 <Money cents={total} />
               </dd>
             </div>
-            <div>
-              <div className="mb-1 flex justify-between text-sm">
-                <dt className="text-pecan">Today</dt>
-                <dd className="font-bold text-espresso">
-                  {formatCents(summary.spentTodayCents + total, { showZeroCents: true })} of {formatCents(summary.dailyLimitCents)}
-                </dd>
-              </div>
-              <Meter value={summary.spentTodayCents + total} max={summary.dailyLimitCents} label="Spent today, including this order" />
+            <div className="flex justify-between">
+              <dt className="text-pecan">Covered by today&apos;s pass (up to {formatCents(summary.maxPassValueCents, { showZeroCents: true })})</dt>
+              <dd className="font-bold text-espresso">
+                <Money cents={split.passValueCents} />
+              </dd>
             </div>
-            <div className="flex justify-between text-sm">
-              <dt className="text-pecan">Credit left after this order</dt>
-              <dd className={cx("font-bold", credit.ok ? "text-espresso" : "text-danger")}>
-                {formatCents(Math.max(0, summary.creditBalanceCents - total), { showZeroCents: true })}
+            <div className="flex justify-between border-t border-latte pt-2">
+              <dt className="font-bold text-espresso">You pay (upgrade)</dt>
+              <dd className="text-2xl font-extrabold text-espresso">
+                <Money cents={split.upgradeCents} />
               </dd>
             </div>
           </dl>
+          {split.upgradeCents > 0 && (
+            <p className="mt-2 text-sm text-pecan">
+              Charged to your card on file at pickup, at the shop&apos;s menu price. Released if the order is cancelled.
+            </p>
+          )}
+          <p className="mt-3 text-sm text-pecan">
+            {summary.passesLeft} of {summary.passesPerMonth} passes left this month · one pass per day
+          </p>
 
           <label htmlFor="pickup" className="mt-5 block font-bold text-espresso">
             Pickup time
@@ -151,7 +156,7 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
             {blocker && total > 0 && <Alert tone="error">{blocker}</Alert>}
             {error && <Alert tone="error">{error}</Alert>}
             <Button disabled={busy || total === 0 || Boolean(blocker) || !pickup} onClick={submit}>
-              {busy ? "Placing order…" : `Confirm · ${formatCents(total, { showZeroCents: true })}`}
+              {busy ? "Placing order…" : split.upgradeCents > 0 ? `Use pass + pay ${formatCents(split.upgradeCents, { showZeroCents: true })}` : "Use today's pass"}
             </Button>
           </div>
         </Card>

@@ -1,9 +1,9 @@
 import "server-only";
-import { getTier, isTierId, planRenewal, type LedgerEntry, type TierId } from "@sippy/core";
+import { getTier, isTierId, planRenewal, TIERS, type PassLedgerEntry, type Subscription, type TierId } from "@sippy/core";
 import Stripe from "stripe";
 import type { Session } from "./auth";
 import { env } from "./env";
-import { badRequest } from "./http";
+import { AppError, badRequest } from "./http";
 import { notifyMemberRenewal } from "./notify";
 import { supabaseAdmin } from "./supabase/server";
 
@@ -21,7 +21,7 @@ function priceIdFor(tier: TierId): string {
 }
 
 function tierForPrice(priceId: string | undefined): TierId | null {
-  for (const id of ["sip", "regular", "daily"] as const) if (process.env[getTier(id).stripePriceEnv] === priceId) return id;
+  for (const t of TIERS) if (process.env[t.stripePriceEnv] === priceId) return t.id;
   return null;
 }
 
@@ -79,8 +79,8 @@ function periodOf(sub: Stripe.Subscription): { start: string; end: string } {
 }
 
 /**
- * Mirror a Stripe subscription into our table. When the paid period changes, unused credit
- * from the old period expires and the new period's credit is granted (packages/core planRenewal).
+ * Mirror a Stripe subscription into our table. When the paid period changes, unused passes
+ * from the old period expire and the new period's passes are granted (packages/core planRenewal).
  */
 export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: boolean }) {
   const db = supabaseAdmin();
@@ -110,20 +110,82 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
 
   if (!opts.grant || !["active", "trialing"].includes(sub.status)) return;
 
-  const { data: grant } = await db.from("credit_ledger").select("id").eq("subscription_id", saved.id).eq("period_start", period.start).eq("type", "grant").maybeSingle();
+  const { data: grant } = await db.from("pass_ledger").select("id").eq("subscription_id", saved.id).eq("period_start", period.start).eq("type", "grant").maybeSingle();
   if (grant) return; // webhook retry: already granted
 
   const prevStart: string | null = existing && existing.current_period_start !== period.start ? existing.current_period_start : null;
-  let previousEntries: LedgerEntry[] = [];
+  let previousEntries: PassLedgerEntry[] = [];
   if (prevStart) {
-    const { data } = await db.from("credit_ledger").select("amount, type, period_start").eq("subscription_id", saved.id).eq("period_start", prevStart);
-    previousEntries = (data ?? []).map((e) => ({ amountCents: e.amount, type: e.type, periodStart: e.period_start }));
+    const { data } = await db.from("pass_ledger").select("passes, type, period_start").eq("subscription_id", saved.id).eq("period_start", prevStart);
+    previousEntries = (data ?? []).map((e) => ({ passes: e.passes, type: e.type, periodStart: e.period_start }));
   }
   const tierCfg = getTier(tier);
   const entries = planRenewal({ previousEntries, previousPeriodStart: prevStart, newPeriodStart: period.start, tier: tierCfg });
-  const { error: ledgerErr } = await db.from("credit_ledger").insert(
-    entries.map((e) => ({ member_id: memberId, subscription_id: saved.id, period_start: e.periodStart, amount: e.amountCents, type: e.type, note: e.note })),
+  const { error: ledgerErr } = await db.from("pass_ledger").insert(
+    entries.map((e) => ({ member_id: memberId, subscription_id: saved.id, period_start: e.periodStart, passes: e.passes, type: e.type, note: e.note })),
   );
   if (ledgerErr && ledgerErr.code !== "23505") throw ledgerErr;
-  if (!ledgerErr) void notifyMemberRenewal(memberId, tierCfg.name, tierCfg.creditCents).catch(() => {});
+  // Snapshot this period's allowance so later edits to tiers.json apply from the next renewal.
+  await db.from("subscriptions").update({ period_passes: tierCfg.passesPerMonth, period_max_pass_value: tierCfg.maxPassValueCents }).eq("id", saved.id);
+  if (!ledgerErr) void notifyMemberRenewal(memberId, tierCfg.name, tierCfg.passesPerMonth).catch(() => {});
+}
+
+// ---------------------------------------------------------------------------
+// Upgrades: the part of a day's order above the tier's max pass value.
+// Authorized on the member's card on file when the order is placed, captured when the shop
+// scans the QR, voided if the order is cancelled. Card details stay with Stripe.
+// ---------------------------------------------------------------------------
+
+async function defaultPaymentMethod(memberId: string, sub: Subscription): Promise<{ customer: string; paymentMethod: string } | null> {
+  const db = supabaseAdmin();
+  const [{ data: profile }, { data: row }] = await Promise.all([
+    db.from("profiles").select("stripe_customer_id").eq("id", memberId).single(),
+    db.from("subscriptions").select("stripe_subscription_id").eq("id", sub.id).single(),
+  ]);
+  const customer = profile?.stripe_customer_id as string | undefined;
+  if (!customer) return null;
+  if (row?.stripe_subscription_id) {
+    const stripeSub = await stripe().subscriptions.retrieve(row.stripe_subscription_id);
+    const pm = stripeSub.default_payment_method;
+    if (pm) return { customer, paymentMethod: typeof pm === "string" ? pm : pm.id };
+  }
+  const c = await stripe().customers.retrieve(customer);
+  const pm = "deleted" in c ? null : c.invoice_settings?.default_payment_method;
+  return pm ? { customer, paymentMethod: typeof pm === "string" ? pm : pm.id } : null;
+}
+
+export async function authorizeUpgrade(memberId: string, sub: Subscription, amountCents: number, metadata: Record<string, string>): Promise<string> {
+  if (!process.env.STRIPE_SECRET_KEY) throw new AppError(503, "UPGRADE_UNAVAILABLE", "Upgrades need payments set up. Pick a drink within your pass value.");
+  const pm = await defaultPaymentMethod(memberId, sub);
+  if (!pm) throw new AppError(402, "NO_PAYMENT_METHOD", "Add a card in your account to pay for upgrades.");
+  try {
+    const pi = await stripe().paymentIntents.create({
+      amount: amountCents,
+      currency: "usd",
+      customer: pm.customer,
+      payment_method: pm.paymentMethod,
+      off_session: true,
+      confirm: true,
+      capture_method: "manual",
+      description: "Sippy Brew drink upgrade",
+      metadata: { member_id: memberId, kind: "upgrade", ...metadata },
+    });
+    return pi.id;
+  } catch {
+    throw new AppError(402, "UPGRADE_DECLINED", "Your card was declined for the upgrade. Update it in your account, or pick a drink within your pass value.");
+  }
+}
+
+export async function captureUpgrade(paymentIntentId: string): Promise<boolean> {
+  try {
+    await stripe().paymentIntents.capture(paymentIntentId);
+    return true;
+  } catch (e) {
+    console.error("upgrade capture failed", paymentIntentId, e);
+    return false;
+  }
+}
+
+export async function voidUpgrade(paymentIntentId: string): Promise<void> {
+  await stripe().paymentIntents.cancel(paymentIntentId);
 }

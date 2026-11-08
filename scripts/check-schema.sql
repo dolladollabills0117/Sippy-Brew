@@ -16,10 +16,13 @@ insert into shops (id, owner_id, name, address, lat, lng, status)
   values ('00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000b1', 'Test Shop', '1 Main', 40.7, -74.0, 'active');
 insert into menu_items (id, shop_id, name, size, price, category)
   values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-00000000005a', 'Latte', '12 oz', 500, 'espresso');
-insert into subscriptions (id, member_id, tier, status, current_period_start, current_period_end)
-  values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a1', 'sip', 'active', '2026-11-01T00:00Z', '2026-12-01T00:00Z');
-insert into credit_ledger (member_id, subscription_id, period_start, amount, type)
-  values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', '2026-11-01T00:00Z', 900, 'grant');
+insert into subscriptions (id, member_id, tier, status, current_period_start, current_period_end, period_passes, period_max_pass_value)
+  values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a1', 'casual', 'active', '2026-11-01T00:00Z', '2026-12-01T00:00Z', 2, 600);
+-- Grant 2 passes (a short allowance so the cap is easy to hit).
+insert into pass_ledger (member_id, subscription_id, period_start, passes, type)
+  values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', '2026-11-01T00:00Z', 2, 'grant');
+insert into shops (id, owner_id, name, address, lat, lng, status)
+  values ('00000000-0000-0000-0000-00000000005b', '00000000-0000-0000-0000-0000000000c1', 'Other Shop', '2 Main', 40.7, -74.0, 'pending');
 
 -- Food categories are impossible.
 do $$ begin
@@ -33,64 +36,110 @@ end $$;
 -- Duplicate grant for the same period is rejected (webhook retry).
 do $$ begin
   begin
-    insert into credit_ledger (member_id, subscription_id, period_start, amount, type)
-      values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', '2026-11-01T00:00Z', 900, 'grant');
+    insert into pass_ledger (member_id, subscription_id, period_start, passes, type)
+      values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', '2026-11-01T00:00Z', 2, 'grant');
     raise exception 'double grant was accepted';
   exception when unique_violation then null;
   end;
 end $$;
 
--- A $5 order within limits works and writes a spend.
+-- Day 1: a $5 order uses a pass.
 select place_order(
-  '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-  '2026-11-01T00:00Z', 500,
-  '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-  now() + interval '10 minutes', now() - interval '1 hour', now() + interval '1 hour', 800) as first_order \gset
-
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-04',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
+      now() + interval '10 minutes', null) as first_order \gset
 do $$ begin
-  assert (select sum(amount) from credit_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 400;
+  assert (select sum(passes) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 1;
 end $$;
 
--- A second $5 order the same day breaks the $8 daily limit.
+-- Second pass the same day is blocked, even at a different shop.
+do $$ begin
+  begin
+    perform place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005b', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-04',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
+      now() + interval '10 minutes', null);
+    raise exception 'one pass per day not enforced';
+  exception when raise_exception then
+    if sqlerrm <> 'PASS_USED_TODAY' then raise; end if;
+  end;
+end $$;
+
+-- The unique index also blocks it if the function were bypassed.
+do $$ begin
+  begin
+    insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_value, upgrade, pass_day, pickup_time)
+      values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005b', '00000000-0000-0000-0000-0000000000d1',
+              '2026-11-01T00:00Z', 300, 300, 0, '2026-11-04', now());
+    raise exception 'unique pass-per-day index missing';
+  exception when unique_violation then null;
+  end;
+end $$;
+
+-- Day 2: a $7.00 order on a $6.00 max is split into $6.00 pass value + $1.00 upgrade.
 do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 500,
-      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', now() - interval '1 hour', now() + interval '1 hour', 800);
-    raise exception 'daily limit not enforced';
+      '2026-11-01T00:00Z', 700, 700, 0, 600, '2026-11-05',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":700}]',
+      now() + interval '10 minutes', null);
+    raise exception 'pass value above max accepted';
   exception when raise_exception then
-    if sqlerrm <> 'DAILY_LIMIT' then raise; end if;
+    if sqlerrm <> 'PASS_VALUE_MISMATCH' then raise; end if;
   end;
 end $$;
 
--- Next day (new day window): $5 is over the $4 credit left.
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 700, 600, 100, 600, '2026-11-05',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":700}]',
+      now() + interval '10 minutes', null) as second_order \gset
+do $$ begin
+  assert (select upgrade_status from orders where pass_day = '2026-11-05') = 'authorized';
+end $$;
+
+-- Day 3: both passes used, so the allowance is exhausted.
 do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 500,
+      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-06',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', now() + interval '1 day', now() + interval '2 days', 800);
-    raise exception 'credit cap not enforced';
+      now() + interval '10 minutes', null);
+    raise exception 'pass allowance not enforced';
   exception when raise_exception then
-    if sqlerrm <> 'CREDIT_CAP' then raise; end if;
+    if sqlerrm <> 'NO_PASSES_LEFT' then raise; end if;
   end;
 end $$;
+
 
 -- Client-supplied totals that don't match the items are rejected.
 do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 100,
+      '2026-11-01T00:00Z', 100, 100, 0, 600, '2026-11-07',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', now() + interval '1 day', now() + interval '2 days', 800);
+      now() + interval '10 minutes', null);
     raise exception 'total mismatch not caught';
   exception when raise_exception then
     if sqlerrm <> 'ORDER_TOTAL_MISMATCH' then raise; end if;
   end;
+end $$;
+
+
+-- Cancelling day 2 releases its pass, and day 3 can then use it.
+select cancel_order(:'second_order', true);
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-06',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
+      now() + interval '10 minutes', null);
+do $$ begin
+  assert (select sum(passes) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 0;
 end $$;
 
 -- QR: an expired code fails, a live code works once.
@@ -110,8 +159,8 @@ end $$;
 select redeem_qr('00000000-0000-0000-0000-000000000f02', '00000000-0000-0000-0000-00000000005a', null, 60, 440);
 
 do $$ begin
-  assert (select status from orders limit 1) = 'picked_up';
-  assert (select commission + net = total from orders limit 1);
+  assert (select status from orders where pass_day = '2026-11-04') = 'picked_up';
+  assert (select commission + net = total from orders where pass_day = '2026-11-04');
   begin
     perform redeem_qr('00000000-0000-0000-0000-000000000f02', '00000000-0000-0000-0000-00000000005a', null, 60, 440);
     raise exception 'QR redeemed twice';
@@ -133,7 +182,7 @@ end $$;
 -- Payout ties orders to the payout and checks the sum.
 select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '7 days', now(), array[:'first_order']::uuid[], 500, 60, 440);
 do $$ begin
-  assert (select payout_id is not null from orders limit 1);
+  assert (select payout_id is not null from orders where pass_day = '2026-11-04');
 end $$;
 
 rollback;

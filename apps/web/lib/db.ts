@@ -26,6 +26,8 @@ export const mapSubscription = (r: Row): Subscription => ({
   currentPeriodStart: r.current_period_start,
   currentPeriodEnd: r.current_period_end,
   cancelAtPeriodEnd: Boolean(r.cancel_at_period_end),
+  periodPasses: r.period_passes ?? null,
+  periodMaxPassValue: r.period_max_pass_value ?? null,
 });
 
 export const mapShop = (r: Row): Shop => ({
@@ -63,6 +65,10 @@ export const mapOrder = (r: Row): Order => ({
   shopName: r.shops?.name ?? "",
   status: r.status,
   totalCents: r.total,
+  passValueCents: r.pass_value ?? r.total,
+  upgradeCents: r.upgrade ?? 0,
+  upgradeStatus: r.upgrade_status ?? "none",
+  passDay: r.pass_day,
   createdAt: r.created_at,
   pickupTime: r.pickup_time,
   redeemedAt: r.redeemed_at ?? null,

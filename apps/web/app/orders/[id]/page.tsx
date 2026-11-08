@@ -45,11 +45,23 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             </li>
           ))}
         </ul>
-        <p className="mt-3 flex justify-between border-t border-latte pt-3 font-extrabold">
-          <span>Paid with credit</span>
-          <Money cents={order.totalCents} />
-        </p>
-        {order.status === "cancelled" && <p className="mt-2 text-sm text-pecan">Your credit was returned.</p>}
+        <dl className="mt-3 space-y-1 border-t border-latte pt-3">
+          <div className="flex justify-between">
+            <dt className="text-pecan">Covered by your Daily Pass</dt>
+            <dd><Money cents={order.passValueCents} /></dd>
+          </div>
+          {order.upgradeCents > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-pecan">Upgrade {order.upgradeStatus === "captured" ? "charged" : order.upgradeStatus === "voided" ? "released" : "(charged at pickup)"}</dt>
+              <dd><Money cents={order.upgradeCents} /></dd>
+            </div>
+          )}
+          <div className="flex justify-between font-extrabold">
+            <dt>Order total</dt>
+            <dd><Money cents={order.totalCents} /></dd>
+          </div>
+        </dl>
+        {order.status === "cancelled" && <p className="mt-2 text-sm text-pecan">Your pass was returned and any upgrade hold released.</p>}
       </Card>
       <ButtonLink href="/shops" variant="secondary">
         Back to shops

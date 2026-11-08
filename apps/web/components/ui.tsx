@@ -151,7 +151,7 @@ export function Stat({ label, value, sub }: { label: string; value: ReactNode; s
   );
 }
 
-/** A horizontal meter, e.g. today's spend vs. the $8 limit. */
+/** A horizontal meter, e.g. passes left this month. */
 export function Meter({ value, max, label }: { value: number; max: number; label: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (

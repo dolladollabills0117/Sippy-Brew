@@ -25,6 +25,9 @@ export interface Subscription {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
+  /** Allowance snapshot for the current period (null until the period's passes are granted). */
+  periodPasses: number | null;
+  periodMaxPassValue: number | null;
 }
 
 export interface Shop {

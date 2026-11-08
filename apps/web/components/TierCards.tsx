@@ -1,8 +1,8 @@
-import { DEFAULT_TIER, formatCents, RULES, TIERS } from "@sippy/core";
+import { DEFAULT_TIER, formatCents, TIERS } from "@sippy/core";
 import type { ReactNode } from "react";
 import { Badge, cx } from "./ui";
 
-/** The three plans, straight from packages/core/config/tiers.json. Regular is highlighted. */
+/** The three plans, straight from packages/core/config/tiers.json. Routine is highlighted. */
 export function TierCards({ action }: { action: (tierId: string, highlighted: boolean) => ReactNode }) {
   return (
     <ul className="grid gap-4 md:grid-cols-3">
@@ -25,13 +25,13 @@ export function TierCards({ action }: { action: (tierId: string, highlighted: bo
             </p>
             <ul className="flex flex-col gap-2 text-espresso">
               <li>
-                <strong>{formatCents(t.creditCents)}</strong> coffee credit every month
+                <strong>{t.passesPerMonth} Daily Passes</strong> a month
               </li>
               <li>
-                Up to <strong>{formatCents(RULES.dailyLimitCents)}</strong> a day
+                Each pass covers up to <strong>{formatCents(t.maxPassValueCents, { showZeroCents: true })}</strong>
               </li>
-              <li>Any participating shop</li>
-              <li className="text-pecan">Credit resets monthly. No rollover.</li>
+              <li>One pass a day, at any participating shop</li>
+              <li className="text-pecan">Passes reset monthly. No rollover.</li>
             </ul>
             <div className="mt-auto">{action(t.id, hl)}</div>
           </li>

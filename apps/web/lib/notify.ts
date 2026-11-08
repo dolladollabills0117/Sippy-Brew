@@ -57,17 +57,17 @@ export async function maybeSendWelcome(userId: string) {
   }
 }
 
-export async function notifyMemberRenewal(memberId: string, tierName: string, creditCents: number) {
+export async function notifyMemberRenewal(memberId: string, tierName: string, passes: number) {
   await sendEmail(
     await emailOf(memberId),
-    "Your Sippy Brew credit just reset",
-    `Your ${tierName} plan renewed. You have ${formatCents(creditCents)} in coffee credit this month. Unused credit from last month has expired.\n\n${env.siteUrl()}/shops`,
+    "Your Daily Passes just reset",
+    `Your ${tierName} plan renewed. You have ${passes} Daily Passes this month. Unused passes from last month have expired.\n\n${env.siteUrl()}/shops`,
   );
-  await sendPush([memberId], "consumer", "Fresh credit ☕", `${formatCents(creditCents)} is ready to spend this month.`, { screen: "shops" });
+  await sendPush([memberId], "consumer", "Fresh passes ☕", `${passes} Daily Passes are ready this month.`, { screen: "shops" });
 }
 
 export async function notifyMemberRenewalReminder(memberId: string, tierName: string, renewsOn: string) {
-  await sendPush([memberId], "consumer", "Renewing soon", `Your ${tierName} plan renews on ${renewsOn}. Unused credit doesn't roll over.`, { screen: "account" });
+  await sendPush([memberId], "consumer", "Renewing soon", `Your ${tierName} plan renews on ${renewsOn}. Unused passes don't roll over.`, { screen: "account" });
 }
 
 export async function notifyShopNewOrder(order: Order) {
@@ -84,7 +84,7 @@ export async function notifyMemberOrderStatus(order: Order) {
   const text: Partial<Record<Order["status"], string>> = {
     preparing: `${order.shopName} is making your order.`,
     ready: `Your order is ready at ${order.shopName}. Show your QR at the counter.`,
-    cancelled: `${order.shopName} cancelled your order. Your credit was returned.`,
+    cancelled: `${order.shopName} cancelled your order. Your pass was returned and any upgrade charge released.`,
   };
   const body = text[order.status];
   if (body) await sendPush([order.memberId], "consumer", "Order update", body, { orderId: order.id });
