@@ -17,7 +17,7 @@ function Root() {
   }, [fontsReady, ready]);
 
   if (!fontsReady || !ready) return null;
-  if (!session) return <SignInScreen title="Sippy Brew Shop" subtitle="Orders, scanning and your menu, behind the counter." role="shop_owner" />;
+  if (!session) return <SignInScreen subtitle="Orders, scanning and your menu, behind the counter." role="shop_owner" />;
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.vanillaBean } }}>

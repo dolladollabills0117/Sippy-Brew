@@ -36,7 +36,7 @@ export default function OrdersScreen() {
   }
 
   function cancel(o: Order) {
-    Alert.alert(`Cancel ${o.memberFirstName}'s order?`, "Their Daily Pass will be returned and any upgrade charge released.", [
+    Alert.alert(`Cancel ${o.memberFirstName}'s order?`, "Their Daily Pass will be returned and any overage hold released.", [
       { text: "Keep order", style: "cancel" },
       { text: "Cancel order", style: "destructive", onPress: () => move(o, "cancelled") },
     ]);
@@ -76,7 +76,7 @@ export default function OrdersScreen() {
                 ))}
                 <Text variant="small" color={colors.pecan}>
                   {formatCents(o.totalCents, { showZeroCents: true })} · Daily Pass
-                  {o.upgradeCents > 0 ? ` + ${formatCents(o.upgradeCents, { showZeroCents: true })} upgrade (paid in app)` : ""}
+                  {o.overageCents > 0 ? ` + ${formatCents(o.overageCents, { showZeroCents: true })} overage (paid in app, 100% yours)` : ""}
                 </Text>
                 {next && next !== "picked_up" && (
                   <Button big label={`Mark ${ORDER_STATUS_LABELS[next].toLowerCase()}`} loading={busy === o.id} onPress={() => move(o, next)} />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, TextInput, View } from "react-native";
 import { Button, Card, ErrorNote, Screen, Text } from "./components";
+import { Logo } from "./Logo";
 import { supabase } from "./session";
 import { colors, radii, spacing, type } from "./theme";
 
@@ -36,8 +37,8 @@ function Input(props: React.ComponentProps<typeof TextInput> & { label: string }
   );
 }
 
-/** Email + password sign in / sign up, shared by both apps. */
-export function SignInScreen({ title, subtitle, role }: { title: string; subtitle: string; role: "member" | "shop_owner" }) {
+/** Email + password sign in / sign up, shared by both apps. Shows the logo only, no app name as text. */
+export function SignInScreen({ subtitle, role }: { subtitle: string; role: "member" | "shop_owner" }) {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,10 +64,10 @@ export function SignInScreen({ title, subtitle, role }: { title: string; subtitl
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Screen>
         <View style={{ paddingTop: spacing.xxl, gap: spacing.sm }}>
-          <Text variant="display" accessibilityRole="header">
-            {title}
+          <Logo size={96} />
+          <Text variant="h2" accessibilityRole="header">
+            {subtitle}
           </Text>
-          <Text color={colors.pecan}>{subtitle}</Text>
         </View>
         <Card style={{ gap: spacing.lg }}>
           {mode === "up" && <Input label="Name" value={name} onChangeText={setName} autoComplete="name" textContentType="name" />}

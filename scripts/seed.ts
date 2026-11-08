@@ -16,6 +16,7 @@ import {
   planRenewal,
   previousWeekBounds,
   RULES,
+  overageProcessingFee,
   splitOrder,
   splitPassValue,
   summarizePayout,
@@ -110,9 +111,9 @@ const SHOPS = [
 ] as const;
 
 const MEMBERS: { email: string; name: string; tier: TierId }[] = [
-  { email: "casual@demo.sippybrew.test", name: "Sam Rivera", tier: "casual" },
-  { email: "routine@demo.sippybrew.test", name: "Riley Okafor", tier: "routine" },
-  { email: "ritual@demo.sippybrew.test", name: "Dana Kowalski", tier: "daily_ritual" },
+  { email: "affogato@demo.sippybrew.test", name: "Sam Rivera", tier: "affogato" },
+  { email: "macchiato@demo.sippybrew.test", name: "Riley Okafor", tier: "macchiato" },
+  { email: "double@demo.sippybrew.test", name: "Dana Kowalski", tier: "double_espresso" },
 ];
 const ADMIN = { email: "admin@demo.sippybrew.test", name: "Avery Admin" };
 
@@ -247,14 +248,16 @@ async function main() {
     ]);
     await db.from("saved_shops").insert([{ member_id: memberId, shop_id: shops[mi % 3]!.id }, { member_id: memberId, shop_id: shops[(mi + 1) % 3]!.id }]);
 
-    // Sample orders: one pass per day, leaving at least one pass for today. Some are upgrades.
-    const visitsBy: Record<TierId, number[]> = { casual: [11, 8, 4], routine: [11, 9, 7, 5, 3, 1], daily_ritual: [12, 11, 10, 9, 8, 6, 5, 3, 2, 1] };
+    // Sample orders: one pass per day, leaving at least one pass for today. Every third visit
+    // adds a second drink, so some orders go over $8.00 and show a confirmed overage.
+    const visitsBy: Record<TierId, number[]> = { affogato: [11, 8, 4], macchiato: [11, 9, 7, 5, 3, 1], double_espresso: [12, 11, 10, 9, 8, 6, 5, 3, 2, 1] };
     for (const [vi, daysAgo] of visitsBy[m.tier].entries()) {
       const shop = shops[(mi + vi) % 3]!;
       const item = shop.menu[(vi * 2 + mi) % shop.menu.length]!;
-      await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [item], at: localTime(daysAgo, 7 + ((vi + mi) % 4), 10 + vi * 3), redeemed: true, maxPassValue: tier.maxPassValueCents });
+      const items = vi % 3 === 1 ? [item, shop.menu[(vi + 3) % shop.menu.length]!] : [item];
+      await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items, at: localTime(daysAgo, 7 + ((vi + mi) % 4), 10 + vi * 3), redeemed: true, maxPassValue: tier.maxPassValueCents });
     }
-    if (m.tier === "daily_ritual") {
+    if (m.tier === "double_espresso") {
       const shop = shops[0]!;
       await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [shop.menu[2]!], at: new Date(Date.now() - 4 * 60_000), redeemed: false, maxPassValue: tier.maxPassValueCents });
     }
@@ -264,13 +267,14 @@ async function main() {
   const week = previousWeekBounds(new Date(), TZ);
   for (const shop of shops) {
     const orders = await must(
-      db.from("orders").select("id, total").eq("shop_id", shop.id).eq("status", "picked_up").is("payout_id", null).gte("redeemed_at", week.start.toISOString()).lt("redeemed_at", week.end.toISOString()),
+      db.from("orders").select("id, pass_covered_amount, overage_amount, overage_fee").eq("shop_id", shop.id).eq("status", "picked_up").is("payout_id", null).gte("redeemed_at", week.start.toISOString()).lt("redeemed_at", week.end.toISOString()),
       "payout orders",
     );
     if (!orders.length) continue;
-    const sum = summarizePayout(orders.map((o: { total: number }) => o.total));
+    type Row = { id: string; pass_covered_amount: number; overage_amount: number; overage_fee: number };
+    const sum = summarizePayout((orders as Row[]).map((o) => ({ passCoveredCents: o.pass_covered_amount, overageCents: o.overage_amount, overageFeeCents: o.overage_fee })));
     const payoutId = await must(
-      db.rpc("create_payout", { p_shop: shop.id, p_start: week.start.toISOString(), p_end: week.end.toISOString(), p_order_ids: orders.map((o: { id: string }) => o.id), p_gross: sum.grossCents, p_commission: sum.commissionCents, p_net: sum.netCents }),
+      db.rpc("create_payout", { p_shop: shop.id, p_start: week.start.toISOString(), p_end: week.end.toISOString(), p_order_ids: orders.map((o: { id: string }) => o.id), p_gross: sum.grossCents, p_commission: sum.commissionCents, p_net: sum.netCents, p_overage_total: sum.overageTotalCents, p_processing_fees: sum.processingFeesCents }),
       "payout",
     );
     await db.from("payouts").update({ status: "paid", paid_at: new Date(week.end.getTime() + 10 * 3600_000).toISOString(), stripe_transfer_id: "tr_demo" }).eq("id", payoutId);
@@ -298,7 +302,7 @@ async function insertOrder(o: {
 }) {
   const total = o.items.reduce((s, i) => s + i.price, 0);
   const pass = splitPassValue(total, o.maxPassValue);
-  const split = splitOrder(total);
+  const split = splitOrder(pass.passCoveredCents); // commission on pass-covered value only
   const order = await must(
     db
       .from("orders")
@@ -309,10 +313,12 @@ async function insertOrder(o: {
         period_start: o.periodStart.toISOString(),
         status: o.redeemed ? "picked_up" : "received",
         total,
-        pass_value: pass.passValueCents,
-        upgrade: pass.upgradeCents,
-        // Demo upgrades are marked captured; real ones go through Stripe.
-        upgrade_status: pass.upgradeCents > 0 ? (o.redeemed ? "captured" : "authorized") : "none",
+        pass_covered_amount: pass.passCoveredCents,
+        overage_amount: pass.overageCents,
+        // Demo overages are confirmed and marked captured; real ones go through Stripe.
+        overage_confirmed_at: pass.overageCents > 0 ? o.at.toISOString() : null,
+        overage_status: pass.overageCents > 0 ? (o.redeemed ? "captured" : "authorized") : "none",
+        overage_fee: o.redeemed ? overageProcessingFee(pass.overageCents) : 0,
         pass_day: dayKey(o.at, TZ),
         commission: o.redeemed ? split.commissionCents : null,
         net: o.redeemed ? split.netCents : null,

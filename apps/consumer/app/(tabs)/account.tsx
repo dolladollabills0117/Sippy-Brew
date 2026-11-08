@@ -69,7 +69,7 @@ export default function AccountTab() {
               {sub.cancelAtPeriodEnd && <Badge label={`Ends ${dateFmt.format(new Date(sub.currentPeriodEnd))}`} tone="latte" />}
             </Row>
             <Text color={colors.pecan}>
-              {formatCents(tier.priceCents)}/month · {tier.passesPerMonth} passes up to {formatCents(tier.maxPassValueCents, { showZeroCents: true })} · renews{" "}
+              {formatCents(tier.priceCents)}/month · {tier.passesPerMonth} passes, {formatCents(tier.maxPassValueCents, { showZeroCents: true })} max per pass · renews{" "}
               {dateFmt.format(new Date(sub.currentPeriodEnd))}
             </Text>
             <Button label="Change or cancel plan" variant="secondary" onPress={manage} loading={busy === "portal"} />
@@ -97,7 +97,7 @@ export default function AccountTab() {
           <Meter value={s.passesLeft} max={s.passesPerMonth} label="Daily Passes remaining" />
           <Badge label={s.passUsedToday ? "Today's pass used" : s.passesLeft > 0 ? "Today's pass ready" : "No passes left"} tone={s.passUsedToday || s.passesLeft === 0 ? "latte" : "sky"} />
           <Text variant="small" color={colors.pecan}>
-            Unused passes expire at renewal. Drinks above {formatCents(s.maxPassValueCents, { showZeroCents: true })} are an upgrade you pay in the app.
+            Unused passes expire at renewal. Your pass covers the first {formatCents(s.maxPassValueCents, { showZeroCents: true })} of each day’s order. If it’s more, you’ll confirm the overage before paying.
           </Text>
         </Card>
       )}

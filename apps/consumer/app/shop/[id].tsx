@@ -7,13 +7,13 @@ import {
   pickupSlots,
   RULES,
   splitPassValue,
-  upgradeIsCharged,
+  overageIsCharged,
 } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, Switch, View } from "react-native";
 
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: RULES.timeZone });
 
@@ -43,7 +43,10 @@ function Stepper({ name, value, onChange }: { name: string; value: number; onCha
   );
 }
 
-/** Shop page + order flow: menu, today's pass and any upgrade, pickup time, confirm. */
+/**
+ * Shop page + order flow: menu, today's pass, pickup time. If the order is over the pass, the
+ * member sees the pass amount, overage and total and must confirm the exact overage first.
+ */
 export default function ShopScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const detail = useLoad(() => api.getShop(id), [id]);
@@ -53,6 +56,8 @@ export default function ShopScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<boolean | null>(null);
+  // The overage amount the member confirmed. A changed cart needs a new confirmation.
+  const [confirmedOverage, setConfirmedOverage] = useState<number | null>(null);
 
   const shop = detail.data?.shop;
   const slots = useMemo(() => (shop ? pickupSlots(new Date(), shop.hours) : []), [shop]);
@@ -67,6 +72,9 @@ export default function ShopScreen() {
   const pass = summary ? checkPassAvailable({ passesLeft: summary.passesLeft, passDaysUsed: summary.passDaysUsed, now: new Date() }) : null;
   const split = splitPassValue(total, summary?.maxPassValueCents ?? 0);
   const blocker = pass && !pass.ok ? pass.message : null;
+  const hasOverage = split.overageCents > 0;
+  const overageConfirmed = !hasOverage || confirmedOverage === split.overageCents;
+  const money = (c: number) => formatCents(c, { showZeroCents: true });
   const hasPlan = summary?.subscription && ["active", "trialing"].includes(summary.subscription.status);
   const isSaved = saved ?? detail.data.saved;
 
@@ -75,7 +83,12 @@ export default function ShopScreen() {
     setError(null);
     try {
       const items = Object.entries(qty).filter(([, n]) => n > 0).map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
-      const { order } = await api.placeOrder({ shopId: id, items, pickupAt: slots[slot]!.toISOString() });
+      const { order } = await api.placeOrder({
+        shopId: id,
+        items,
+        pickupAt: slots[slot]!.toISOString(),
+        confirmedOverageCents: hasOverage ? confirmedOverage : null,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/order/${order.id}`);
     } catch (e) {
@@ -150,25 +163,42 @@ export default function ShopScreen() {
           <Card style={{ gap: spacing.md }}>
             <Text variant="h2">Order for pickup</Text>
             <Row style={{ justifyContent: "space-between" }}>
-              <Text color={colors.pecan}>Order value</Text>
-              <Text variant="bodyBold">{formatCents(total, { showZeroCents: true })}</Text>
-            </Row>
-            <Row style={{ justifyContent: "space-between" }}>
               <Text color={colors.pecan} style={{ flex: 1 }}>
-                Today’s pass covers (up to {formatCents(summary!.maxPassValueCents, { showZeroCents: true })})
+                Pass covers (first {money(summary!.maxPassValueCents)})
               </Text>
-              <Text variant="bodyBold">{formatCents(split.passValueCents, { showZeroCents: true })}</Text>
+              <Text variant="bodyBold">{money(split.passCoveredCents)}</Text>
             </Row>
             <Row style={{ justifyContent: "space-between" }}>
-              <Text variant="bodyBold">You pay (upgrade)</Text>
-              <Text variant="stat">{formatCents(split.upgradeCents, { showZeroCents: true })}</Text>
+              <Text color={colors.pecan}>Overage</Text>
+              <Text variant="bodyBold">{money(split.overageCents)}</Text>
             </Row>
-            {split.upgradeCents > 0 && (
-              <Text variant="small" color={colors.pecan}>
-                {upgradeIsCharged(split.upgradeCents)
-                  ? "Charged to your card on file at pickup, at the shop’s menu price."
-                  : `Upgrades under ${formatCents(RULES.minUpgradeChargeCents, { showZeroCents: true })} are on us.`}
-              </Text>
+            <Row style={{ justifyContent: "space-between" }}>
+              <Text variant="bodyBold">Order total</Text>
+              <Text variant="stat">{money(total)}</Text>
+            </Row>
+            {hasOverage && (
+              <Card style={{ borderWidth: 2, borderColor: colors.espresso, backgroundColor: colors.vanillaBean, gap: spacing.sm }}>
+                <Text variant="bodyBold">This order is {money(split.overageCents)} over your pass.</Text>
+                <Text variant="small" color={colors.pecan}>
+                  {overageIsCharged(split.overageCents)
+                    ? "The overage is charged to your card on file when the shop hands over your order, at the shop’s menu prices. It’s released if the order is cancelled."
+                    : `Overages under ${money(RULES.minOverageChargeCents)} are waived, so you won’t be charged for this one.`}
+                </Text>
+                <Row style={{ justifyContent: "space-between", minHeight: 48 }}>
+                  <Text variant="bodyBold" style={{ flex: 1 }} nativeID="confirm-overage-label">
+                    I confirm the {money(split.overageCents)} overage. My pass covers {money(split.passCoveredCents)} of the {money(total)} total.
+                  </Text>
+                  <Switch
+                    accessibilityLabelledBy="confirm-overage-label"
+                    accessibilityLabel={`Confirm the ${money(split.overageCents)} overage`}
+                    value={overageConfirmed}
+                    onValueChange={(v) => setConfirmedOverage(v ? split.overageCents : null)}
+                    trackColor={{ false: colors.latte, true: colors.skyBlue }}
+                    thumbColor={colors.espresso}
+                    ios_backgroundColor={colors.latte}
+                  />
+                </Row>
+              </Card>
             )}
             <Text variant="small">
               {summary!.passesLeft} of {summary!.passesPerMonth} passes left · one pass per day
@@ -203,10 +233,10 @@ export default function ShopScreen() {
             {blocker && total > 0 && <ErrorNote message={blocker} />}
             {error && <ErrorNote message={error} />}
             <Button
-              label={upgradeIsCharged(split.upgradeCents) ? `Use pass + pay ${formatCents(split.upgradeCents, { showZeroCents: true })}` : "Use today's pass"}
+              label={hasOverage ? `Use pass + pay ${money(split.overageCents)} overage` : "Use today's pass"}
               onPress={place}
               loading={busy}
-              disabled={total === 0 || Boolean(blocker) || slots.length === 0}
+              disabled={total === 0 || Boolean(blocker) || slots.length === 0 || !overageConfirmed}
             />
           </Card>
         )

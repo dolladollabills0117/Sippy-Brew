@@ -17,7 +17,7 @@ function Root() {
   }, [fontsReady, ready]);
 
   if (!fontsReady || !ready) return null;
-  if (!session) return <SignInScreen title="Sippy Brew" subtitle="Your neighborhood, every morning." role="member" />;
+  if (!session) return <SignInScreen subtitle="Your neighborhood, brewed daily." role="member" />;
 
   return (
     <Stack

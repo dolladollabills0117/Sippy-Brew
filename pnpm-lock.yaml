@@ -23,6 +23,9 @@ importers:
 
   apps/consumer:
     dependencies:
+      '@expo-google-fonts/caprasimo':
+        specifier: 0.4.0
+        version: 0.4.0
       '@expo-google-fonts/cherry-bomb-one':
         specifier: 0.4.2
         version: 0.4.2
@@ -123,6 +126,9 @@ importers:
 
   apps/shop:
     dependencies:
+      '@expo-google-fonts/caprasimo':
+        specifier: 0.4.0
+        version: 0.4.0
       '@expo-google-fonts/cherry-bomb-one':
         specifier: 0.4.2
         version: 0.4.2
@@ -287,6 +293,9 @@ importers:
 
   packages/mobile-ui:
     dependencies:
+      '@expo-google-fonts/caprasimo':
+        specifier: '*'
+        version: 0.4.0
       '@expo-google-fonts/cherry-bomb-one':
         specifier: '*'
         version: 0.4.2
@@ -323,6 +332,9 @@ importers:
       react-native-safe-area-context:
         specifier: '*'
         version: 5.11.1(react-native@0.88.1(@babel/core@7.29.13)(@react-native/metro-config@0.88.1(@babel/core@7.29.13))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+      react-native-svg:
+        specifier: '*'
+        version: 15.16.0(react-native@0.88.1(@babel/core@7.29.13)(@react-native/metro-config@0.88.1(@babel/core@7.29.13))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
 
 packages:
 
@@ -882,6 +894,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@expo-google-fonts/caprasimo@0.4.0':
+    resolution: {integrity: sha512-rqD2czxcU20yT49A9h+QJUYCrcHD50Pp5USynATJxms3Knxx/83LgjnjwbvH567lg1O85FsGpLG7U6BprwTsnw==}
 
   '@expo-google-fonts/cherry-bomb-one@0.4.2':
     resolution: {integrity: sha512-Psthkoc3Lbst8CLWq+6ZfA+O5Ivan9TVDvumtyVPhXj0wdyfdPItObEvZVxyCIZBmmhQYCwuJ7hx2qYaDtY+2w==}
@@ -4535,6 +4550,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.2':
     optional: true
+
+  '@expo-google-fonts/caprasimo@0.4.0': {}
 
   '@expo-google-fonts/cherry-bomb-one@0.4.2': {}
 

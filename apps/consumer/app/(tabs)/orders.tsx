@@ -21,7 +21,7 @@ function OrderRow({ o }: { o: Order }) {
           {dateFmt.format(new Date(o.createdAt))} · {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}
         </Text>
         <Text variant="small">
-          Daily Pass{o.upgradeCents > 0 ? ` + ${formatCents(o.upgradeCents, { showZeroCents: true })} upgrade` : ""}
+          Daily Pass{o.overageCents > 0 ? ` + ${formatCents(o.overageCents, { showZeroCents: true })} overage` : ""}
         </Text>
         {open && (
           <Text variant="bodyBold" color={colors.burntSugarInk}>

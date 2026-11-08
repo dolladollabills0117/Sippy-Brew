@@ -1,3 +1,4 @@
+import { Caprasimo_400Regular } from "@expo-google-fonts/caprasimo";
 import { CherryBombOne_400Regular } from "@expo-google-fonts/cherry-bomb-one";
 import { Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from "@expo-google-fonts/nunito";
 import { ApiError } from "@sippy/core/api";
@@ -9,9 +10,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { api } from "./session";
 
-/** Cherry Bomb One for headings, Nunito for everything else — same as the web app. */
+/** Cherry Bomb One for headings, Nunito for everything else, Caprasimo for the logo. Same as the web app. */
 export function useBrandFonts() {
   const [loaded, error] = useFonts({
+    Caprasimo_400Regular,
     CherryBombOne_400Regular,
     Nunito_400Regular,
     Nunito_600SemiBold,

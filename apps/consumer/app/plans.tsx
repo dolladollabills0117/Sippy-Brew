@@ -44,7 +44,7 @@ export default function PlansScreen() {
               <Text color={colors.pecan}> / month</Text>
             </Text>
             <Text>
-              {t.passesPerMonth} Daily Passes · each covers up to {formatCents(t.maxPassValueCents, { showZeroCents: true })}
+              {t.passesPerMonth} Daily Passes · {formatCents(t.maxPassValueCents, { showZeroCents: true })} max per pass
             </Text>
             <Text variant="small" color={colors.pecan}>
               {t.blurb} Unused passes don’t roll over.
