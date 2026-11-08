@@ -127,7 +127,7 @@ Run `pnpm test` afterwards. The economics tests pin the current numbers, so upda
 
 ## Mobile apps
 
-Both apps use Expo Router, the shared `@sippy/core` rules and brand tokens, and `@sippy/mobile-ui`. Cherry Bomb One and Nunito load through `expo-font`, and text follows iOS Dynamic Type and Android font scaling.
+Both apps use Expo Router, the shared `@sippy/core` rules and brand tokens, and `@sippy/mobile-ui`. Caprasimo (headings and the logo) and Nunito load through `expo-font`, and text follows iOS Dynamic Type and Android font scaling.
 
 ```bash
 cd apps/consumer   # or apps/shop
@@ -151,7 +151,7 @@ Icons and splash images in `apps/*/assets` are generated from the logo SVG. Chec
 
 ## Brand
 
-The app UI shows only the logo: no "Sippy Brew" text in headers, footers or screens. The name stays in legal pages, emails, this README, the browser tab title and the logo's accessible label (for screen readers). The logo is one SVG (`packages/core/src/logo.ts`, also `apps/web/public/logo.svg`) used by the web header, both Expo apps and the generated app icons. Its "SB" uses Caprasimo, loaded with `next/font` on the web and `expo-font` in the apps.
+The app UI shows only the logo: no "Sippy Brew" text in headers, footers or screens. The name stays in legal pages, emails, this README, the browser tab title and the logo's accessible label (for screen readers). The logo is one SVG (`packages/core/src/logo.ts`, also `apps/web/public/logo.svg`) used by the web header, both Expo apps and the generated app icons. Its "SB" uses Caprasimo, the same face as all headings, loaded with `next/font` on the web and `expo-font` in the apps.
 
 The landing page has scattered background beans (6% opacity) and three hero beans that drop in, dance three times and settle. With reduced motion turned on, the beans stay still.
 

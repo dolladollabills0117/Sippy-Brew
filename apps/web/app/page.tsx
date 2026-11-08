@@ -1,14 +1,8 @@
-import { formatCents, SITE, TIERS } from "@sippy/core";
-import { TierCards } from "@/components/TierCards";
-import { ButtonLink, Card, SectionTitle } from "@/components/ui";
+import { DEFAULT_TIER, formatCents, SITE, TIERS } from "@sippy/core";
+import Link from "next/link";
+import { cx } from "@/components/ui";
 
-const MAX_PASS = TIERS[0]!.maxPassValueCents;
-
-const STEPS = [
-  { n: "1", title: "Pick a plan", body: "Affogato, Macchiato or Double Espresso. Your Daily Passes load right away." },
-  { n: "2", title: "Order ahead", body: `One pass a day at any shop covers the first ${formatCents(MAX_PASS, { showZeroCents: true })} of your order.` },
-  { n: "3", title: "Scan and sip", body: "Show your QR code at the counter. The shop scans it and hands you your cup." },
-];
+const STEPS = ["Pick a pass", "Order ahead from a shop near you", "Scan at the counter. Sip."];
 
 /** Three dancing beans, verbatim from the brand spec. Decorative. */
 function HeroBeans() {
@@ -38,66 +32,78 @@ function HeroBeans() {
 
 export default function Landing() {
   return (
-    <>
-      <section className="hero-gradient relative -mx-4 mt-0 overflow-hidden px-6 pb-36 pt-12 sm:mx-0 sm:mt-6 sm:rounded-[28px] sm:px-12 sm:pb-16 sm:pt-16">
-        <div className="relative z-10 max-w-xl">
-          <p className="mb-5 inline-block -rotate-3 rounded-full border-2 border-espresso bg-cream-swirl px-4 py-1.5 text-sm font-extrabold uppercase tracking-wide text-espresso shadow-card">
-            New in {SITE.launchCity}
-          </p>
-          <h1 className="glow text-5xl leading-[1.05] text-espresso sm:text-7xl">Your neighborhood, brewed daily.</h1>
-          <p className="mt-5 text-xl font-bold text-espresso sm:text-2xl">One monthly pass. Any local coffee shop.</p>
-          <div className="mt-8">
-            <ButtonLink href="/signup" variant="honey">
-              Get my pass
-            </ButtonLink>
+    <div className="mx-auto flex max-w-3xl flex-col gap-8 pt-2 sm:pt-6">
+      <section className="rounded-[28px] bg-cream-swirl px-6 pb-7 pt-7 shadow-card sm:px-10 sm:pb-10 sm:pt-10">
+        <p className="inline-block rounded-full bg-sky-blue px-4 py-1.5 font-bold text-espresso">New in {SITE.launchCity}</p>
+        <h1 className="mt-5 text-[2.25rem] leading-[1.1] text-espresso [text-wrap:balance] sm:text-6xl">Your neighborhood, brewed daily.</h1>
+        <p className="mt-4 text-[1.0625rem] text-pecan sm:text-xl">One monthly pass. Any local coffee shop.</p>
+        {/* Beans sit beside the button, clear of the headline and the button itself. */}
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <Link
+            href="/signup"
+            className="inline-flex min-h-14 items-center whitespace-nowrap rounded-full bg-honey px-9 text-[1.1875rem] font-extrabold text-espresso shadow-card transition-colors hover:bg-caramel sm:px-12"
+          >
+            Get my pass
+          </Link>
+          <div className="pointer-events-none w-20 shrink-0 sm:w-36">
+            <HeroBeans />
           </div>
-        </div>
-        {/* Lower right, in its own space below the button on phones and beside the copy on wider screens. */}
-        <div className="pointer-events-none absolute bottom-4 right-4 w-40 sm:bottom-8 sm:right-10 sm:w-56">
-          <HeroBeans />
         </div>
       </section>
 
-      <SectionTitle>How it works</SectionTitle>
-      <ol className="grid gap-4 md:grid-cols-3">
-        {STEPS.map((s) => (
-          <li key={s.n}>
-            <Card className="h-full">
-              <span aria-hidden="true" className="mb-3 grid h-10 w-10 place-items-center rounded-full bg-sky-blue font-extrabold text-espresso">
-                {s.n}
+      <section aria-labelledby="passes-title">
+        <h2 id="passes-title" className="mb-4 px-1 text-[1.75rem] text-espresso sm:text-3xl">
+          Pick your pass
+        </h2>
+        <ul className="grid grid-cols-3 gap-2.5 sm:gap-4">
+          {TIERS.map((t) => {
+            const popular = t.id === DEFAULT_TIER;
+            return (
+              <li key={t.id}>
+                <Link
+                  href={`/signup?plan=${t.id}`}
+                  aria-label={`${t.name}: ${formatCents(t.priceCents)} a month, ${t.passesPerMonth} passes, up to ${formatCents(t.maxPassValueCents)} a day${popular ? ", most popular" : ""}`}
+                  className={cx(
+                    "flex h-full flex-col rounded-[22px] border-2 bg-cream-swirl px-3 py-4 transition-shadow hover:shadow-lift sm:px-5 sm:py-5",
+                    popular ? "border-honey" : "border-transparent",
+                  )}
+                >
+                  {popular && (
+                    <span className="mb-2 self-start whitespace-nowrap rounded-full bg-honey px-2 py-0.5 text-[0.6875rem] font-extrabold text-espresso sm:px-2.5 sm:text-xs">Most popular</span>
+                  )}
+                  <span className="text-sm leading-tight text-pecan sm:text-base">{t.name}</span>
+                  <span className="mt-1.5 font-heading text-[1.75rem] leading-none text-espresso sm:text-4xl">{formatCents(t.priceCents)}</span>
+                  <span className="mt-3 text-sm text-pecan">{t.passesPerMonth} passes</span>
+                  <span className="text-sm text-pecan">up to {formatCents(t.maxPassValueCents)}/day</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section aria-labelledby="how-title">
+        <h2 id="how-title" className="mb-4 px-1 text-[1.75rem] text-espresso sm:text-3xl">
+          How it works
+        </h2>
+        <ol className="flex flex-col gap-2.5">
+          {STEPS.map((step, i) => (
+            <li key={step} className="flex items-center gap-3 rounded-[18px] bg-cream-swirl px-4 py-3.5 text-lg text-espresso">
+              <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sky-blue text-sm font-bold text-espresso">
+                {i + 1}
               </span>
-              <h3 className="text-2xl text-espresso">{s.title}</h3>
-              <p className="mt-2 text-pecan">{s.body}</p>
-            </Card>
-          </li>
-        ))}
-      </ol>
+              {step}
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      <SectionTitle>Plans</SectionTitle>
-      <TierCards
-        action={(id, hl) => (
-          <ButtonLink href={`/signup?plan=${id}`} variant={hl ? "honey" : "secondary"} className="w-full">
-            Get my pass
-          </ButtonLink>
-        )}
-      />
-      <p className="mt-6 text-sm text-pecan">
-        Coffee only. One pass per day. If your order is over {formatCents(MAX_PASS, { showZeroCents: true })}, you&apos;ll see the overage and
-        confirm it before you pay. Unused passes expire at renewal.
+      <p className="px-1 text-sm text-pecan">
+        Own a coffee shop?{" "}
+        <Link href="/for-shops" className="font-bold text-burnt-sugar-ink underline underline-offset-4">
+          See how it works for shops
+        </Link>
       </p>
-
-      <SectionTitle>Own a coffee shop?</SectionTitle>
-      <Card className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-xl text-espresso">Get new regulars, pickup orders from members nearby, and weekly payouts to your bank.</p>
-        <div className="flex flex-wrap gap-2">
-          <ButtonLink href="/for-shops" variant="secondary">
-            How it works for shops
-          </ButtonLink>
-          <ButtonLink href="/signup?role=shop" variant="secondary">
-            List your shop
-          </ButtonLink>
-        </div>
-      </Card>
-    </>
+    </div>
   );
 }

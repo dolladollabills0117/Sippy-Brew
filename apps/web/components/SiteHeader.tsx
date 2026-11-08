@@ -25,7 +25,7 @@ export async function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-latte/70 bg-vanilla-bean/90 backdrop-blur">
+      <header className="sticky top-0 z-40 bg-vanilla-bean/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link href={session ? (role === "shop_owner" ? "/shop" : "/home") : "/"} aria-label="Sippy Brew home">
             <Logo size={44} />
@@ -50,7 +50,7 @@ export async function SiteHeader() {
             ) : (
               <Link
                 href="/login"
-                className="inline-flex min-h-11 items-center rounded-full border-2 border-espresso bg-cream-swirl px-5 font-extrabold text-espresso hover:bg-latte"
+                className="inline-flex min-h-11 items-center rounded-full bg-espresso px-6 font-bold text-cream-swirl hover:bg-pecan"
               >
                 Log in
               </Link>

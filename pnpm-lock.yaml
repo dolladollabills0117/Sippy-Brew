@@ -26,9 +26,6 @@ importers:
       '@expo-google-fonts/caprasimo':
         specifier: 0.4.0
         version: 0.4.0
-      '@expo-google-fonts/cherry-bomb-one':
-        specifier: 0.4.2
-        version: 0.4.2
       '@expo-google-fonts/nunito':
         specifier: 0.4.2
         version: 0.4.2
@@ -129,9 +126,6 @@ importers:
       '@expo-google-fonts/caprasimo':
         specifier: 0.4.0
         version: 0.4.0
-      '@expo-google-fonts/cherry-bomb-one':
-        specifier: 0.4.2
-        version: 0.4.2
       '@expo-google-fonts/nunito':
         specifier: 0.4.2
         version: 0.4.2
@@ -296,9 +290,6 @@ importers:
       '@expo-google-fonts/caprasimo':
         specifier: '*'
         version: 0.4.0
-      '@expo-google-fonts/cherry-bomb-one':
-        specifier: '*'
-        version: 0.4.2
       '@expo-google-fonts/nunito':
         specifier: '*'
         version: 0.4.2
@@ -897,9 +888,6 @@ packages:
 
   '@expo-google-fonts/caprasimo@0.4.0':
     resolution: {integrity: sha512-rqD2czxcU20yT49A9h+QJUYCrcHD50Pp5USynATJxms3Knxx/83LgjnjwbvH567lg1O85FsGpLG7U6BprwTsnw==}
-
-  '@expo-google-fonts/cherry-bomb-one@0.4.2':
-    resolution: {integrity: sha512-Psthkoc3Lbst8CLWq+6ZfA+O5Ivan9TVDvumtyVPhXj0wdyfdPItObEvZVxyCIZBmmhQYCwuJ7hx2qYaDtY+2w==}
 
   '@expo-google-fonts/nunito@0.4.2':
     resolution: {integrity: sha512-1KCWphw/I2ugqfs9iRHUCkPTnomNgGPtF4AvqVquoEKxr0EL+mcLNLgeixsslbaSFevRR6/KJAE3sc8g0VaY0Q==}
@@ -4552,8 +4540,6 @@ snapshots:
     optional: true
 
   '@expo-google-fonts/caprasimo@0.4.0': {}
-
-  '@expo-google-fonts/cherry-bomb-one@0.4.2': {}
 
   '@expo-google-fonts/nunito@0.4.2': {}
 

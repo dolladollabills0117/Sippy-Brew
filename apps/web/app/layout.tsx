@@ -1,15 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Caprasimo, Cherry_Bomb_One, Nunito } from "next/font/google";
+import { Caprasimo, Nunito } from "next/font/google";
 import { colors, focusRing, gradient, shadows } from "@sippy/core/brand";
 import { BACKGROUND_BEANS_SVG } from "@sippy/core/logo";
 import { BackgroundBeans } from "@/components/Logo";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
-const cherryBomb = Cherry_Bomb_One({ weight: "400", subsets: ["latin"], variable: "--font-cherry-bomb", display: "swap" });
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito", display: "swap" });
-// Used only for the "SB" in the logo.
-const caprasimo = Caprasimo({ weight: "400", subsets: ["latin"], variable: "--font-caprasimo", display: "block" });
+// Headings and the "SB" in the logo.
+const caprasimo = Caprasimo({ weight: "400", subsets: ["latin"], variable: "--font-caprasimo", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Sippy Brew", template: "%s · Sippy Brew" },
@@ -29,7 +28,7 @@ const brandVars = [
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cherryBomb.variable} ${nunito.variable} ${caprasimo.variable}`}>
+    <html lang="en" className={`${nunito.variable} ${caprasimo.variable}`}>
       <head>
         <style>{`:root{${brandVars}}`}</style>
       </head>

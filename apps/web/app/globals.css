@@ -19,7 +19,7 @@
   --color-danger: var(--brand-danger);
   --color-success: var(--brand-success);
 
-  --font-heading: var(--font-cherry-bomb), "Cherry Bomb One", ui-rounded, system-ui, sans-serif;
+  --font-heading: var(--font-caprasimo), Caprasimo, Georgia, "Times New Roman", serif;
   --font-body: var(--font-nunito), "Nunito", ui-rounded, system-ui, sans-serif;
 
   --radius-card: 16px;
@@ -96,7 +96,7 @@
   to { background-position: -200% 0; }
 }
 
-/* The logo's "SB" uses Caprasimo; next/font renames the family, so point the SVG text at it. */
+/* Headings and the logo's "SB" use Caprasimo; next/font renames the family, so point the SVG text at it. */
 .logo text {
   font-family: var(--font-caprasimo), Caprasimo, serif;
 }

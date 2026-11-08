@@ -32,11 +32,11 @@ export const gradient = {
 } as const;
 
 export const fonts = {
-  heading: "Cherry Bomb One",
+  heading: "Caprasimo",
   body: "Nunito",
   /** expo-font family names registered by the mobile apps. */
   native: {
-    heading: "CherryBombOne_400Regular",
+    heading: "Caprasimo_400Regular",
     body: "Nunito_400Regular",
     bodySemi: "Nunito_600SemiBold",
     bodyBold: "Nunito_700Bold",
