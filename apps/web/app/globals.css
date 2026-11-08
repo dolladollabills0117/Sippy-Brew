@@ -37,7 +37,11 @@
   }
   body {
     min-height: 100dvh;
-    background: var(--brand-vanilla-bean);
+    /* Coffee beans scattered over Vanilla Bean (180px tile, slightly rotated, 6% opacity). */
+    background-color: var(--brand-vanilla-bean);
+    background-image: var(--brand-bean-tile);
+    background-repeat: repeat;
+    background-size: 180px 180px;
   }
   h1, h2, h3, .font-heading {
     font-family: var(--font-heading);

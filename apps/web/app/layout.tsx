@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Caprasimo, Nunito } from "next/font/google";
 import { colors, focusRing, gradient, shadows } from "@sippy/core/brand";
-import { BACKGROUND_BEANS_SVG } from "@sippy/core/logo";
-import { BackgroundBeans } from "@/components/Logo";
+import { BEAN_TILE_SVG } from "@sippy/core/logo";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -24,6 +23,8 @@ const brandVars = [
   `--brand-shadow-card:${shadows.card};`,
   `--brand-shadow-lift:${shadows.lift};`,
   `--brand-focus-ring:${focusRing.css};`,
+  // Scattered coffee beans behind every page, as a repeating CSS background tile.
+  `--brand-bean-tile:url("data:image/svg+xml,${encodeURIComponent(BEAN_TILE_SVG)}");`,
 ].join("");
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,8 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <style>{`:root{${brandVars}}`}</style>
       </head>
-      <body className="relative antialiased">
-        <BackgroundBeans svg={BACKGROUND_BEANS_SVG} />
+      <body className="antialiased">
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-cream-swirl focus:px-4 focus:py-2">
           Skip to content
         </a>

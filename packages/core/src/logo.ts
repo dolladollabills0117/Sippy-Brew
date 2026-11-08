@@ -26,6 +26,18 @@ export function logoSvg(opts: { size?: number | string; fontFamily?: string } = 
   return svg;
 }
 
+/**
+ * One 180x180 tile of the background bean pattern (same beans, rotations and 6% opacity as
+ * BACKGROUND_BEANS_SVG). Used as a repeating CSS background so nothing can paint over it.
+ */
+export const BEAN_TILE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+<g opacity="0.06">
+<g transform="translate(30 40) rotate(20)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+<g transform="translate(120 110) rotate(-35)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+<g transform="translate(70 150) rotate(60)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+</g>
+</svg>`;
+
 /** Background beans, verbatim from the brand spec (absolute, behind the page, aria-hidden). */
 export const BACKGROUND_BEANS_SVG = `<svg aria-hidden="true" width="100%" height="100%">
 <defs><pattern id="beans" width="180" height="180" patternUnits="userSpaceOnUse">
