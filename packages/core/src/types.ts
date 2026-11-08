@@ -75,6 +75,8 @@ export interface OrderItem {
   unitPriceCents: number;
 }
 
+export type UpgradeStatus = "none" | "authorized" | "captured" | "voided" | "failed";
+
 export interface Order {
   id: string;
   memberId: string;
@@ -82,7 +84,12 @@ export interface Order {
   shopId: string;
   shopName: string;
   status: OrderStatus;
+  /** Full value at menu prices = passValueCents + upgradeCents. */
   totalCents: number;
+  passValueCents: number;
+  upgradeCents: number;
+  upgradeStatus: UpgradeStatus;
+  passDay: string;
   createdAt: string;
   pickupTime: string;
   redeemedAt: string | null;
@@ -93,11 +100,13 @@ export interface MemberSummary {
   profile: Profile;
   subscription: Subscription | null;
   tierName: string | null;
-  monthlyCreditCents: number;
-  creditBalanceCents: number;
-  spentTodayCents: number;
-  dailyLimitCents: number;
-  dailyRemainingCents: number;
+  passesPerMonth: number;
+  passesLeft: number;
+  maxPassValueCents: number;
+  /** True if today's pass is already used (one per calendar day, any shop). */
+  passUsedToday: boolean;
+  /** Calendar days with a live pass order this period. */
+  passDaysUsed: string[];
   areas: SavedArea[];
 }
 

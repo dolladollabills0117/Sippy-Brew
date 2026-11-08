@@ -1,6 +1,6 @@
 {
   "$comment": "Platform-wide business rules shared by web, consumer app and shop app. Amounts in cents.",
-  "dailyLimitCents": 800,
+  "passesPerDay": 1,
   "commissionBps": 1200,
   "qrTtlSeconds": 30,
   "timeZone": "America/New_York",

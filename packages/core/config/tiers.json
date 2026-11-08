@@ -1,31 +1,34 @@
 {
-  "$comment": "Membership tiers. Edit prices/credits here; no code changes needed. Amounts are in cents. stripePriceEnv names the env var that holds the Stripe Price ID for that tier.",
+  "$comment": "Membership tiers. Edit prices, pass counts and max pass values here; no code changes needed. Amounts are in cents. stripePriceEnv names the env var holding that tier's Stripe Price ID.",
   "currency": "usd",
-  "defaultTier": "regular",
+  "defaultTier": "routine",
   "tiers": [
     {
-      "id": "sip",
-      "name": "Sip",
+      "id": "casual",
+      "name": "Casual Brew",
       "priceCents": 3000,
-      "creditCents": 3000,
-      "blurb": "A few good cups a month.",
-      "stripePriceEnv": "STRIPE_PRICE_SIP"
+      "passesPerMonth": 5,
+      "maxPassValueCents": 600,
+      "blurb": "A few good mornings a month.",
+      "stripePriceEnv": "STRIPE_PRICE_CASUAL"
     },
     {
-      "id": "regular",
-      "name": "Regular",
+      "id": "routine",
+      "name": "Routine",
       "priceCents": 6000,
-      "creditCents": 6000,
-      "blurb": "Most mornings, most weeks.",
-      "stripePriceEnv": "STRIPE_PRICE_REGULAR"
+      "passesPerMonth": 8,
+      "maxPassValueCents": 750,
+      "blurb": "Two mornings a week, every week.",
+      "stripePriceEnv": "STRIPE_PRICE_ROUTINE"
     },
     {
-      "id": "daily",
-      "name": "Daily",
+      "id": "daily_ritual",
+      "name": "Daily Ritual",
       "priceCents": 10000,
-      "creditCents": 10000,
-      "blurb": "Your cup, every single day.",
-      "stripePriceEnv": "STRIPE_PRICE_DAILY"
+      "passesPerMonth": 12,
+      "maxPassValueCents": 833,
+      "blurb": "Your cup, most days of the week.",
+      "stripePriceEnv": "STRIPE_PRICE_DAILY_RITUAL"
     }
   ]
 }

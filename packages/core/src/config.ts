@@ -1,22 +1,24 @@
 import tiersJson from "../config/tiers.json";
 import rulesJson from "../config/rules.json";
 
-export type TierId = "sip" | "regular" | "daily";
+export type TierId = "casual" | "routine" | "daily_ritual";
 
 export interface Tier {
   id: TierId;
   name: string;
   /** Monthly price, in cents. */
   priceCents: number;
-  /** Monthly coffee credit, in cents. */
-  creditCents: number;
+  /** Daily Passes included per subscription period. One pass covers one calendar day. */
+  passesPerMonth: number;
+  /** Most a pass covers on its day, in cents. Anything above is an upgrade the member pays. */
+  maxPassValueCents: number;
   blurb: string;
   /** Name of the env var that holds this tier's Stripe Price ID (server only). */
   stripePriceEnv: string;
 }
 
 export interface Rules {
-  dailyLimitCents: number;
+  passesPerDay: number;
   commissionBps: number;
   qrTtlSeconds: number;
   timeZone: string;

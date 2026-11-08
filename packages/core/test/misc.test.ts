@@ -14,13 +14,9 @@ import {
   TIERS,
 } from "../src";
 
-describe("tier config", () => {
-  it("loads the three tiers with credit equal to price", () => {
-    expect(TIERS.map((t) => [t.id, t.priceCents, t.creditCents])).toEqual([
-      ["sip", 3000, 3000],
-      ["regular", 6000, 6000],
-      ["daily", 10000, 10000],
-    ]);
+describe("tier lookup", () => {
+  it("throws on unknown tiers", () => {
+    expect(TIERS).toHaveLength(3);
     expect(() => getTier("nope")).toThrow();
   });
 });

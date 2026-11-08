@@ -24,8 +24,9 @@ const ctx = (over: Partial<OrderContext> = {}): OrderContext => ({
   shop: { id: "s1", status: "active", hours },
   subscription: { status: "active", currentPeriodEnd: "2026-12-01T00:00:00Z" },
   menu,
-  creditBalanceCents: 6000,
-  spentTodayCents: 0,
+  passesLeft: 8,
+  passDaysUsed: [],
+  maxPassValueCents: 750,
   pickupAt,
   now,
   timeZone: "America/New_York",
@@ -33,19 +34,24 @@ const ctx = (over: Partial<OrderContext> = {}): OrderContext => ({
 });
 
 describe("validateOrder", () => {
-  it("prices from server menu data and passes a valid order", () => {
+  it("prices from server menu data and covers a drink under the max", () => {
+    const r = validateOrder([{ menuItemId: "latte", quantity: 1 }], ctx());
+    expect(r).toMatchObject({ ok: true, totalCents: 525, passValueCents: 525, upgradeCents: 0, passDay: "2026-11-04", passesLeftAfter: 7 });
+  });
+
+  it("splits a day's order above the max into pass value + upgrade", () => {
     const r = validateOrder([{ menuItemId: "latte", quantity: 1 }, { menuItemId: "drip", quantity: 1 }], ctx());
-    expect(r).toMatchObject({ ok: true, totalCents: 800, creditAfterCents: 5200, dailyRemainingAfterCents: 0 });
+    expect(r).toMatchObject({ ok: true, totalCents: 800, passValueCents: 750, upgradeCents: 50 });
   });
 
-  it("enforces the daily limit", () => {
-    const r = validateOrder([{ menuItemId: "latte", quantity: 1 }], ctx({ spentTodayCents: 300 }));
-    expect(r).toMatchObject({ ok: false, code: "DAILY_LIMIT" });
+  it("enforces one pass per day", () => {
+    const r = validateOrder([{ menuItemId: "drip", quantity: 1 }], ctx({ passDaysUsed: ["2026-11-04"] }));
+    expect(r).toMatchObject({ ok: false, code: "PASS_USED_TODAY" });
   });
 
-  it("enforces the monthly credit cap", () => {
-    const r = validateOrder([{ menuItemId: "latte", quantity: 1 }], ctx({ creditBalanceCents: 500 }));
-    expect(r).toMatchObject({ ok: false, code: "CREDIT_CAP" });
+  it("enforces the monthly pass allowance", () => {
+    const r = validateOrder([{ menuItemId: "drip", quantity: 1 }], ctx({ passesLeft: 0 }));
+    expect(r).toMatchObject({ ok: false, code: "NO_PASSES_LEFT" });
   });
 
   it("requires an active subscription in its current period", () => {

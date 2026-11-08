@@ -1,9 +1,8 @@
 import { RULES } from "../config";
 import { assertCents } from "../money";
-import { checkCreditCap } from "./credit";
-import { checkDailyLimit } from "./dailyLimit";
 import { checkPickupTime, type ShopHours } from "./hours";
 import { isCoffeeCategory } from "./menu";
+import { checkPassAvailable, splitPassValue } from "./passes";
 
 export type OrderErrorCode =
   | "NO_ACTIVE_SUBSCRIPTION"
@@ -13,8 +12,8 @@ export type OrderErrorCode =
   | "ITEM_NOT_FOUND"
   | "ITEM_UNAVAILABLE"
   | "NOT_COFFEE"
-  | "DAILY_LIMIT"
-  | "CREDIT_CAP"
+  | "PASS_USED_TODAY"
+  | "NO_PASSES_LEFT"
   | "INVALID_PICKUP";
 
 export interface OrderError {
@@ -42,12 +41,15 @@ export interface OrderContext {
   shop: { id: string; status: string; hours: ShopHours };
   subscription: { status: string; currentPeriodEnd: Date | string } | null;
   menu: readonly MenuItemForOrder[];
-  creditBalanceCents: number;
-  spentTodayCents: number;
+  /** Passes left in the current period. */
+  passesLeft: number;
+  /** Calendar days with a live pass order, at any shop. */
+  passDaysUsed: readonly string[];
+  /** The member's tier max per day, in cents. */
+  maxPassValueCents: number;
   pickupAt: Date;
   now: Date;
   timeZone?: string;
-  dailyLimitCents?: number;
 }
 
 export interface PricedLine {
@@ -63,8 +65,12 @@ export type OrderValidation =
       ok: true;
       totalCents: number;
       lines: PricedLine[];
-      creditAfterCents: number;
-      dailyRemainingAfterCents: number;
+      /** Covered by today's pass. */
+      passValueCents: number;
+      /** Charged to the member as an upgrade. */
+      upgradeCents: number;
+      passDay: string;
+      passesLeftAfter: number;
     }
   | OrderError;
 
@@ -99,8 +105,8 @@ export function priceOrder(lines: readonly OrderLineInput[], menu: readonly Menu
 
 /**
  * The single source of truth for whether an order may be placed. Runs on the server
- * (apps/web API) and in the apps for instant feedback. The database re-checks the daily limit
- * and credit cap atomically when it writes the order.
+ * (apps/web API) and in the apps for instant feedback. The database re-checks one pass per
+ * day and the pass balance atomically when it writes the order.
  */
 export function validateOrder(lines: readonly OrderLineInput[], ctx: OrderContext): OrderValidation {
   const now = ctx.now;
@@ -112,25 +118,26 @@ export function validateOrder(lines: readonly OrderLineInput[], ctx: OrderContex
   const priced = priceOrder(lines, ctx.menu, ctx.shop.id);
   if (!priced.ok) return priced;
 
-  const daily = checkDailyLimit(ctx.spentTodayCents, priced.totalCents, ctx.dailyLimitCents ?? RULES.dailyLimitCents);
-  if (!daily.ok) return { ok: false, code: daily.code, message: daily.message };
+  const tz = ctx.timeZone ?? RULES.timeZone;
+  const pass = checkPassAvailable({ passesLeft: ctx.passesLeft, passDaysUsed: ctx.passDaysUsed, now, timeZone: tz });
+  if (!pass.ok) return pass;
 
-  const credit = checkCreditCap(ctx.creditBalanceCents, priced.totalCents);
-  if (!credit.ok) return { ok: false, code: credit.code, message: credit.message };
-
-  const pickup = checkPickupTime(ctx.pickupAt, now, ctx.shop.hours, ctx.timeZone ?? RULES.timeZone);
+  const pickup = checkPickupTime(ctx.pickupAt, now, ctx.shop.hours, tz);
   if (!pickup.ok) return pickup;
 
+  const split = splitPassValue(priced.totalCents, ctx.maxPassValueCents);
   return {
     ok: true,
     totalCents: priced.totalCents,
     lines: priced.lines,
-    creditAfterCents: credit.remainingAfterCents,
-    dailyRemainingAfterCents: daily.remainingAfterCents,
+    passValueCents: split.passValueCents,
+    upgradeCents: split.upgradeCents,
+    passDay: pass.passDay,
+    passesLeftAfter: pass.passesLeftAfter,
   };
 }
 
-/** Order statuses the shop moves through. "cancelled" refunds the credit. */
+/** Order statuses the shop moves through. "cancelled" returns the pass and voids any upgrade charge. */
 export const ORDER_STATUSES = ["received", "preparing", "ready", "picked_up", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 

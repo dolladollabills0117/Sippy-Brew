@@ -8,7 +8,7 @@ export interface Split {
 }
 
 /**
- * Platform commission on one order paid with credit: 12% (1200 basis points), rounded to the
+ * Platform commission on one order (pass-covered value plus any upgrade): 12% (1200 bps), rounded to the
  * nearest cent per order. The shop receives the rest, so commission + net always equals gross.
  */
 export function splitOrder(grossCents: number, commissionBps: number = RULES.commissionBps): Split {
