@@ -1,0 +1,31 @@
+{
+  "$comment": "Membership tiers. Edit prices/credits here; no code changes needed. Amounts are in cents. stripePriceEnv names the env var that holds the Stripe Price ID for that tier.",
+  "currency": "usd",
+  "defaultTier": "regular",
+  "tiers": [
+    {
+      "id": "sip",
+      "name": "Sip",
+      "priceCents": 3000,
+      "creditCents": 3000,
+      "blurb": "A few good cups a month.",
+      "stripePriceEnv": "STRIPE_PRICE_SIP"
+    },
+    {
+      "id": "regular",
+      "name": "Regular",
+      "priceCents": 6000,
+      "creditCents": 6000,
+      "blurb": "Most mornings, most weeks.",
+      "stripePriceEnv": "STRIPE_PRICE_REGULAR"
+    },
+    {
+      "id": "daily",
+      "name": "Daily",
+      "priceCents": 10000,
+      "creditCents": 10000,
+      "blurb": "Your cup, every single day.",
+      "stripePriceEnv": "STRIPE_PRICE_DAILY"
+    }
+  ]
+}

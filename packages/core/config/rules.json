@@ -1,0 +1,12 @@
+{
+  "$comment": "Platform-wide business rules shared by web, consumer app and shop app. Amounts in cents.",
+  "dailyLimitCents": 800,
+  "commissionBps": 1200,
+  "qrTtlSeconds": 30,
+  "timeZone": "America/New_York",
+  "shopStoryMaxChars": 300,
+  "postMaxChars": 280,
+  "postsPerShopPerDay": 1,
+  "minPickupLeadMinutes": 5,
+  "maxPickupLeadMinutes": 120
+}

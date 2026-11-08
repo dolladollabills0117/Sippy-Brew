@@ -1,0 +1,22 @@
+{
+  "name": "sippy-brew",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "test": "pnpm --filter @sippy/core test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "dev:web": "pnpm --filter @sippy/web dev",
+    "dev:consumer": "pnpm --filter @sippy/consumer start",
+    "dev:shop": "pnpm --filter @sippy/shop-app start",
+    "build:web": "pnpm --filter @sippy/web build",
+    "seed": "tsx scripts/seed.ts",
+    "db:check": "bash scripts/check-schema.sh"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "2.119.0",
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}
