@@ -1,0 +1,29 @@
+import Link from "next/link";
+import { Suspense } from "react";
+import { AuthForm } from "@/components/AuthForm";
+import { Card, PageTitle, SkeletonList } from "@/components/ui";
+
+export const metadata = { title: "Sign up" };
+
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
+  const { role } = await searchParams;
+  const shop = role === "shop";
+  return (
+    <div className="mx-auto max-w-md">
+      <PageTitle sub={shop ? "Set up your shop and start taking pickup orders." : "A few seconds, then pick your plan."}>
+        {shop ? "List your shop" : "Join Sippy Brew"}
+      </PageTitle>
+      <Card>
+        <Suspense fallback={<SkeletonList rows={3} />}>
+          <AuthForm mode="signup" />
+        </Suspense>
+      </Card>
+      <p className="mt-6 text-center text-pecan">
+        Already have an account?{" "}
+        <Link href="/login" className="font-bold text-burnt-sugar-ink underline underline-offset-4">
+          Log in
+        </Link>
+      </p>
+    </div>
+  );
+}
