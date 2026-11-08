@@ -8,6 +8,7 @@ import {
   type PressableProps,
   type StyleProp,
   type TextProps,
+  type ViewProps,
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,8 +41,12 @@ export function Screen({ children, scroll = true, refreshControl, contentStyle }
   );
 }
 
-export function Card({ children, style, accent }: { children: ReactNode; style?: StyleProp<ViewStyle>; accent?: boolean }) {
-  return <View style={[styles.card, accent && { borderColor: colors.skyBlue, borderWidth: 3 }, style]}>{children}</View>;
+export function Card({ children, style, accent, ...rest }: ViewProps & { accent?: boolean }) {
+  return (
+    <View {...rest} style={[styles.card, accent && { borderColor: colors.skyBlue, borderWidth: 3 }, style]}>
+      {children}
+    </View>
+  );
 }
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -182,8 +187,12 @@ export function Meter({ value, max, label }: { value: number; max: number; label
   );
 }
 
-export function Row({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[{ flexDirection: "row", alignItems: "center", gap: spacing.sm }, style]}>{children}</View>;
+export function Row({ children, style, ...rest }: ViewProps) {
+  return (
+    <View {...rest} style={[{ flexDirection: "row", alignItems: "center", gap: spacing.sm }, style]}>
+      {children}
+    </View>
+  );
 }
 
 /** Pill toggle for filters (Sky Blue when on, with an Espresso outline). */
