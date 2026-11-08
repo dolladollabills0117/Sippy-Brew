@@ -6,7 +6,7 @@ import {
   isOpenAt,
   issueQr,
   passBalance,
-  upgradeIsCharged,
+  overageIsCharged,
   RULES,
   validateOrder,
   type PassLedgerEntry,
@@ -18,7 +18,7 @@ import {
   type Subscription,
 } from "@sippy/core";
 import type { Session } from "./auth";
-import { authorizeUpgrade, voidUpgrade } from "./billing";
+import { authorizeOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPost, mapShop, mapSubscription, ORDER_SELECT } from "./db";
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { notifyShopNewOrder } from "./notify";
@@ -162,10 +162,14 @@ export async function getShopDetail(id: string, s: Session | null) {
 
 /**
  * Place a Daily Pass order. Rules run in packages/core, then the database re-checks them
- * atomically. If the order is above the tier's max, the difference is authorized on the
- * member's card on file now and captured when the shop scans the QR.
+ * atomically. The pass covers the first $8.00. If the order is over, the member must have
+ * confirmed the exact overage (`confirmedOverageCents`); only then is it authorized on their
+ * card on file, to be captured when the shop scans the QR.
  */
-export async function placeOrder(s: Session, input: { shopId: string; items: OrderLineInput[]; pickupAt: string }) {
+export async function placeOrder(
+  s: Session,
+  input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null },
+) {
   if (!input?.shopId || !Array.isArray(input.items)) throw badRequest("BAD_ORDER", "Pick a shop and at least one coffee.");
   const pickupAt = new Date(input.pickupAt);
   if (Number.isNaN(pickupAt.getTime())) throw badRequest("INVALID_PICKUP", "Pick a pickup time.");
@@ -187,14 +191,18 @@ export async function placeOrder(s: Session, input: { shopId: string; items: Ord
     passesLeft: passes.passesLeft,
     passDaysUsed: passes.passDaysUsed,
     maxPassValueCents: allowance?.maxPassValueCents ?? 0,
+    confirmedOverageCents: typeof input.confirmedOverageCents === "number" ? input.confirmedOverageCents : null,
     pickupAt,
     now,
   });
-  if (!result.ok) throw new AppError(result.code === "PASS_USED_TODAY" || result.code === "NO_PASSES_LEFT" ? 409 : 400, result.code, result.message);
+  if (!result.ok) {
+    const conflict = ["PASS_USED_TODAY", "NO_PASSES_LEFT", "OVERAGE_CONFIRMATION_REQUIRED"].includes(result.code);
+    throw new AppError(conflict ? 409 : 400, result.code, result.message);
+  }
 
   let paymentIntent: string | null = null;
-  if (upgradeIsCharged(result.upgradeCents)) {
-    paymentIntent = await authorizeUpgrade(s.userId, sub!, result.upgradeCents, { shop_id: shop.id, pass_day: result.passDay });
+  if (overageIsCharged(result.overageCents)) {
+    paymentIntent = await authorizeOverage(s.userId, sub!, result.overageCents, { shop_id: shop.id, pass_day: result.passDay });
   }
 
   const sizes = new Map((menu ?? []).map((m) => [m.id, m.size as string]));
@@ -204,8 +212,8 @@ export async function placeOrder(s: Session, input: { shopId: string; items: Ord
     p_subscription: sub!.id,
     p_period_start: sub!.currentPeriodStart,
     p_total: result.totalCents,
-    p_pass_value: result.passValueCents,
-    p_upgrade: result.upgradeCents,
+    p_pass_covered: result.passCoveredCents,
+    p_overage: result.overageCents,
     p_max_pass_value: allowance!.maxPassValueCents,
     p_pass_day: result.passDay,
     p_items: result.lines.map((l) => ({
@@ -216,10 +224,11 @@ export async function placeOrder(s: Session, input: { shopId: string; items: Ord
       unit_price: l.unitPriceCents,
     })),
     p_pickup: pickupAt.toISOString(),
-    p_upgrade_payment_intent: paymentIntent,
+    p_overage_payment_intent: paymentIntent,
+    p_overage_confirmed: result.overageCents > 0,
   });
   if (error) {
-    if (paymentIntent) await voidUpgrade(paymentIntent).catch(() => {});
+    if (paymentIntent) await voidOverage(paymentIntent).catch(() => {});
     throw fromDbError(error);
   }
 

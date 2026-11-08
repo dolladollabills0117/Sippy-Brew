@@ -10,7 +10,7 @@ export const runtime = "nodejs";
  * Run once a day, early morning local time.
  * 1. No-shows: a pass is only used when a drink is redeemed, so orders from earlier days that
  *    were never picked up are cancelled. Their passes return (if still in the period) and any
- *    upgrade hold is released.
+ *    overage hold is released.
  * 2. Renewal reminders for plans renewing in about 3 days.
  */
 export async function GET(req: Request) {
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 
   const { data: stale } = await db
     .from("orders")
-    .select("id, member_id, subscription_id, period_start, upgrade_payment_intent, upgrade_status")
+    .select("id, member_id, subscription_id, period_start, overage_payment_intent, overage_status")
     .in("status", ["received", "preparing", "ready"])
     .lt("pass_day", today)
     .limit(1000);

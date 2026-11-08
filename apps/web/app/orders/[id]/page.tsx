@@ -48,12 +48,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <dl className="mt-3 space-y-1 border-t border-latte pt-3">
           <div className="flex justify-between">
             <dt className="text-pecan">Covered by your Daily Pass</dt>
-            <dd><Money cents={order.passValueCents} /></dd>
+            <dd><Money cents={order.passCoveredCents} /></dd>
           </div>
-          {order.upgradeCents > 0 && (
+          {order.overageCents > 0 && (
             <div className="flex justify-between">
-              <dt className="text-pecan">Upgrade {order.upgradeStatus === "captured" ? "charged" : order.upgradeStatus === "voided" ? "released" : order.upgradeStatus === "waived" ? "(on us)" : "(charged at pickup)"}</dt>
-              <dd><Money cents={order.upgradeCents} /></dd>
+              <dt className="text-pecan">Overage you confirmed {order.overageStatus === "captured" ? "(charged)" : order.overageStatus === "voided" ? "(released)" : order.overageStatus === "waived" ? "(waived)" : "(charged at pickup)"}</dt>
+              <dd><Money cents={order.overageCents} /></dd>
             </div>
           )}
           <div className="flex justify-between font-extrabold">
@@ -61,7 +61,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             <dd><Money cents={order.totalCents} /></dd>
           </div>
         </dl>
-        {order.status === "cancelled" && <p className="mt-2 text-sm text-pecan">Your pass was returned and any upgrade hold released.</p>}
+        {order.status === "cancelled" && <p className="mt-2 text-sm text-pecan">Your pass was returned and any overage hold released.</p>}
       </Card>
       <ButtonLink href="/shops" variant="secondary">
         Back to shops

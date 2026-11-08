@@ -84,7 +84,7 @@ export async function notifyMemberOrderStatus(order: Order) {
   const text: Partial<Record<Order["status"], string>> = {
     preparing: `${order.shopName} is making your order.`,
     ready: `Your order is ready at ${order.shopName}. Show your QR at the counter.`,
-    cancelled: `${order.shopName} cancelled your order. Your pass was returned and any upgrade charge released.`,
+    cancelled: `${order.shopName} cancelled your order. Your pass was returned and any overage hold released.`,
   };
   const body = text[order.status];
   if (body) await sendPush([order.memberId], "consumer", "Order update", body, { orderId: order.id });

@@ -17,7 +17,7 @@ insert into shops (id, owner_id, name, address, lat, lng, status)
 insert into menu_items (id, shop_id, name, size, price, category)
   values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-00000000005a', 'Latte', '12 oz', 500, 'espresso');
 insert into subscriptions (id, member_id, tier, status, current_period_start, current_period_end, period_passes, period_max_pass_value)
-  values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a1', 'casual', 'active', '2026-11-01T00:00Z', '2026-12-01T00:00Z', 2, 600);
+  values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a1', 'affogato', 'active', '2026-11-01T00:00Z', '2026-12-01T00:00Z', 2, 800);
 -- Grant 2 passes (a short allowance so the cap is easy to hit).
 insert into pass_ledger (member_id, subscription_id, period_start, passes, type)
   values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', '2026-11-01T00:00Z', 2, 'grant');
@@ -46,9 +46,9 @@ end $$;
 -- Day 1: a $5 order uses a pass.
 select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-04',
+      '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-04',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null) as first_order \gset
+      now() + interval '10 minutes', null, false) as first_order \gset
 do $$ begin
   assert (select sum(passes) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 1;
 end $$;
@@ -58,9 +58,9 @@ do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005b', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-04',
+      '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-04',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null);
+      now() + interval '10 minutes', null, false);
     raise exception 'one pass per day not enforced';
   exception when raise_exception then
     if sqlerrm <> 'PASS_USED_TODAY' then raise; end if;
@@ -70,7 +70,7 @@ end $$;
 -- The unique index also blocks it if the function were bypassed.
 do $$ begin
   begin
-    insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_value, upgrade, pass_day, pickup_time)
+    insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_covered_amount, overage_amount, pass_day, pickup_time)
       values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005b', '00000000-0000-0000-0000-0000000000d1',
               '2026-11-01T00:00Z', 300, 300, 0, '2026-11-04', now());
     raise exception 'unique pass-per-day index missing';
@@ -78,32 +78,47 @@ do $$ begin
   end;
 end $$;
 
--- Day 2: a $7.00 order on a $6.00 max is split into $6.00 pass value + $1.00 upgrade.
+-- Day 2: a $9.50 order with an $8.00 max: $8.00 pass-covered + $1.50 overage.
 do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 700, 700, 0, 600, '2026-11-05',
-      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":700}]',
-      now() + interval '10 minutes', null);
+      '2026-11-01T00:00Z', 950, 950, 0, 800, '2026-11-05',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":950}]',
+      now() + interval '10 minutes', null, false);
     raise exception 'pass value above max accepted';
   exception when raise_exception then
     if sqlerrm <> 'PASS_VALUE_MISMATCH' then raise; end if;
   end;
 end $$;
 
-select place_order(
-      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 700, 600, 100, 600, '2026-11-05',
-      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":700}]',
-      now() + interval '10 minutes', 'pi_test_authorized') as second_order \gset
+-- The same order without the member's confirmation is refused.
 do $$ begin
-  assert (select upgrade_status from orders where pass_day = '2026-11-05') = 'authorized';
+  begin
+    perform place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 950, 800, 150, 800, '2026-11-05',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":950}]',
+      now() + interval '10 minutes', 'pi_test_authorized', false);
+    raise exception 'overage charged without confirmation';
+  exception when raise_exception then
+    if sqlerrm <> 'OVERAGE_CONFIRMATION_REQUIRED' then raise; end if;
+  end;
 end $$;
 
--- An upgrade below the minimum charge has no PaymentIntent and is recorded as waived.
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 950, 800, 150, 800, '2026-11-05',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":950}]',
+      now() + interval '10 minutes', 'pi_test_authorized', true) as second_order \gset
 do $$ begin
-  assert (select count(*) from orders where upgrade_status = 'waived') = 0;
+  assert (select overage_status from orders where pass_day = '2026-11-05') = 'authorized';
+  assert (select overage_confirmed_at is not null from orders where pass_day = '2026-11-05');
+end $$;
+
+-- No waived overages so far.
+do $$ begin
+  assert (select count(*) from orders where overage_status = 'waived') = 0;
 end $$;
 
 -- Day 3: both passes used, so the allowance is exhausted.
@@ -111,9 +126,9 @@ do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-06',
+      '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-06',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null);
+      now() + interval '10 minutes', null, false);
     raise exception 'pass allowance not enforced';
   exception when raise_exception then
     if sqlerrm <> 'NO_PASSES_LEFT' then raise; end if;
@@ -126,9 +141,9 @@ do $$ begin
   begin
     perform place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 100, 100, 0, 600, '2026-11-07',
+      '2026-11-01T00:00Z', 100, 100, 0, 800, '2026-11-07',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null);
+      now() + interval '10 minutes', null, false);
     raise exception 'total mismatch not caught';
   exception when raise_exception then
     if sqlerrm <> 'ORDER_TOTAL_MISMATCH' then raise; end if;
@@ -140,9 +155,9 @@ end $$;
 select cancel_order(:'second_order', true);
 select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
-      '2026-11-01T00:00Z', 500, 500, 0, 600, '2026-11-06',
+      '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-06',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null);
+      now() + interval '10 minutes', null, false);
 do $$ begin
   assert (select sum(passes) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 0;
 end $$;
@@ -185,7 +200,7 @@ do $$ begin
 end $$;
 
 -- Payout ties orders to the payout and checks the sum.
-select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '7 days', now(), array[:'first_order']::uuid[], 500, 60, 440);
+select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '7 days', now(), array[:'first_order']::uuid[], 500, 60, 440, 0, 0);
 do $$ begin
   assert (select payout_id is not null from orders where pass_day = '2026-11-04');
 end $$;

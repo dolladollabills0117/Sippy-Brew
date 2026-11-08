@@ -1,0 +1,10 @@
+<svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sippy Brew">
+<circle cx="130" cy="130" r="124" fill="#D9C4A3"/>
+<rect x="226" y="118" width="26" height="24" rx="10" fill="#FBF6EC" stroke="#B4A08A" stroke-width="2"/>
+<circle cx="130" cy="130" r="108" fill="#FBF6EC" stroke="#B4A08A" stroke-width="2"/>
+<circle cx="130" cy="130" r="90" fill="#3B2A1E"/>
+<g fill="#C68E4E" opacity="0.5">
+<circle cx="72" cy="88" r="6"/><circle cx="188" cy="80" r="4"/><circle cx="196" cy="184" r="7"/><circle cx="66" cy="176" r="5"/>
+</g>
+<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-family="Caprasimo, serif" font-size="66" fill="#F3E5C7" transform="translate(130 130) scale(0.94 1.16)">SB</text>
+</svg>

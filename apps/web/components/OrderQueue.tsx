@@ -71,7 +71,7 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
                 ))}
               </ul>
               <p className="text-sm text-pecan">
-                <Money cents={o.totalCents} /> · Daily Pass{o.upgradeCents > 0 ? <> + <Money cents={o.upgradeCents} /> upgrade</> : null}
+                <Money cents={o.totalCents} /> · Daily Pass{o.overageCents > 0 ? <> + <Money cents={o.overageCents} /> overage (paid in app)</> : null}
               </p>
               <div className="mt-auto flex flex-wrap gap-2">
                 {next && next !== "picked_up" && (

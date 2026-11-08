@@ -6,7 +6,7 @@ export function cx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
 }
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "honey";
 type Size = "md" | "sm";
 
 /**
@@ -26,6 +26,7 @@ export function buttonClass(variant: Variant = "primary", size: Size = "md", ext
     variant === "secondary" && "border-2 border-pecan bg-cream-swirl text-espresso hover:bg-latte",
     variant === "ghost" && "text-burnt-sugar-ink hover:bg-latte/60",
     variant === "danger" && "border-2 border-danger bg-cream-swirl text-danger hover:bg-danger hover:text-cream-swirl",
+    variant === "honey" && "bg-honey text-espresso shadow-card hover:bg-caramel",
     extra,
   );
 }

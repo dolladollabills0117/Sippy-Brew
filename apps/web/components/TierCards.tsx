@@ -2,7 +2,7 @@ import { DEFAULT_TIER, formatCents, TIERS } from "@sippy/core";
 import type { ReactNode } from "react";
 import { Badge, cx } from "./ui";
 
-/** The three plans, straight from packages/core/config/tiers.json. Routine is highlighted. */
+/** The three plans, straight from packages/core/config/tiers.json. Macchiato is highlighted. */
 export function TierCards({ action }: { action: (tierId: string, highlighted: boolean) => ReactNode }) {
   return (
     <ul className="grid gap-4 md:grid-cols-3">
@@ -28,7 +28,7 @@ export function TierCards({ action }: { action: (tierId: string, highlighted: bo
                 <strong>{t.passesPerMonth} Daily Passes</strong> a month
               </li>
               <li>
-                Each pass covers up to <strong>{formatCents(t.maxPassValueCents, { showZeroCents: true })}</strong>
+                <strong>{formatCents(t.maxPassValueCents, { showZeroCents: true })}</strong> max per pass
               </li>
               <li>One pass a day, at any participating shop</li>
               <li className="text-pecan">Passes reset monthly. No rollover.</li>

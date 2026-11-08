@@ -9,10 +9,10 @@ create extension if not exists pgcrypto;
 -- Enums
 -- ---------------------------------------------------------------------------
 create type public.user_role as enum ('member', 'shop_owner', 'admin');
-create type public.tier_id as enum ('casual', 'routine', 'daily_ritual');
+create type public.tier_id as enum ('affogato', 'macchiato', 'double_espresso');
 create type public.subscription_status as enum ('active', 'trialing', 'past_due', 'canceled', 'incomplete', 'unpaid');
 create type public.pass_ledger_type as enum ('grant', 'use', 'release', 'expire');
-create type public.upgrade_status as enum ('none', 'authorized', 'captured', 'voided', 'failed', 'waived');
+create type public.overage_status as enum ('none', 'authorized', 'captured', 'voided', 'failed', 'waived');
 create type public.shop_status as enum ('pending', 'active', 'paused');
 create type public.coffee_category as enum ('espresso', 'brewed', 'cold', 'specialty');
 create type public.order_status as enum ('received', 'preparing', 'ready', 'picked_up', 'cancelled');
@@ -118,14 +118,18 @@ create table public.orders (
   subscription_id uuid not null references public.subscriptions (id),
   period_start timestamptz not null,
   status public.order_status not null default 'received',
-  -- total = full value at menu prices = pass_value (covered by the Daily Pass) + upgrade
-  -- (paid by the member). Commission is 12% of total.
+  -- total = full value at menu prices = pass_covered_amount (the Daily Pass covers the first
+  -- $8.00) + overage_amount (paid by the member only after confirming it at checkout).
+  -- Commission is 12% of pass_covered_amount only. Overage goes 100% to the shop, which pays
+  -- the card processing on it (overage_fee).
   total integer not null check (total > 0),
-  pass_value integer not null check (pass_value >= 0),
-  upgrade integer not null default 0 check (upgrade >= 0),
+  pass_covered_amount integer not null check (pass_covered_amount >= 0),
+  overage_amount integer not null default 0 check (overage_amount >= 0),
   pass_day date not null,
-  upgrade_payment_intent text,
-  upgrade_status public.upgrade_status not null default 'none',
+  overage_confirmed_at timestamptz,
+  overage_payment_intent text,
+  overage_status public.overage_status not null default 'none',
+  overage_fee integer not null default 0,
   -- Locked in at redemption with the commission rate in force (packages/core splitOrder).
   commission integer,
   net integer,
@@ -134,8 +138,11 @@ create table public.orders (
   payout_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check ((commission is null and net is null) or (commission + net = total)),
-  check (pass_value + upgrade = total)
+  check ((commission is null and net is null) or (commission + net = pass_covered_amount)),
+  check (pass_covered_amount + overage_amount = total),
+  check (overage_fee >= 0 and overage_fee <= overage_amount),
+  -- Never an overage without the member's confirmation.
+  check (overage_amount = 0 or overage_confirmed_at is not null)
 );
 create index orders_member_created_idx on public.orders (member_id, created_at desc);
 create index orders_shop_created_idx on public.orders (shop_id, created_at desc);
@@ -180,6 +187,9 @@ create table public.payouts (
   gross integer not null check (gross >= 0),
   commission integer not null check (commission >= 0),
   net integer not null check (net >= 0),
+  -- Overages pass through 100% to the shop; card processing on them is deducted.
+  overage_total integer not null default 0 check (overage_total >= 0),
+  processing_fees integer not null default 0 check (processing_fees >= 0),
   order_count integer not null default 0,
   status public.payout_status not null default 'pending',
   stripe_transfer_id text,
@@ -187,7 +197,8 @@ create table public.payouts (
   paid_at timestamptz,
   created_at timestamptz not null default now(),
   unique (shop_id, period_start),
-  check (gross = commission + net)
+  check (gross = commission + net),
+  check (processing_fees <= overage_total)
 );
 
 alter table public.orders
@@ -284,13 +295,14 @@ create or replace function public.place_order(
   p_subscription uuid,
   p_period_start timestamptz,
   p_total integer,
-  p_pass_value integer,
-  p_upgrade integer,
+  p_pass_covered integer,
+  p_overage integer,
   p_max_pass_value integer,
   p_pass_day date,          -- local calendar day from packages/core dayKey()
   p_items jsonb,            -- [{menu_item_id, name, size, quantity, unit_price}]
   p_pickup timestamptz,
-  p_upgrade_payment_intent text
+  p_overage_payment_intent text,
+  p_overage_confirmed boolean
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
@@ -302,11 +314,14 @@ begin
 
   select coalesce(sum((i ->> 'quantity')::int * (i ->> 'unit_price')::int), 0) into v_items_total
     from jsonb_array_elements(p_items) i;
-  if v_items_total <> p_total or p_total <= 0 or p_pass_value + p_upgrade <> p_total then
+  if v_items_total <> p_total or p_total <= 0 or p_pass_covered + p_overage <> p_total then
     raise exception 'ORDER_TOTAL_MISMATCH' using errcode = 'P0001';
   end if;
-  if p_pass_value <> least(p_total, p_max_pass_value) then
+  if p_pass_covered <> least(p_total, p_max_pass_value) then
     raise exception 'PASS_VALUE_MISMATCH' using errcode = 'P0001';
+  end if;
+  if p_overage > 0 and not coalesce(p_overage_confirmed, false) then
+    raise exception 'OVERAGE_CONFIRMATION_REQUIRED' using errcode = 'P0001';
   end if;
 
   if exists (select 1 from orders where member_id = p_member and pass_day = p_pass_day and status <> 'cancelled') then
@@ -319,12 +334,13 @@ begin
     raise exception 'NO_PASSES_LEFT' using errcode = 'P0001';
   end if;
 
-  insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_value, upgrade, pass_day, pickup_time,
-                      upgrade_payment_intent, upgrade_status)
-    values (p_member, p_shop, p_subscription, p_period_start, p_total, p_pass_value, p_upgrade, p_pass_day, p_pickup,
-            p_upgrade_payment_intent, case when p_upgrade = 0 then 'none'::upgrade_status
-                 when p_upgrade_payment_intent is null then 'waived'::upgrade_status
-                 else 'authorized'::upgrade_status end)
+  insert into orders (member_id, shop_id, subscription_id, period_start, total, pass_covered_amount, overage_amount, pass_day,
+                      pickup_time, overage_confirmed_at, overage_payment_intent, overage_status)
+    values (p_member, p_shop, p_subscription, p_period_start, p_total, p_pass_covered, p_overage, p_pass_day,
+            p_pickup, case when p_overage > 0 then now() end, p_overage_payment_intent,
+            case when p_overage = 0 then 'none'::overage_status
+                 when p_overage_payment_intent is null then 'waived'::overage_status
+                 else 'authorized'::overage_status end)
     returning id into v_order;
 
   insert into order_items (order_id, menu_item_id, name, size, quantity, unit_price)
@@ -359,7 +375,7 @@ begin
   if o.status = 'cancelled' then raise exception 'ORDER_CANCELLED' using errcode = 'P0001'; end if;
   if o.shop_id <> p_shop then raise exception 'WRONG_SHOP' using errcode = 'P0001'; end if;
   if r.expires_at <= now() then raise exception 'EXPIRED' using errcode = 'P0001'; end if;
-  if p_commission + p_net <> o.total then raise exception 'SPLIT_MISMATCH' using errcode = 'P0001'; end if;
+  if p_commission + p_net <> o.pass_covered_amount then raise exception 'SPLIT_MISMATCH' using errcode = 'P0001'; end if;
 
   update redemptions set redeemed_at = now(), redeemed_by = p_staff where id = r.id;
   update orders set status = 'picked_up', redeemed_at = now(), commission = p_commission, net = p_net where id = o.id;
@@ -383,32 +399,36 @@ begin
   end if;
 end $$;
 
--- Record a weekly payout and attach its orders in one step.
+-- Record a weekly payout and attach its orders in one step. gross/commission/net cover the
+-- pass value only; overage_total and processing_fees must match the orders' overages and fees.
 create or replace function public.create_payout(
   p_shop uuid, p_start timestamptz, p_end timestamptz, p_order_ids uuid[],
-  p_gross integer, p_commission integer, p_net integer
+  p_gross integer, p_commission integer, p_net integer, p_overage_total integer, p_processing_fees integer
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
-declare v_id uuid; v_sum integer;
+declare v_id uuid; v_pass integer; v_over integer; v_fees integer;
 begin
-  select coalesce(sum(total), 0) into v_sum from orders
+  select coalesce(sum(pass_covered_amount), 0), coalesce(sum(overage_amount), 0), coalesce(sum(overage_fee), 0)
+    into v_pass, v_over, v_fees from orders
     where id = any (p_order_ids) and shop_id = p_shop and status = 'picked_up' and payout_id is null;
-  if v_sum <> p_gross then raise exception 'PAYOUT_MISMATCH' using errcode = 'P0001'; end if;
-  insert into payouts (shop_id, period_start, period_end, gross, commission, net, order_count)
-    values (p_shop, p_start, p_end, p_gross, p_commission, p_net, coalesce(array_length(p_order_ids, 1), 0))
+  if v_pass <> p_gross or v_over <> p_overage_total or v_fees <> p_processing_fees then
+    raise exception 'PAYOUT_MISMATCH' using errcode = 'P0001';
+  end if;
+  insert into payouts (shop_id, period_start, period_end, gross, commission, net, overage_total, processing_fees, order_count)
+    values (p_shop, p_start, p_end, p_gross, p_commission, p_net, p_overage_total, p_processing_fees, coalesce(array_length(p_order_ids, 1), 0))
     returning id into v_id;
   update orders set payout_id = v_id where id = any (p_order_ids);
   return v_id;
 end $$;
 
-revoke execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, integer, integer, integer, date, jsonb, timestamptz, text) from public, anon, authenticated;
+revoke execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, integer, integer, integer, date, jsonb, timestamptz, text, boolean) from public, anon, authenticated;
 revoke execute on function public.redeem_qr(uuid, uuid, uuid, integer, integer) from public, anon, authenticated;
 revoke execute on function public.cancel_order(uuid, boolean) from public, anon, authenticated;
-revoke execute on function public.create_payout(uuid, timestamptz, timestamptz, uuid[], integer, integer, integer) from public, anon, authenticated;
-grant execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, integer, integer, integer, date, jsonb, timestamptz, text) to service_role;
+revoke execute on function public.create_payout(uuid, timestamptz, timestamptz, uuid[], integer, integer, integer, integer, integer) from public, anon, authenticated;
+grant execute on function public.place_order(uuid, uuid, uuid, timestamptz, integer, integer, integer, integer, date, jsonb, timestamptz, text, boolean) to service_role;
 grant execute on function public.redeem_qr(uuid, uuid, uuid, integer, integer) to service_role;
 grant execute on function public.cancel_order(uuid, boolean) to service_role;
-grant execute on function public.create_payout(uuid, timestamptz, timestamptz, uuid[], integer, integer, integer) to service_role;
+grant execute on function public.create_payout(uuid, timestamptz, timestamptz, uuid[], integer, integer, integer, integer, integer) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- Row level security. The API uses the service role for writes; these policies are defense

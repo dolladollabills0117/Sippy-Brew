@@ -28,7 +28,7 @@ export async function SiteHeader() {
       <header className="sticky top-0 z-40 border-b border-latte/70 bg-vanilla-bean/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link href={session ? (role === "shop_owner" ? "/shop" : "/home") : "/"} aria-label="Sippy Brew home">
-            <Logo size={38} />
+            <Logo size={44} />
           </Link>
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             {links.map((l) => (
@@ -48,14 +48,12 @@ export async function SiteHeader() {
             {session ? (
               <SignOutButton />
             ) : (
-              <>
-                <Link href="/login" className="rounded-xl px-3 py-2 font-bold text-espresso hover:bg-latte/60">
-                  Log in
-                </Link>
-                <Link href="/signup" className="hidden rounded-[12px] bg-burnt-sugar-ink px-4 py-2 font-extrabold text-cream-swirl hover:bg-caramel hover:text-espresso sm:inline-flex">
-                  Get started
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="inline-flex min-h-11 items-center rounded-full border-2 border-espresso bg-cream-swirl px-5 font-extrabold text-espresso hover:bg-latte"
+              >
+                Log in
+              </Link>
             )}
           </div>
         </div>

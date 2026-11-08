@@ -34,7 +34,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
               {sub.cancelAtPeriodEnd && <Badge tone="latte">Ends {dateFmt.format(new Date(sub.currentPeriodEnd))}</Badge>}
             </p>
             <p className="text-pecan">
-              {formatCents(tier.priceCents)}/month · {tier.passesPerMonth} Daily Passes up to {formatCents(tier.maxPassValueCents, { showZeroCents: true })} · renews {dateFmt.format(new Date(sub.currentPeriodEnd))}
+              {formatCents(tier.priceCents)}/month · {tier.passesPerMonth} Daily Passes, {formatCents(tier.maxPassValueCents, { showZeroCents: true })} max per pass · renews {dateFmt.format(new Date(sub.currentPeriodEnd))}
             </p>
             {sub.status === "past_due" && <p className="mt-1 font-bold text-danger">Your last payment failed. Update your card to keep ordering.</p>}
           </div>

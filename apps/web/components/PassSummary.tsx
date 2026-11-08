@@ -25,8 +25,8 @@ export function PassSummary({ summary }: { summary: MemberSummary }) {
           {summary.passUsedToday ? <Badge tone="latte">Today&apos;s pass used</Badge> : summary.passesLeft > 0 ? <Badge>Pass ready</Badge> : <Badge tone="latte">No passes left</Badge>}
         </div>
         <p className="mt-3 text-espresso">
-          Your pass covers up to <strong>{formatCents(summary.maxPassValueCents, { showZeroCents: true })}</strong>. Anything above that is an upgrade you pay
-          for in the app.
+          Your pass covers up to <strong>{formatCents(summary.maxPassValueCents, { showZeroCents: true })}</strong>. If an order is more, you'll see the overage
+          and confirm it before you pay.
         </p>
       </Card>
     </div>

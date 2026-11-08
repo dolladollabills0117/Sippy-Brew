@@ -21,6 +21,7 @@ const DB_ERRORS: Record<string, [number, string]> = {
   NO_PASSES_LEFT: [409, "You've used all your Daily Passes this month."],
   ORDER_TOTAL_MISMATCH: [400, "Order total didn't match the menu. Please try again."],
   PASS_VALUE_MISMATCH: [400, "Order total didn't match your plan. Please try again."],
+  OVERAGE_CONFIRMATION_REQUIRED: [409, "Please confirm the overage before placing this order."],
   EXPIRED: [410, "This code expired. Ask the member to refresh their QR."],
   ALREADY_REDEEMED: [409, "This code was already redeemed."],
   WRONG_SHOP: [403, "This order belongs to a different shop."],

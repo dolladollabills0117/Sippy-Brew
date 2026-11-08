@@ -10,7 +10,7 @@ export default async function MenuPage() {
   const { session } = await requireOwnerShop("/shop/menu");
   return (
     <>
-      <PageTitle sub="Coffee only. Food can't be sold through Sippy Brew.">Menu</PageTitle>
+      <PageTitle sub="Coffee only. Food can't be sold through the app.">Menu</PageTitle>
       <MenuManager initial={await shopMenu(session)} />
     </>
   );

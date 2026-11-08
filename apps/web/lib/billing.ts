@@ -131,9 +131,11 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
 }
 
 // ---------------------------------------------------------------------------
-// Upgrades: the part of a day's order above the tier's max pass value.
-// Authorized on the member's card on file when the order is placed, captured when the shop
-// scans the QR, voided if the order is cancelled. Card details stay with Stripe.
+// Overages: the part of a day's order above the $8.00 the pass covers.
+// Only after the member confirms the exact amount at checkout, it's authorized on their card
+// on file; it's captured when the shop scans the QR and voided if the order is cancelled.
+// Overage goes 100% to the shop, which pays the card processing on it. Card details stay
+// with Stripe.
 // ---------------------------------------------------------------------------
 
 async function defaultPaymentMethod(memberId: string, sub: Subscription): Promise<{ customer: string; paymentMethod: string } | null> {
@@ -154,10 +156,10 @@ async function defaultPaymentMethod(memberId: string, sub: Subscription): Promis
   return pm ? { customer, paymentMethod: typeof pm === "string" ? pm : pm.id } : null;
 }
 
-export async function authorizeUpgrade(memberId: string, sub: Subscription, amountCents: number, metadata: Record<string, string>): Promise<string> {
-  if (!process.env.STRIPE_SECRET_KEY) throw new AppError(503, "UPGRADE_UNAVAILABLE", "Upgrades need payments set up. Pick a drink within your pass value.");
+export async function authorizeOverage(memberId: string, sub: Subscription, amountCents: number, metadata: Record<string, string>): Promise<string> {
+  if (!process.env.STRIPE_SECRET_KEY) throw new AppError(503, "OVERAGE_UNAVAILABLE", "Overages need payments set up. Pick drinks that total $8.00 or less.");
   const pm = await defaultPaymentMethod(memberId, sub);
-  if (!pm) throw new AppError(402, "NO_PAYMENT_METHOD", "Add a card in your account to pay for upgrades.");
+  if (!pm) throw new AppError(402, "NO_PAYMENT_METHOD", "Add a card in your account to pay overages.");
   try {
     const pi = await stripe().paymentIntents.create({
       amount: amountCents,
@@ -167,25 +169,32 @@ export async function authorizeUpgrade(memberId: string, sub: Subscription, amou
       off_session: true,
       confirm: true,
       capture_method: "manual",
-      description: "Sippy Brew drink upgrade",
-      metadata: { member_id: memberId, kind: "upgrade", ...metadata },
+      description: "Sippy Brew order overage",
+      metadata: { member_id: memberId, kind: "overage", ...metadata },
     });
     return pi.id;
   } catch {
-    throw new AppError(402, "UPGRADE_DECLINED", "Your card was declined for the upgrade. Update it in your account, or pick a drink within your pass value.");
+    throw new AppError(402, "OVERAGE_DECLINED", "Your card was declined for the overage. Update it in your account, or pick drinks that total $8.00 or less.");
   }
 }
 
-export async function captureUpgrade(paymentIntentId: string): Promise<boolean> {
+/**
+ * Capture a confirmed overage. Returns the actual Stripe processing fee (charged to the shop),
+ * or null if Stripe didn't report one, in which case the caller uses the configured estimate.
+ */
+export async function captureOverage(paymentIntentId: string): Promise<{ ok: boolean; feeCents: number | null }> {
   try {
-    await stripe().paymentIntents.capture(paymentIntentId);
-    return true;
+    const pi = await stripe().paymentIntents.capture(paymentIntentId, { expand: ["latest_charge.balance_transaction"] });
+    const charge = pi.latest_charge;
+    const bt = charge && typeof charge !== "string" ? charge.balance_transaction : null;
+    const fee = bt && typeof bt !== "string" ? bt.fee : null;
+    return { ok: true, feeCents: typeof fee === "number" ? fee : null };
   } catch (e) {
-    console.error("upgrade capture failed", paymentIntentId, e);
-    return false;
+    console.error("overage capture failed", paymentIntentId, e);
+    return { ok: false, feeCents: null };
   }
 }
 
-export async function voidUpgrade(paymentIntentId: string): Promise<void> {
+export async function voidOverage(paymentIntentId: string): Promise<void> {
   await stripe().paymentIntents.cancel(paymentIntentId);
 }

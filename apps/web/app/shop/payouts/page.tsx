@@ -13,19 +13,21 @@ export default async function PayoutsPage() {
   const payouts = await shopPayouts(session);
   return (
     <>
-      <PageTitle sub={`Paid weekly to your bank through Stripe. Sippy Brew keeps ${RULES.commissionBps / 100}% of each order redeemed with a Daily Pass, including upgrades.`}>Payouts</PageTitle>
+      <PageTitle sub={`Paid weekly to your bank through Stripe: ${100 - RULES.commissionBps / 100}% of pass-covered sales, plus overages less card processing.`}>Payouts</PageTitle>
       {payouts.length === 0 ? (
         <EmptyState title="No payouts yet">Your first payout is sent the Monday after your first redemption.</EmptyState>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left">
+          <table className="w-full min-w-[760px] text-left">
             <caption className="sr-only">Weekly payouts</caption>
             <thead className="border-b border-latte text-sm text-pecan">
               <tr>
                 <th scope="col" className="px-5 py-3">Week</th>
                 <th scope="col" className="px-5 py-3 text-right">Orders</th>
-                <th scope="col" className="px-5 py-3 text-right">Gross sales</th>
+                <th scope="col" className="px-5 py-3 text-right">Pass sales</th>
                 <th scope="col" className="px-5 py-3 text-right">{RULES.commissionBps / 100}% commission</th>
+                <th scope="col" className="px-5 py-3 text-right">Overages</th>
+                <th scope="col" className="px-5 py-3 text-right">Card processing</th>
                 <th scope="col" className="px-5 py-3 text-right">Net payout</th>
                 <th scope="col" className="px-5 py-3">Status</th>
               </tr>
@@ -39,7 +41,9 @@ export default async function PayoutsPage() {
                   <td className="px-5 py-3 text-right tabular-nums">{p.orderCount}</td>
                   <td className="px-5 py-3 text-right"><Money cents={p.grossCents} /></td>
                   <td className="px-5 py-3 text-right text-pecan">−<Money cents={p.commissionCents} /></td>
-                  <td className="px-5 py-3 text-right font-extrabold"><Money cents={p.netCents} /></td>
+                  <td className="px-5 py-3 text-right">+<Money cents={p.overageTotalCents} /></td>
+                  <td className="px-5 py-3 text-right text-pecan">−<Money cents={p.processingFeesCents} /></td>
+                  <td className="px-5 py-3 text-right font-extrabold"><Money cents={p.transferCents} /></td>
                   <td className="px-5 py-3">
                     <Badge tone={p.status === "paid" ? "success" : p.status === "failed" ? "danger" : "latte"}>{p.status}</Badge>
                   </td>

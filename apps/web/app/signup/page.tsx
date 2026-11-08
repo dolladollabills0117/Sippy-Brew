@@ -11,7 +11,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   return (
     <div className="mx-auto max-w-md">
       <PageTitle sub={shop ? "Set up your shop and start taking pickup orders." : "A few seconds, then pick your plan."}>
-        {shop ? "List your shop" : "Join Sippy Brew"}
+        {shop ? "List your shop" : "Get your pass"}
       </PageTitle>
       <Card>
         <Suspense fallback={<SkeletonList rows={3} />}>

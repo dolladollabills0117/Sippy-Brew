@@ -7,6 +7,7 @@ import {
   dayBounds,
   dayKey,
   monthBounds,
+  overageProcessingFee,
   normalizeShortCode,
   parseQrPayload,
   RULES,
@@ -20,7 +21,7 @@ import {
   type ShopHours,
 } from "@sippy/core";
 import type { Session } from "./auth";
-import { captureUpgrade, voidUpgrade } from "./billing";
+import { captureOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPayout, mapPost, mapShop, ORDER_SELECT } from "./db";
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { getLiveSubscription, getOrder } from "./member";
@@ -67,16 +68,16 @@ export async function saveShop(
 
 // ---- Orders ----
 
-/** Cancel: return the pass (if still in the current period) and release any upgrade hold. */
-export async function cancelOrderRow(row: { id: string; member_id: string; subscription_id: string; period_start: string; upgrade_payment_intent: string | null; upgrade_status: string }) {
+/** Cancel: return the pass (if still in the current period) and release any overage hold. */
+export async function cancelOrderRow(row: { id: string; member_id: string; subscription_id: string; period_start: string; overage_payment_intent: string | null; overage_status: string }) {
   const db = supabaseAdmin();
   const sub = await getLiveSubscription(row.member_id);
   const release = Boolean(sub && sub.id === row.subscription_id && canReleasePass(row.period_start, sub.currentPeriodStart));
   const { error } = await db.rpc("cancel_order", { p_order: row.id, p_refund: release });
   if (error) throw fromDbError(error);
-  if (row.upgrade_payment_intent && row.upgrade_status === "authorized") {
-    const ok = await voidUpgrade(row.upgrade_payment_intent).then(() => true, () => false);
-    await db.from("orders").update({ upgrade_status: ok ? "voided" : "failed" }).eq("id", row.id);
+  if (row.overage_payment_intent && row.overage_status === "authorized") {
+    const ok = await voidOverage(row.overage_payment_intent).then(() => true, () => false);
+    await db.from("orders").update({ overage_status: ok ? "voided" : "failed" }).eq("id", row.id);
   }
 }
 
@@ -118,7 +119,7 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
   const db = supabaseAdmin();
   const now = new Date();
 
-  let q = db.from("redemptions").select("*, orders!inner(shop_id, status, total)");
+  let q = db.from("redemptions").select("*, orders!inner(shop_id, status, total, pass_covered_amount)");
   if (input.qr) {
     const token = parseQrPayload(input.qr);
     if (!token) throw badRequest("NOT_SIPPY", "That isn't a Sippy Brew code.");
@@ -142,7 +143,8 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
   );
   if (!check.ok) throw new AppError(check.code === "EXPIRED" ? 410 : 409, check.code, check.message);
 
-  const split = splitOrder(r.orders.total);
+  // Commission is on the pass-covered value only.
+  const split = splitOrder(r.orders.pass_covered_amount);
   const { error } = await db.rpc("redeem_qr", {
     p_redemption: r.id,
     p_shop: shop.id,
@@ -152,11 +154,13 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
   });
   if (error) throw fromDbError(error);
 
-  // The drink is handed over: collect any upgrade the member authorized at order time.
-  const { data: paid } = await db.from("orders").select("upgrade_payment_intent, upgrade_status").eq("id", r.order_id).single();
-  if (paid?.upgrade_payment_intent && paid.upgrade_status === "authorized") {
-    const ok = await captureUpgrade(paid.upgrade_payment_intent);
-    await db.from("orders").update({ upgrade_status: ok ? "captured" : "failed" }).eq("id", r.order_id);
+  // The drink is handed over: collect the overage the member confirmed at checkout. The
+  // shop pays its card processing: the actual Stripe fee, or the configured estimate.
+  const { data: paid } = await db.from("orders").select("overage_amount, overage_payment_intent, overage_status").eq("id", r.order_id).single();
+  if (paid?.overage_payment_intent && paid.overage_status === "authorized") {
+    const res = await captureOverage(paid.overage_payment_intent);
+    const fee = res.ok ? Math.min(paid.overage_amount, res.feeCents ?? overageProcessingFee(paid.overage_amount)) : 0;
+    await db.from("orders").update({ overage_status: res.ok ? "captured" : "failed", overage_fee: fee }).eq("id", r.order_id);
   }
 
   const order = await getOrder(r.order_id);
@@ -224,7 +228,7 @@ export async function getShopStats(s: Session) {
   const month = monthBounds(now, RULES.timeZone);
   // This month's orders plus each member's earlier first visit, for new vs. returning.
   const [{ data: recent }, { data: earlier }] = await Promise.all([
-    db.from("orders").select("id, member_id, total, status, created_at, redeemed_at, order_items(name, quantity)").eq("shop_id", shopRow.id).gte("created_at", new Date(month.start.getTime() - 7 * 864e5).toISOString()),
+    db.from("orders").select("id, member_id, total, pass_covered_amount, overage_amount, overage_fee, overage_status, status, created_at, redeemed_at, order_items(name, quantity)").eq("shop_id", shopRow.id).gte("created_at", new Date(month.start.getTime() - 7 * 864e5).toISOString()),
     db.from("orders").select("member_id, redeemed_at").eq("shop_id", shopRow.id).eq("status", "picked_up").lt("redeemed_at", month.start.toISOString()).limit(5000),
   ]);
   const orders = [
@@ -233,6 +237,9 @@ export async function getShopStats(s: Session) {
       id: o.id,
       memberId: o.member_id,
       totalCents: o.total,
+      passCoveredCents: o.pass_covered_amount,
+      overageCents: o.overage_amount,
+      overageFeeCents: o.overage_status === "captured" ? o.overage_fee : undefined,
       status: o.status,
       createdAt: o.created_at,
       redeemedAt: o.redeemed_at,

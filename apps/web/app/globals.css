@@ -11,6 +11,7 @@
   --color-burnt-sugar: var(--brand-burnt-sugar);
   --color-burnt-sugar-ink: var(--brand-burnt-sugar-ink);
   --color-caramel: var(--brand-caramel);
+  --color-honey: var(--brand-honey);
   --color-latte: var(--brand-latte);
   --color-vanilla-bean: var(--brand-vanilla-bean);
   --color-cream-swirl: var(--brand-cream-swirl);
@@ -94,6 +95,18 @@
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
+
+/* The logo's "SB" uses Caprasimo; next/font renames the family, so point the SVG text at it. */
+.logo text {
+  font-family: var(--font-caprasimo), Caprasimo, serif;
+}
+
+/* Hero beans: verbatim from the brand spec. */
+.hero-beans .drop { animation: drop 0.8s ease-out both; animation-delay: var(--d); }
+.hero-beans .dance { transform-box: fill-box; transform-origin: center; animation: dance 0.9s ease-in-out 1s 3; }
+@keyframes drop { from { transform: translateY(-60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes dance { 0%,100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-12deg) translateY(-6px); } 50% { transform: rotate(8deg); } 75% { transform: rotate(-6deg) translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .hero-beans .drop, .hero-beans .dance { animation: none; } }
 
 .leaflet-container {
   font-family: var(--font-body);

@@ -10,6 +10,6 @@ export const GET = route(async (req: Request) => {
 
 export const POST = route(async (req: Request) => {
   const s = await requireApiSession(req, "member");
-  const body = await readJson<{ shopId: string; items: OrderLineInput[]; pickupAt: string }>(req);
+  const body = await readJson<{ shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null }>(req);
   return json({ order: await placeOrder(s, body) }, { status: 201 });
 });
