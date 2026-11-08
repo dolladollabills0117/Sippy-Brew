@@ -95,7 +95,10 @@ describe("brand accessibility (WCAG AA)", () => {
       expect(meetsAA(colors.pecan, bg)).toBe(true);
     }
   });
-  it("Caramel hover pairs with Espresso text", () => {
+  it("the Honey \"Get my pass\" button uses Espresso text", () => {
+    expect(meetsAA(colors.espresso, colors.honey, "text")).toBe(true);
+  });
+    it("Caramel hover pairs with Espresso text", () => {
     expect(meetsAA(colors.espresso, colors.caramel)).toBe(true);
   });
   it("Sky Blue alone is too light for focus rings on light surfaces (hence the Espresso outline)", () => {

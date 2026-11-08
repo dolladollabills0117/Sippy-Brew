@@ -14,6 +14,7 @@ export type OrderErrorCode =
   | "NOT_COFFEE"
   | "PASS_USED_TODAY"
   | "NO_PASSES_LEFT"
+  | "OVERAGE_CONFIRMATION_REQUIRED"
   | "INVALID_PICKUP";
 
 export interface OrderError {
@@ -47,6 +48,11 @@ export interface OrderContext {
   passDaysUsed: readonly string[];
   /** The member's tier max per day, in cents. */
   maxPassValueCents: number;
+  /**
+   * The overage the member confirmed at checkout, in cents. Required, and must match exactly,
+   * whenever the order is over the max. An overage is never charged without it.
+   */
+  confirmedOverageCents?: number | null;
   pickupAt: Date;
   now: Date;
   timeZone?: string;
@@ -66,9 +72,9 @@ export type OrderValidation =
       totalCents: number;
       lines: PricedLine[];
       /** Covered by today's pass. */
-      passValueCents: number;
-      /** Charged to the member as an upgrade. */
-      upgradeCents: number;
+      passCoveredCents: number;
+      /** Confirmed by and charged to the member. Goes 100% to the shop. */
+      overageCents: number;
       passDay: string;
       passesLeftAfter: number;
     }
@@ -126,18 +132,39 @@ export function validateOrder(lines: readonly OrderLineInput[], ctx: OrderContex
   if (!pickup.ok) return pickup;
 
   const split = splitPassValue(priced.totalCents, ctx.maxPassValueCents);
+  const confirm = checkOverageConfirmed(split.overageCents, ctx.confirmedOverageCents);
+  if (!confirm.ok) return confirm;
   return {
     ok: true,
     totalCents: priced.totalCents,
     lines: priced.lines,
-    passValueCents: split.passValueCents,
-    upgradeCents: split.upgradeCents,
+    passCoveredCents: split.passCoveredCents,
+    overageCents: split.overageCents,
     passDay: pass.passDay,
     passesLeftAfter: pass.passesLeftAfter,
   };
 }
 
-/** Order statuses the shop moves through. "cancelled" returns the pass and voids any upgrade charge. */
+/**
+ * An order over the pass max needs the member's explicit confirmation of the exact overage,
+ * after seeing the pass amount, overage and total. A stale confirmation (the cart changed)
+ * doesn't count.
+ */
+export function checkOverageConfirmed(
+  overageCents: number,
+  confirmedOverageCents: number | null | undefined,
+): { ok: true } | (OrderError & { overageCents: number }) {
+  if (overageCents === 0) return { ok: true };
+  if (confirmedOverageCents === overageCents) return { ok: true };
+  return {
+    ok: false,
+    code: "OVERAGE_CONFIRMATION_REQUIRED",
+    overageCents,
+    message: `This order is $${(overageCents / 100).toFixed(2)} over your pass. Please confirm the overage to continue.`,
+  };
+}
+
+/** Order statuses the shop moves through. "cancelled" returns the pass and releases any overage hold. */
 export const ORDER_STATUSES = ["received", "preparing", "ready", "picked_up", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 

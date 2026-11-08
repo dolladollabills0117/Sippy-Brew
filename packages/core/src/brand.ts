@@ -13,6 +13,7 @@ export const colors = {
    */
   burntSugarInk: "#8E5226",
   caramel: "#C68E4E", // hover states, highlights (pair with Espresso text, not Cream)
+  honey: "#E9B44C", // "Get my pass" call to action, with Espresso text (7.3:1)
   latte: "#D9C4A3", // borders, dividers, soft backgrounds, headline glow
   vanillaBean: "#F3E5C7", // main page background
   creamSwirl: "#FBF6EC", // cards and surfaces

@@ -1,7 +1,8 @@
 import tiersJson from "../config/tiers.json";
 import rulesJson from "../config/rules.json";
+import siteJson from "../config/site.json";
 
-export type TierId = "casual" | "routine" | "daily_ritual";
+export type TierId = "affogato" | "macchiato" | "double_espresso";
 
 export interface Tier {
   id: TierId;
@@ -10,7 +11,7 @@ export interface Tier {
   priceCents: number;
   /** Daily Passes included per subscription period. One pass covers one calendar day. */
   passesPerMonth: number;
-  /** Most a pass covers on its day, in cents. Anything above is an upgrade the member pays. */
+  /** Most a pass covers on its day, in cents. Anything above is an overage the member pays. */
   maxPassValueCents: number;
   blurb: string;
   /** Name of the env var that holds this tier's Stripe Price ID (server only). */
@@ -19,8 +20,11 @@ export interface Tier {
 
 export interface Rules {
   passesPerDay: number;
-  /** Upgrades below this aren't charged (Stripe's minimum card charge); the platform absorbs them. */
-  minUpgradeChargeCents: number;
+  /** Overages below this can't be charged (Stripe's minimum card charge) and are waived. */
+  minOverageChargeCents: number;
+  /** Card processing on overage charges, paid by the shop: bps of the amount plus a fixed fee. */
+  overageProcessingFeeBps: number;
+  overageProcessingFeeFixedCents: number;
   commissionBps: number;
   qrTtlSeconds: number;
   timeZone: string;
@@ -37,6 +41,8 @@ export const CURRENCY: string = tiersJson.currency;
 
 const { $comment: _ignored, ...rules } = rulesJson;
 export const RULES: Readonly<Rules> = Object.freeze(rules as Rules);
+
+export const SITE: Readonly<{ launchCity: string }> = Object.freeze({ launchCity: siteJson.launchCity });
 
 export function getTier(id: string): Tier {
   const tier = TIERS.find((t) => t.id === id);

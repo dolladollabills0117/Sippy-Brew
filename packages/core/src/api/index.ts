@@ -79,7 +79,7 @@ export function createApiClient(opts: ApiClientOptions) {
     listShops: (params: { near?: "home" | "work"; lat?: number; lng?: number } = {}) =>
       request<{ shops: ShopListItem[]; spotlights: ShopListItem[]; posts: Post[] }>("GET", `/api/shops${q(params)}`),
     getShop: (id: string) => request<{ shop: Shop; menu: MenuItem[]; post: Post | null; saved: boolean }>("GET", `/api/shops/${id}`),
-    placeOrder: (input: { shopId: string; items: OrderLineInput[]; pickupAt: string }) => request<{ order: Order }>("POST", "/api/orders", input),
+    placeOrder: (input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null }) => request<{ order: Order }>("POST", "/api/orders", input),
     myOrders: () => request<{ orders: Order[] }>("GET", "/api/orders"),
     getOrder: (id: string) => request<{ order: Order }>("GET", `/api/orders/${id}`),
     issueQr: (orderId: string) => request<QrTicket>("POST", `/api/orders/${orderId}/qr`),

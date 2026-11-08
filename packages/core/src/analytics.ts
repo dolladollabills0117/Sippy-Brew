@@ -1,11 +1,15 @@
 import { RULES } from "./config";
-import { splitOrder } from "./rules/commission";
+import { orderPayout } from "./rules/commission";
 import { dayBounds, isWithin, monthBounds, weekBounds, zonedParts } from "./time";
 
 export interface StatsOrder {
   id: string;
   memberId: string;
   totalCents: number;
+  /** Pass-covered part of the total (defaults to the whole total). */
+  passCoveredCents?: number;
+  overageCents?: number;
+  overageFeeCents?: number | null;
   status: string;
   createdAt: Date | string;
   redeemedAt?: Date | string | null;
@@ -53,7 +57,11 @@ export function shopStats(allTimeOrders: readonly StatsOrder[], now: Date, timeZ
     if (isWithin(o.at, week)) {
       redemptions.week++;
       grossCents.week += o.totalCents;
-      weekNet += splitOrder(o.totalCents).netCents;
+      weekNet += orderPayout({
+        passCoveredCents: o.passCoveredCents ?? o.totalCents - (o.overageCents ?? 0),
+        overageCents: o.overageCents ?? 0,
+        overageFeeCents: o.overageFeeCents ?? undefined,
+      }).shopCents;
     }
     if (isWithin(o.at, month)) {
       redemptions.month++;

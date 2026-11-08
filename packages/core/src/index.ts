@@ -12,4 +12,5 @@ export * from "./rules/menu";
 export * from "./rules/hours";
 export * from "./rules/posts";
 export * from "./rules/order";
+export { logoSvg, BEAN_PATH } from "./logo";
 export { brand, colors, gradient, fonts, radii, spacing, shadows, focusRing, touchTarget } from "./brand";

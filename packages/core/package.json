@@ -10,7 +10,8 @@
     "./brand": "./src/brand.ts",
     "./api": "./src/api/index.ts",
     "./config/tiers.json": "./config/tiers.json",
-    "./config/rules.json": "./config/rules.json"
+    "./config/rules.json": "./config/rules.json",
+    "./logo": "./src/logo.ts"
   },
   "scripts": {
     "test": "vitest run",

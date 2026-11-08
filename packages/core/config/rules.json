@@ -1,7 +1,9 @@
 {
   "$comment": "Platform-wide business rules shared by web, consumer app and shop app. Amounts in cents.",
   "passesPerDay": 1,
-  "minUpgradeChargeCents": 50,
+  "minOverageChargeCents": 50,
+  "overageProcessingFeeBps": 290,
+  "overageProcessingFeeFixedCents": 30,
   "commissionBps": 1200,
   "qrTtlSeconds": 30,
   "timeZone": "America/New_York",

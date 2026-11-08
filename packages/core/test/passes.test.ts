@@ -8,6 +8,11 @@ import {
   passBalance,
   planRenewal,
   splitPassValue,
+  DEFAULT_TIER,
+  orderPayout,
+  overageIsCharged,
+  overageProcessingFee,
+  RULES,
   TIERS,
   validatePassEntry,
   type PassLedgerEntry,
@@ -18,12 +23,13 @@ const periodStart = "2026-11-01T14:00:00.000Z";
 const prevStart = "2026-10-01T14:00:00.000Z";
 
 describe("tier config", () => {
-  it("has the three tiers with passes and max values", () => {
+  it("has the three tiers, each with an $8.00 max per pass", () => {
     expect(TIERS.map((t) => [t.id, t.name, t.priceCents, t.passesPerMonth, t.maxPassValueCents])).toEqual([
-      ["casual", "Casual Brew", 3000, 5, 600],
-      ["routine", "Routine", 6000, 8, 750],
-      ["daily_ritual", "Daily Ritual", 10000, 12, 833],
+      ["affogato", "Affogato", 4000, 5, 800],
+      ["macchiato", "Macchiato", 9600, 12, 800],
+      ["double_espresso", "Double Espresso", 16000, 20, 800],
     ]);
+    expect(DEFAULT_TIER).toBe("macchiato");
   });
 });
 
@@ -54,8 +60,8 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
     expect(checkPassAvailable({ passesLeft: 0, passDaysUsed: [], now, timeZone: TZ })).toMatchObject({ ok: false, code: "NO_PASSES_LEFT" });
   });
 
-  it("a Casual Brew member gets exactly 5 passes, then is blocked", () => {
-    const tier = getTier("casual");
+  it("an Affogato member gets exactly 5 passes, then is blocked", () => {
+    const tier = getTier("affogato");
     const entries: PassLedgerEntry[] = [{ type: "grant", passes: tier.passesPerMonth, periodStart }];
     const days: string[] = [];
     let used = 0;
@@ -75,7 +81,7 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
   });
 
   it("monthEconomics rejects more uses than the tier includes", () => {
-    expect(() => monthEconomics(getTier("casual"), [600, 600, 600, 600, 600, 600])).toThrow();
+    expect(() => monthEconomics(getTier("affogato"), [800, 800, 800, 800, 800, 800])).toThrow();
   });
 
   it("a cancelled order releases its pass", () => {
@@ -94,43 +100,59 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
   });
 });
 
-describe("drinks above the max are split between pass value and upgrade", () => {
-  it("covers a drink under the max in full", () => {
-    expect(splitPassValue(475, 600)).toEqual({ totalCents: 475, passValueCents: 475, upgradeCents: 0 });
+describe("the pass covers the first $8.00; the rest is overage", () => {
+  it("$8.00 order: the pass covers it, no overage", () => {
+    expect(splitPassValue(800, 800)).toEqual({ totalCents: 800, passCoveredCents: 800, overageCents: 0 });
   });
-  it("covers a drink at exactly the max in full", () => {
-    expect(splitPassValue(750, 750)).toEqual({ totalCents: 750, passValueCents: 750, upgradeCents: 0 });
+  it("$9.50 order: the pass covers $8.00 and the member owes $1.50", () => {
+    expect(splitPassValue(950, 800)).toEqual({ totalCents: 950, passCoveredCents: 800, overageCents: 150 });
   });
-  it("charges the difference above the max as an upgrade", () => {
-    expect(splitPassValue(675, 600)).toEqual({ totalCents: 675, passValueCents: 600, upgradeCents: 75 });
-    expect(splitPassValue(925, 833)).toEqual({ totalCents: 925, passValueCents: 833, upgradeCents: 92 });
+  it("an order under $8.00 is covered in full", () => {
+    expect(splitPassValue(475, 800)).toEqual({ totalCents: 475, passCoveredCents: 475, overageCents: 0 });
   });
-  it("applies the max to the whole day's order, not per drink", () => {
-    // Two drinks on one pass: $3.25 + $4.25 = $7.50 against a $6.00 max.
-    expect(splitPassValue(325 + 425, 600)).toEqual({ totalCents: 750, passValueCents: 600, upgradeCents: 150 });
-  });
-  it("waives upgrades below the minimum card charge", async () => {
-    const { upgradeIsCharged, RULES } = await import("../src");
-    expect(RULES.minUpgradeChargeCents).toBe(50);
-    expect(upgradeIsCharged(49)).toBe(false);
-    expect(upgradeIsCharged(50)).toBe(true);
-  });
-  it("includes upgrades in the shop total and the 12% commission", () => {
-    const e = monthEconomics(getTier("casual"), [675]);
-    expect(e).toMatchObject({ coveredCents: 600, upgradeCents: 75, shopCents: 594 }); // 88% of $6.75 = $5.94
-    expect(e.platformCents).toBe(3000 + 75 - 594);
+  it("applies the $8.00 to the whole day's order, not per drink", () => {
+    // Two drinks on one pass: $4.25 + $5.25 = $9.50.
+    expect(splitPassValue(425 + 525, 800)).toMatchObject({ passCoveredCents: 800, overageCents: 150 });
   });
 });
 
-describe("commission and shop payout per member-month", () => {
+describe("overage money: 100% to the shop, no commission, shop pays processing", () => {
+  it("excludes overage from commission", () => {
+    const withOverage = orderPayout({ passCoveredCents: 800, overageCents: 150, overageFeeCents: 0 });
+    const withoutOverage = orderPayout({ passCoveredCents: 800, overageCents: 0 });
+    expect(withOverage.commissionCents).toBe(96); // 12% of $8.00 only
+    expect(withOverage.commissionCents).toBe(withoutOverage.commissionCents);
+  });
+  it("pays the shop the overage minus processing fees", () => {
+    // $1.50 overage, estimated card processing 2.9% + 30¢ = 4¢ + 30¢ = 34¢.
+    expect(overageProcessingFee(150)).toBe(34);
+    const p = orderPayout({ passCoveredCents: 800, overageCents: 150 });
+    expect(p).toEqual({ passCoveredCents: 800, commissionCents: 96, passNetCents: 704, overageCents: 150, processingFeeCents: 34, shopCents: 704 + 150 - 34 });
+  });
+  it("uses the actual Stripe fee when it's known", () => {
+    expect(orderPayout({ passCoveredCents: 800, overageCents: 300, overageFeeCents: 39 }).shopCents).toBe(704 + 300 - 39);
+  });
+  it("overage never changes the platform's take", () => {
+    const tier = getTier("macchiato");
+    const plain = monthEconomics(tier, Array(12).fill(800));
+    const over = monthEconomics(tier, Array(12).fill(950));
+    expect(over.platformCents).toBe(plain.platformCents);
+    expect(over.shopCents).toBe(plain.shopCents + 12 * (150 - 34));
+  });
+  it("overages under the minimum card charge can't be charged, so they're waived with no fee", () => {
+    expect(RULES.minOverageChargeCents).toBe(50);
+    expect(overageIsCharged(49)).toBe(false);
+    expect(overageIsCharged(50)).toBe(true);
+    expect(overageProcessingFee(25)).toBe(0);
+  });
+});
+
+describe("commission: 12% of pass-covered value; shop gets 88%", () => {
   const cases: [string, number, number, number][] = [
-    // tier, passes used (each at or above the max), shop $, platform $
-    ["casual", 5, 2640, 360],
-    ["casual", 3, 1584, 1416],
-    ["routine", 8, 5280, 720],
-    ["routine", 6, 3960, 2040],
-    ["daily_ritual", 12, 8796, 1204],
-    ["daily_ritual", 9, 6597, 3403],
+    // tier, passes used (each an $8.00 order), shop, platform
+    ["affogato", 5, 3520, 480],
+    ["macchiato", 12, 8448, 1152],
+    ["double_espresso", 20, 14080, 1920],
   ];
   for (const [tierId, used, shop, platform] of cases) {
     it(`${getTier(tierId).name}: ${used} passes used → shop $${(shop / 100).toFixed(2)}, platform $${(platform / 100).toFixed(2)}`, () => {
@@ -139,50 +161,53 @@ describe("commission and shop payout per member-month", () => {
       expect(e.shopCents).toBe(shop);
       expect(e.platformCents).toBe(platform);
       expect(e.shopCents + e.platformCents).toBe(tier.priceCents);
-      expect(e.passesUnused).toBe(tier.passesPerMonth - used);
     });
   }
+  it("the platform keeps the value of unused passes", () => {
+    const e = monthEconomics(getTier("affogato"), [800, 800, 800]); // 2 of 5 unused
+    expect(e).toMatchObject({ passesUnused: 2, shopCents: 3 * 704, platformCents: 4000 - 3 * 704 });
+  });
 });
 
 describe("unused passes expire on renewal and never carry over", () => {
   const prev: PassLedgerEntry[] = [
-    { type: "grant", passes: 8, periodStart: prevStart },
+    { type: "grant", passes: 12, periodStart: prevStart },
     { type: "use", passes: -1, periodStart: prevStart },
     { type: "use", passes: -1, periodStart: prevStart },
     { type: "use", passes: -1, periodStart: prevStart },
   ];
 
-  it("expires the 5 unused passes and grants a fresh 8", () => {
-    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("routine") })).toEqual([
-      { type: "expire", passes: -5, periodStart: prevStart, note: expect.any(String) },
-      { type: "grant", passes: 8, periodStart, note: expect.any(String) },
+  it("expires the 9 unused passes and grants a fresh 12", () => {
+    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("macchiato") })).toEqual([
+      { type: "expire", passes: -9, periodStart: prevStart, note: expect.any(String) },
+      { type: "grant", passes: 12, periodStart, note: expect.any(String) },
     ]);
   });
 
   it("the new balance is exactly the tier allowance however many were left", () => {
-    for (const usedLast of [0, 3, 8]) {
-      const previous: PassLedgerEntry[] = [{ type: "grant", passes: 8, periodStart: prevStart }];
+    for (const usedLast of [0, 3, 12]) {
+      const previous: PassLedgerEntry[] = [{ type: "grant", passes: 12, periodStart: prevStart }];
       for (let i = 0; i < usedLast; i++) previous.push({ type: "use", passes: -1, periodStart: prevStart });
-      const all = [...previous, ...planRenewal({ previousEntries: previous, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("routine") })];
-      expect(passBalance(all, periodStart)).toBe(8);
+      const all = [...previous, ...planRenewal({ previousEntries: previous, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("macchiato") })];
+      expect(passBalance(all, periodStart)).toBe(12);
       expect(passBalance(all, prevStart)).toBe(0);
-      expect(all.reduce((s, e) => s + e.passes, 0)).toBe(8);
+      expect(all.reduce((s, e) => s + e.passes, 0)).toBe(12);
     }
   });
 
   it("ignores old-period passes even if an expire entry was never written", () => {
-    expect(passBalance([...prev, { type: "grant", passes: 8, periodStart }], periodStart)).toBe(8);
+    expect(passBalance([...prev, { type: "grant", passes: 12, periodStart }], periodStart)).toBe(12);
   });
 
   it("first period only grants; downgrade grants the new tier's allowance", () => {
-    expect(planRenewal({ previousEntries: [], previousPeriodStart: null, newPeriodStart: periodStart, tier: getTier("daily_ritual") })).toEqual([
-      { type: "grant", passes: 12, periodStart, note: expect.any(String) },
+    expect(planRenewal({ previousEntries: [], previousPeriodStart: null, newPeriodStart: periodStart, tier: getTier("double_espresso") })).toEqual([
+      { type: "grant", passes: 20, periodStart, note: expect.any(String) },
     ]);
-    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("casual") }).at(-1)).toMatchObject({ type: "grant", passes: 5 });
+    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("affogato") }).at(-1)).toMatchObject({ type: "grant", passes: 5 });
   });
 
   it("detects duplicate grants and won't release a pass from an expired period", () => {
-    expect(hasGrantForPeriod([...prev, { type: "grant", passes: 8, periodStart }], periodStart)).toBe(true);
+    expect(hasGrantForPeriod([...prev, { type: "grant", passes: 12, periodStart }], periodStart)).toBe(true);
     expect(hasGrantForPeriod(prev, periodStart)).toBe(false);
     expect(canReleasePass(prevStart, periodStart)).toBe(false);
     expect(canReleasePass(periodStart, periodStart)).toBe(true);

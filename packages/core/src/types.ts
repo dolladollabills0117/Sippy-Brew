@@ -78,7 +78,7 @@ export interface OrderItem {
   unitPriceCents: number;
 }
 
-export type UpgradeStatus = "none" | "authorized" | "captured" | "voided" | "failed" | "waived";
+export type OverageStatus = "none" | "authorized" | "captured" | "voided" | "failed" | "waived";
 
 export interface Order {
   id: string;
@@ -87,11 +87,11 @@ export interface Order {
   shopId: string;
   shopName: string;
   status: OrderStatus;
-  /** Full value at menu prices = passValueCents + upgradeCents. */
+  /** Full value at menu prices = passCoveredCents + overageCents. */
   totalCents: number;
-  passValueCents: number;
-  upgradeCents: number;
-  upgradeStatus: UpgradeStatus;
+  passCoveredCents: number;
+  overageCents: number;
+  overageStatus: OverageStatus;
   passDay: string;
   createdAt: string;
   pickupTime: string;
@@ -129,6 +129,12 @@ export interface Payout {
   grossCents: number;
   commissionCents: number;
   netCents: number;
+  /** Overages, 100% to the shop. */
+  overageTotalCents: number;
+  /** Card processing on overages, paid by the shop. */
+  processingFeesCents: number;
+  /** net + overage total - processing fees. */
+  transferCents: number;
   orderCount: number;
   status: PayoutStatus;
   paidAt: string | null;

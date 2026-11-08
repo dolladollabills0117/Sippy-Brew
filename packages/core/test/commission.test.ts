@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RULES, splitOrder, summarizePayout } from "../src";
 
-describe("commission math (12% platform, 88% shop)", () => {
+describe("commission math on pass-covered value (12% platform, 88% shop)", () => {
   it("uses 12% from config", () => {
     expect(RULES.commissionBps).toBe(1200);
   });
@@ -29,12 +29,25 @@ describe("commission math (12% platform, 88% shop)", () => {
   });
 
   it("summarizes a payout as the sum of per-order splits", () => {
-    const totals = [480, 480, 480]; // each 57.6 → 58
-    expect(summarizePayout(totals)).toEqual({ grossCents: 1440, commissionCents: 174, netCents: 1266, orderCount: 3 });
+    const orders = [480, 480, 480].map((c) => ({ passCoveredCents: c, overageCents: 0 })); // each 57.6 → 58
+    expect(summarizePayout(orders)).toEqual({
+      grossCents: 1440, commissionCents: 174, netCents: 1266, overageTotalCents: 0, processingFeesCents: 0, transferCents: 1266, orderCount: 3,
+    });
+  });
+
+  it("adds overages to the transfer, less processing, with no commission on them", () => {
+    const s = summarizePayout([
+      { passCoveredCents: 800, overageCents: 150 }, // estimated fee 34¢
+      { passCoveredCents: 800, overageCents: 0 },
+      { passCoveredCents: 800, overageCents: 300, overageFeeCents: 39 }, // actual Stripe fee
+    ]);
+    expect(s).toEqual({
+      grossCents: 2400, commissionCents: 288, netCents: 2112, overageTotalCents: 450, processingFeesCents: 73, transferCents: 2112 + 450 - 73, orderCount: 3,
+    });
   });
 
   it("an empty week pays nothing", () => {
-    expect(summarizePayout([])).toEqual({ grossCents: 0, commissionCents: 0, netCents: 0, orderCount: 0 });
+    expect(summarizePayout([])).toMatchObject({ grossCents: 0, commissionCents: 0, netCents: 0, transferCents: 0, orderCount: 0 });
   });
 
   it("rejects bad input", () => {

@@ -16,6 +16,7 @@ const pickupAt = new Date(now.getTime() + 15 * 60_000);
 const menu = [
   { id: "latte", shopId: "s1", name: "Latte", priceCents: 525, category: "espresso", available: true, soldOutToday: false },
   { id: "drip", shopId: "s1", name: "Drip", priceCents: 275, category: "brewed", available: true, soldOutToday: false },
+  { id: "cortado", shopId: "s1", name: "Cortado", priceCents: 425, category: "espresso", available: true, soldOutToday: false },
   { id: "cold", shopId: "s1", name: "Cold brew", priceCents: 500, category: "cold", available: true, soldOutToday: true },
   { id: "other", shopId: "s2", name: "Cortado", priceCents: 400, category: "espresso", available: true, soldOutToday: false },
 ];
@@ -26,7 +27,7 @@ const ctx = (over: Partial<OrderContext> = {}): OrderContext => ({
   menu,
   passesLeft: 8,
   passDaysUsed: [],
-  maxPassValueCents: 750,
+  maxPassValueCents: 800,
   pickupAt,
   now,
   timeZone: "America/New_York",
@@ -36,12 +37,19 @@ const ctx = (over: Partial<OrderContext> = {}): OrderContext => ({
 describe("validateOrder", () => {
   it("prices from server menu data and covers a drink under the max", () => {
     const r = validateOrder([{ menuItemId: "latte", quantity: 1 }], ctx());
-    expect(r).toMatchObject({ ok: true, totalCents: 525, passValueCents: 525, upgradeCents: 0, passDay: "2026-11-04", passesLeftAfter: 7 });
+    expect(r).toMatchObject({ ok: true, totalCents: 525, passCoveredCents: 525, overageCents: 0, passDay: "2026-11-04", passesLeftAfter: 7 });
   });
 
-  it("splits a day's order above the max into pass value + upgrade", () => {
+  it("$8.00 order: no overage and no confirmation needed", () => {
     const r = validateOrder([{ menuItemId: "latte", quantity: 1 }, { menuItemId: "drip", quantity: 1 }], ctx());
-    expect(r).toMatchObject({ ok: true, totalCents: 800, passValueCents: 750, upgradeCents: 50 });
+    expect(r).toMatchObject({ ok: true, totalCents: 800, passCoveredCents: 800, overageCents: 0 });
+  });
+
+  it("$9.50 order: refuses until the member confirms the exact $1.50 overage", () => {
+    const items = [{ menuItemId: "latte", quantity: 1 }, { menuItemId: "cortado", quantity: 1 }]; // 5.25 + 4.25
+    expect(validateOrder(items, ctx())).toMatchObject({ ok: false, code: "OVERAGE_CONFIRMATION_REQUIRED", overageCents: 150 });
+    expect(validateOrder(items, ctx({ confirmedOverageCents: 100 }))).toMatchObject({ ok: false, code: "OVERAGE_CONFIRMATION_REQUIRED" });
+    expect(validateOrder(items, ctx({ confirmedOverageCents: 150 }))).toMatchObject({ ok: true, totalCents: 950, passCoveredCents: 800, overageCents: 150 });
   });
 
   it("enforces one pass per day", () => {

@@ -1,14 +1,15 @@
 import { RULES, type Tier } from "../config";
 import { assertCents } from "../money";
 import { dayKey } from "../time";
-import { splitOrder } from "./commission";
+import { orderPayout } from "./commission";
 
 /**
  * Daily Passes.
  *
  * - Each tier includes `passesPerMonth` passes per subscription period.
- * - One pass covers one calendar day (platform time zone) at one shop, up to the tier's
- *   `maxPassValueCents`. Anything above that is an upgrade the member pays through the app.
+ * - One pass covers one calendar day (platform time zone) at one shop: the first
+ *   `maxPassValueCents` ($8.00) of that day's order. Anything above is an overage the member
+ *   confirms and pays in the app; it goes 100% to the shop.
  * - At most one pass per member per calendar day, across all shops.
  * - Passes reset on the renewal date. Unused passes expire; nothing rolls over.
  */
@@ -117,27 +118,19 @@ export function checkPassAvailable(params: {
 export interface PassSplit {
   /** Full order value at the shop's menu prices. */
   totalCents: number;
-  /** Covered by the pass: min(total, tier max). */
-  passValueCents: number;
-  /** Paid by the member through the app (upgrades: lattes, extra shots, bigger sizes). */
-  upgradeCents: number;
+  /** Covered by the pass: the first min(total, tier max). */
+  passCoveredCents: number;
+  /** Paid by the member after confirming at checkout. Goes 100% to the shop. */
+  overageCents: number;
 }
 
-/** Split an order between what the pass covers and the upgrade the member pays. */
+/** The pass covers the first $8.00 (the tier max) of the day's order; the rest is overage. */
 export function splitPassValue(totalCents: number, maxPassValueCents: number): PassSplit {
   assertCents(totalCents, "totalCents");
   assertCents(maxPassValueCents, "maxPassValueCents");
   if (totalCents < 0 || maxPassValueCents < 0) throw new Error("amounts cannot be negative");
-  const passValueCents = Math.min(totalCents, maxPassValueCents);
-  return { totalCents, passValueCents, upgradeCents: totalCents - passValueCents };
-}
-
-/**
- * Upgrades under the minimum card charge (Stripe: $0.50) are waived for the member. The shop is
- * still paid on the full order value; the platform absorbs the difference.
- */
-export function upgradeIsCharged(upgradeCents: number, minChargeCents: number = RULES.minUpgradeChargeCents): boolean {
-  return upgradeCents >= minChargeCents;
+  const passCoveredCents = Math.min(totalCents, maxPassValueCents);
+  return { totalCents, passCoveredCents, overageCents: totalCents - passCoveredCents };
 }
 
 // ---------------------------------------------------------------------------
@@ -148,34 +141,37 @@ export interface MonthEconomics {
   passesUsed: number;
   passesUnused: number;
   coveredCents: number;
-  upgradeCents: number;
-  /** Paid to shops: 88% of covered value plus upgrades (per-order rounding). */
+  overageCents: number;
+  /** Paid to shops: 88% of covered value, plus overages less processing fees. */
   shopCents: number;
-  /** Platform keeps: subscription price + upgrades − shop payouts. Includes unused passes. */
+  /** Platform keeps: subscription price minus the shops' share of covered value. Includes unused passes. Overages never count. */
   platformCents: number;
 }
 
 /**
  * Where one member's money goes in a period. `orderTotalsCents` is the full value of each
- * redeemed pass order. Platform revenue = subscription + upgrades − shop share.
+ * redeemed pass order. Overages pass straight through to the shop (less card processing).
  */
 export function monthEconomics(tier: Pick<Tier, "priceCents" | "passesPerMonth" | "maxPassValueCents">, orderTotalsCents: readonly number[], commissionBps = RULES.commissionBps): MonthEconomics {
   if (orderTotalsCents.length > tier.passesPerMonth) throw new Error("more passes used than the tier includes");
   let covered = 0;
-  let upgrades = 0;
+  let overage = 0;
   let shop = 0;
+  let passNet = 0;
   for (const total of orderTotalsCents) {
     const s = splitPassValue(total, tier.maxPassValueCents);
-    covered += s.passValueCents;
-    upgrades += s.upgradeCents;
-    shop += splitOrder(total, commissionBps).netCents;
+    const p = orderPayout({ passCoveredCents: s.passCoveredCents, overageCents: s.overageCents }, commissionBps);
+    covered += s.passCoveredCents;
+    overage += s.overageCents;
+    shop += p.shopCents;
+    passNet += p.passNetCents;
   }
   return {
     passesUsed: orderTotalsCents.length,
     passesUnused: tier.passesPerMonth - orderTotalsCents.length,
     coveredCents: covered,
-    upgradeCents: upgrades,
+    overageCents: overage,
     shopCents: shop,
-    platformCents: tier.priceCents + upgrades - shop,
+    platformCents: tier.priceCents - passNet,
   };
 }
