@@ -21,7 +21,9 @@ jobs:
         run: pnpm typecheck
       - name: Web build
         run: pnpm build:web
-      - name: Demo build
-        run: pnpm demo:build
+      - name: Demo build (and check the published copy in docs/ is up to date)
+        run: |
+          pnpm demo:build
+          git diff --exit-code -- docs demo/dist || (echo "Run pnpm demo:build and commit docs/ and demo/dist/" && exit 1)
       - name: Schema and database rules
         run: bash scripts/check-schema.sh

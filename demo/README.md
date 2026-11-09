@@ -37,10 +37,14 @@ pnpm demo:test    # run the end-to-end checks (needs Playwright with Chromium in
 
 **Live at https://dolladollabills0117.github.io/Sippy-Brew/** (GitHub Pages).
 
-`.github/workflows/pages.yml` rebuilds and republishes the demo on every push to `main`. The build
-writes `dist/index.html`, a full page with share-preview tags, so links pasted into LinkedIn,
-Slack or iMessage show `docs/marketing/sippy-brew-card.png`. One-time setup in the repo:
-**Settings → Pages → Build and deployment → Source: GitHub Actions**.
+`pnpm demo:build` writes the site into `docs/` (`index.html`, the share card and `.nojekyll`),
+and GitHub Pages serves that folder from `main`. `index.html` has share-preview tags, so links
+pasted into LinkedIn, Slack or iMessage show `docs/marketing/sippy-brew-card.png`.
+
+One-time setup in the repo: **Settings → Pages → Build and deployment → Source: Deploy from a
+branch → Branch: `main`, folder: `/docs` → Save.** After that, every push to `main` that changes
+`docs/` republishes the site within a minute or two. CI fails if `docs/` is out of date with the
+build.
 
 The built files are self-contained apart from Google Fonts, so any static host works too. What a viewer does is saved
 only in their own browser. "Reset the demo" on the Account tab starts over.

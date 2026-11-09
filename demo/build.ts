@@ -63,7 +63,7 @@ ${css}
   console.log(`Built ${out} (${Math.round(page.length / 1024)} KB)`);
 
   // GitHub Pages: a complete HTML document with share-preview tags, so a link pasted into
-  // LinkedIn, Slack or iMessage shows the Sippy Brew card. Deployed by .github/workflows/pages.yml.
+  // LinkedIn, Slack or iMessage shows the Sippy Brew card. Published from docs/ on main.
   const site = process.env.PAGES_URL ?? "https://dolladollabills0117.github.io/Sippy-Brew/";
   const title = "Sippy Brew: live app demo";
   const description = "One monthly pass. Any local coffee shop. Tap through the live demo: pick a pass, order ahead, customize your drink and show your pickup QR, or run a shop from the merchant portal.";
@@ -100,7 +100,13 @@ ${page.slice(page.indexOf("</style>") + "</style>".length).trim()}
   writeFileSync(join(here, "dist/index.html"), doc);
   copyFileSync(join(root, "docs/marketing/sippy-brew-card.png"), join(here, "dist/sippy-brew-card.png"));
   writeFileSync(join(here, "dist/.nojekyll"), "");
-  console.log(`Built ${join(here, "dist/index.html")} for GitHub Pages`);
+
+  // GitHub Pages serves the docs/ folder on main (Settings → Pages → Deploy from a branch →
+  // main → /docs). Keep the published copy there in step with the build.
+  writeFileSync(join(root, "docs/index.html"), doc);
+  copyFileSync(join(root, "docs/marketing/sippy-brew-card.png"), join(root, "docs/sippy-brew-card.png"));
+  writeFileSync(join(root, "docs/.nojekyll"), "");
+  console.log(`Built ${join(here, "dist/index.html")} and docs/index.html for GitHub Pages`);
 }
 
 main().catch((e) => {

@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Sippy Brew: live app demo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Nunito:wght@400;600;700;800&display=swap">
+<meta name="description" content="One monthly pass. Any local coffee shop. Tap through the live demo: pick a pass, order ahead, customize your drink and show your pickup QR, or run a shop from the merchant portal.">
+<meta name="theme-color" content="#F3E5C7">
+<link rel="canonical" href="https://dolladollabills0117.github.io/Sippy-Brew/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20260%20260%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20role%3D%22img%22%20aria-label%3D%22Sippy%20Brew%22%3E%0A%3Ccircle%20cx%3D%22130%22%20cy%3D%22130%22%20r%3D%22124%22%20fill%3D%22%23D9C4A3%22%2F%3E%0A%3Crect%20x%3D%22226%22%20y%3D%22118%22%20width%3D%2226%22%20height%3D%2224%22%20rx%3D%2210%22%20fill%3D%22%23FBF6EC%22%20stroke%3D%22%23B4A08A%22%20stroke-width%3D%222%22%2F%3E%0A%3Ccircle%20cx%3D%22130%22%20cy%3D%22130%22%20r%3D%22108%22%20fill%3D%22%23FBF6EC%22%20stroke%3D%22%23B4A08A%22%20stroke-width%3D%222%22%2F%3E%0A%3Ccircle%20cx%3D%22130%22%20cy%3D%22130%22%20r%3D%2290%22%20fill%3D%22%233B2A1E%22%2F%3E%0A%3Cg%20fill%3D%22%23C68E4E%22%20opacity%3D%220.5%22%3E%0A%3Ccircle%20cx%3D%2272%22%20cy%3D%2288%22%20r%3D%226%22%2F%3E%3Ccircle%20cx%3D%22188%22%20cy%3D%2280%22%20r%3D%224%22%2F%3E%3Ccircle%20cx%3D%22196%22%20cy%3D%22184%22%20r%3D%227%22%2F%3E%3Ccircle%20cx%3D%2266%22%20cy%3D%22176%22%20r%3D%225%22%2F%3E%0A%3C%2Fg%3E%0A%3Ctext%20x%3D%220%22%20y%3D%220%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22central%22%20font-family%3D%22Caprasimo%2C%20serif%22%20font-size%3D%2266%22%20fill%3D%22%23F3E5C7%22%20transform%3D%22translate(130%20130)%20scale(0.94%201.16)%22%3ESB%3C%2Ftext%3E%0A%3C%2Fsvg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sippy Brew">
+<meta property="og:title" content="Sippy Brew: live app demo">
+<meta property="og:description" content="One monthly pass. Any local coffee shop. Tap through the live demo: pick a pass, order ahead, customize your drink and show your pickup QR, or run a shop from the merchant portal.">
+<meta property="og:url" content="https://dolladollabills0117.github.io/Sippy-Brew/">
+<meta property="og:image" content="https://dolladollabills0117.github.io/Sippy-Brew/sippy-brew-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="Sippy Brew: Your neighborhood, brewed daily. Two phones show the member home screen and a pickup QR code.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sippy Brew: live app demo">
+<meta name="twitter:description" content="One monthly pass. Any local coffee shop. Tap through the live demo: pick a pass, order ahead, customize your drink and show your pickup QR, or run a shop from the merchant portal.">
+<meta name="twitter:image" content="https://dolladollabills0117.github.io/Sippy-Brew/sippy-brew-card.png">
+<style>
+:root { --beans: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%20viewBox%3D%220%200%20180%20180%22%3E%0A%3Cg%20opacity%3D%220.06%22%3E%0A%3Cg%20transform%3D%22translate(30%2040)%20rotate(20)%22%3E%3Cellipse%20rx%3D%229%22%20ry%3D%226%22%20fill%3D%22%23241A13%22%2F%3E%3Cpath%20d%3D%22M-7%200%20Q0%20-3%207%200%22%20fill%3D%22none%22%20stroke%3D%22%23FBF6EC%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%0A%3Cg%20transform%3D%22translate(120%20110)%20rotate(-35)%22%3E%3Cellipse%20rx%3D%229%22%20ry%3D%226%22%20fill%3D%22%23241A13%22%2F%3E%3Cpath%20d%3D%22M-7%200%20Q0%20-3%207%200%22%20fill%3D%22none%22%20stroke%3D%22%23FBF6EC%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%0A%3Cg%20transform%3D%22translate(70%20150)%20rotate(60)%22%3E%3Cellipse%20rx%3D%229%22%20ry%3D%226%22%20fill%3D%22%23241A13%22%2F%3E%3Cpath%20d%3D%22M-7%200%20Q0%20-3%207%200%22%20fill%3D%22none%22%20stroke%3D%22%23FBF6EC%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E"); }
+/* Sippy Brew demo: brand tokens from packages/core/src/brand.ts. Single brand look (light). */
+:root {
+  --espresso: #3B2A1E; --pecan: #6B4F3A; --burnt: #A8642F; --burnt-ink: #8E5226; --caramel: #C68E4E;
+  --honey: #E0A847; --latte: #D9C4A3; --vanilla: #F3E5C7; --cream: #FBF6EC; --sky: #87CEEB;
+  --danger: #9B2C2C; --success: #2F6B3A;
+  --head: "Caprasimo", Georgia, "Times New Roman", serif;
+  --body: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow: 0 6px 24px -8px rgba(59,42,30,.18), 0 2px 6px rgba(59,42,30,.06);
+  --ring: 0 0 0 3px var(--sky), 0 0 0 5px var(--espresso);
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; font-family: var(--body); color: var(--espresso); font-size: 16px; line-height: 1.45;
+  background-color: var(--vanilla); background-image: var(--beans); background-size: 180px 180px;
+  -webkit-tap-highlight-color: transparent;
+}
+* { box-sizing: border-box; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 10px; }
+h1, h2, h3 { font-family: var(--head); font-weight: 400; margin: 0; line-height: 1.1; text-wrap: balance; }
+p { margin: 0; }
+.muted { color: var(--pecan); }
+.small { font-size: .875rem; }
+.num { font-variant-numeric: tabular-nums; }
+
+.wrap {
+  max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 8px 112px;
+}
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-block: 10px; background: rgba(243,229,199,.82); backdrop-filter: blur(6px);
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--vanilla); }
+.logo { width: 44px; height: 44px; display: inline-block; border: 0; background: none; padding: 0; }
+.logo svg { width: 100%; height: 100%; display: block; }
+
+.card { background: var(--cream); border-radius: 22px; box-shadow: var(--shadow); padding: 20px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.between { justify-content: space-between; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.grow { flex: 1; min-width: 0; }
+
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: 999px; border: 0; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.pill.dark { background: var(--espresso); color: var(--cream); font-weight: 700; }
+.pill.honey { background: var(--honey); color: var(--espresso); min-height: 54px; padding: 0 34px; font-size: 1.1875rem; box-shadow: var(--shadow); }
+.pill.honey:active, .pill.honey:hover { background: var(--caramel); }
+.btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; border-radius: 14px; border: 0; background: var(--burnt); color: var(--cream); font-weight: 800; font-size: 1.1875rem; padding: 8px 16px; text-align: center; }
+.btn:hover, .btn:active { background: var(--caramel); color: var(--espresso); }
+.btn[disabled] { opacity: .5; pointer-events: none; }
+.btn.ghost { background: transparent; color: var(--burnt-ink); font-size: 1rem; min-height: 44px; }
+.btn.line { background: var(--cream); color: var(--espresso); border: 2px solid var(--pecan); font-size: 1.05rem; }
+.btn.small { min-height: 44px; font-size: .95rem; background: var(--burnt-ink); }
+.btn.danger { background: var(--cream); color: var(--danger); border: 2px solid var(--danger); font-size: 1rem; min-height: 44px; }
+
+.sticker { display: inline-block; background: var(--sky); color: var(--espresso); font-weight: 700; padding: 6px 16px; border-radius: 999px; }
+.badge { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: .75rem; font-weight: 800; background: var(--latte); color: var(--espresso); white-space: nowrap; }
+.badge.sky { background: var(--sky); }
+.badge.honey { background: var(--honey); }
+.badge.ok { background: var(--success); color: var(--cream); }
+.badge.bad { background: var(--danger); color: var(--cream); }
+
+.hero { padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; }
+.hero h1 { font-size: 2.25rem; }
+.hero .cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 6px; }
+.hero-beans { width: 84px; flex-shrink: 0; }
+.hero-beans .drop { animation: drop .8s ease-out both; animation-delay: var(--d); }
+.hero-beans .dance { transform-box: fill-box; transform-origin: center; animation: dance .9s ease-in-out 1s 3; }
+@keyframes drop { from { transform: translateY(-60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes dance { 0%,100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-12deg) translateY(-6px); } 50% { transform: rotate(8deg); } 75% { transform: rotate(-6deg) translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .hero-beans .drop, .hero-beans .dance { animation: none; } }
+
+.section-title { font-size: 1.75rem; padding: 0 4px; }
+.tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tier { display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: var(--cream); border: 2px solid transparent; border-radius: 22px; padding: 16px 12px; min-width: 0; }
+.tier.popular { border-color: var(--honey); }
+.tier.selected { border-color: var(--espresso); box-shadow: var(--ring); }
+.tier .name { font-size: .875rem; color: var(--pecan); line-height: 1.2; }
+.tier .price { font-family: var(--head); font-size: 1.75rem; line-height: 1; margin-top: 6px; }
+.tier .meta { font-size: .8125rem; color: var(--pecan); }
+.tier .badge { font-size: .6875rem; padding: 2px 8px; margin-bottom: 8px; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.steps li { display: flex; align-items: center; gap: 12px; background: var(--cream); border-radius: 18px; padding: 14px 16px; font-size: 1.05rem; }
+.dot { width: 32px; height: 32px; border-radius: 999px; background: var(--sky); display: grid; place-items: center; font-weight: 800; font-size: .875rem; flex-shrink: 0; }
+
+label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; }
+.input { min-height: 52px; border-radius: 12px; border: 2px solid rgba(107,79,58,.7); background: var(--cream); padding: 10px 14px; font-size: 1rem; width: 100%; }
+.input:focus { border-color: var(--espresso); }
+
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: rgba(251,246,236,.97); border-top: 1px solid var(--latte);
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.tabs .inner { max-width: 560px; margin: 0 auto; display: flex; justify-content: space-around; }
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 4px 0; font-size: .78rem; font-weight: 800; min-height: 54px; }
+.tab .ico { width: 56px; height: 32px; border-radius: 999px; display: grid; place-items: center; }
+.tab[aria-current="page"] .ico { background: var(--sky); }
+.tab svg { width: 22px; height: 22px; stroke: var(--espresso); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.switch { display: inline-flex; background: var(--cream); border: 2px solid var(--latte); border-radius: 999px; padding: 3px; }
+.switch button { border: 0; background: transparent; border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: .82rem; min-height: 36px; }
+.switch button[aria-pressed="true"] { background: var(--espresso); color: var(--cream); }
+
+.shop-card { display: flex; gap: 14px; text-align: left; width: 100%; border: 0; }
+.thumb { width: 72px; height: 72px; border-radius: 16px; flex-shrink: 0; background: linear-gradient(160deg, var(--burnt), var(--caramel) 35%, var(--cream)); display: grid; place-items: center; }
+.menu-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--latte); }
+.menu-item:last-child { border-bottom: 0; }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper button { width: 44px; height: 44px; border-radius: 999px; border: 2px solid var(--pecan); background: var(--cream); font-size: 1.3rem; font-weight: 800; line-height: 1; }
+.stepper button[disabled] { opacity: .35; }
+.stepper output { min-width: 18px; text-align: center; font-weight: 800; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.chip { flex-shrink: 0; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 2px solid var(--latte); background: var(--cream); font-weight: 700; }
+.chip[aria-pressed="true"] { border-color: var(--espresso); background: var(--sky); }
+.lines { display: flex; flex-direction: column; gap: 6px; }
+.lines .row { justify-content: space-between; }
+.total { border-top: 1px solid var(--latte); padding-top: 8px; font-weight: 800; }
+.total .num { font-size: 1.5rem; }
+.confirm { border: 2px solid var(--espresso); background: var(--vanilla); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.confirm label { display: flex; gap: 12px; align-items: flex-start; font-weight: 700; min-height: 44px; cursor: pointer; }
+.confirm input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--burnt); flex-shrink: 0; }
+.alert { border-radius: 14px; border: 2px solid var(--danger); background: var(--cream); color: var(--danger); font-weight: 700; padding: 12px 14px; }
+.alert.ok { border-color: var(--success); color: var(--success); }
+.meter { height: 12px; border-radius: 999px; background: var(--latte); overflow: hidden; }
+.meter > span { display: block; height: 100%; background: var(--burnt); border-radius: 999px; }
+
+.qr-screen { background: #fff; border-radius: 26px; padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; box-shadow: var(--shadow); }
+.qr-box { width: min(100%, 340px); aspect-ratio: 1; max-width: 100%; }
+.qr-box svg { width: 100%; height: 100%; display: block; }
+.code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 2.1rem; font-weight: 800; letter-spacing: .28em; }
+.demo-note { font-size: .8rem; color: var(--pecan); text-align: center; padding: 0 8px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 40; background: var(--espresso); color: var(--cream); padding: 10px 18px; border-radius: 999px; font-weight: 700; max-width: calc(100% - 32px); text-align: center; }
+.sheet-back { position: fixed; inset: 0; z-index: 50; background: rgba(59,42,30,.4); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--cream); width: 100%; max-width: 560px; border-radius: 26px 26px 0 0; padding: 22px max(20px, env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat { background: var(--cream); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+.stat b { display: block; font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+.linkbtn { border: 0; background: none; padding: 6px 2px; min-height: 44px; font-weight: 800; color: var(--burnt-ink); text-decoration: underline; text-underline-offset: 4px; }
+.back { border: 0; background: none; font-weight: 800; color: var(--burnt-ink); padding: 8px 0; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+
+.subswitch { display: flex; background: var(--cream); border: 2px solid var(--latte); border-radius: 999px; padding: 4px; }
+.subswitch button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 54px; border: 0; background: transparent; border-radius: 999px; line-height: 1.15; }
+.subswitch button b { font-weight: 800; font-size: .95rem; }
+.subswitch button span { font-size: .75rem; color: var(--pecan); font-weight: 600; }
+.subswitch button[aria-checked="true"] { background: var(--espresso); color: var(--cream); }
+.subswitch button[aria-checked="true"] span { color: rgba(251,246,236,.85); }
+
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 50px; padding: 0 14px; border-radius: 14px; border: 2px solid var(--latte); background: var(--cream); text-align: left; width: 100%; }
+.opt.on { border-color: var(--espresso); background: var(--vanilla); font-weight: 800; }
+
+</style>
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script>var SippyCore=(()=>{var Kr=Object.create;var fe=Object.defineProperty;var Qr=Object.getOwnPropertyDescriptor;var Jr=Object.getOwnPropertyNames;var Wr=Object.getPrototypeOf,jr=Object.prototype.hasOwnProperty;var h=(t,e)=>()=>{try{return e||t((e={exports:{}}).exports,e),e.exports}catch(r){throw e=0,r}},Zr=(t,e)=>{for(var r in e)fe(t,r,{get:e[r],enumerable:!0})},xt=(t,e,r,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of Jr(e))!jr.call(t,o)&&o!==r&&fe(t,o,{get:()=>e[o],enumerable:!(n=Qr(e,o))||n.enumerable});return t};var Xr=(t,e,r)=>(r=t!=null?Kr(Wr(t)):{},xt(e||!t||!t.__esModule?fe(r,"default",{value:t,enumerable:!0}):r,t)),en=t=>xt(fe({},"__esModule",{value:!0}),t);var Kt=h((ui,Yt)=>{Yt.exports=function(){return typeof Promise=="function"&&Promise.prototype&&Promise.prototype.then}});var R=h(B=>{var Xe,Zn=[0,26,44,70,100,134,172,196,242,292,346,404,466,532,581,655,733,815,901,991,1085,1156,1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,2611,2761,2876,3034,3196,3362,3532,3706];B.getSymbolSize=function(e){if(!e)throw new Error('"version" cannot be null or undefined');if(e<1||e>40)throw new Error('"version" should be in range from 1 to 40');return e*4+17};B.getSymbolTotalCodewords=function(e){return Zn[e]};B.getBCHDigit=function(t){let e=0;for(;t!==0;)e++,t>>>=1;return e};B.setToSJISFunction=function(e){if(typeof e!="function")throw new Error('"toSJISFunc" is not a valid function.');Xe=e};B.isKanjiModeEnabled=function(){return typeof Xe!="undefined"};B.toSJIS=function(e){return Xe(e)}});var Ce=h(P=>{P.L={bit:1};P.M={bit:0};P.Q={bit:3};P.H={bit:2};function Xn(t){if(typeof t!="string")throw new Error("Param is not a string");switch(t.toLowerCase()){case"l":case"low":return P.L;case"m":case"medium":return P.M;case"q":case"quartile":return P.Q;case"h":case"high":return P.H;default:throw new Error("Unknown EC Level: "+t)}}P.isValid=function(e){return e&&typeof e.bit!="undefined"&&e.bit>=0&&e.bit<4};P.from=function(e,r){if(P.isValid(e))return e;try{return Xn(e)}catch{return r}}});var Wt=h((di,Jt)=>{function Qt(){this.buffer=[],this.length=0}Qt.prototype={get:function(t){let e=Math.floor(t/8);return(this.buffer[e]>>>7-t%8&1)===1},put:function(t,e){for(let r=0;r<e;r++)this.putBit((t>>>e-r-1&1)===1)},getLengthInBits:function(){return this.length},putBit:function(t){let e=Math.floor(this.length/8);this.buffer.length<=e&&this.buffer.push(0),t&&(this.buffer[e]|=128>>>this.length%8),this.length++}};Jt.exports=Qt});var Zt=h((fi,jt)=>{function ne(t){if(!t||t<1)throw new Error("BitMatrix size must be defined and greater than 0");this.size=t,this.data=new Uint8Array(t*t),this.reservedBit=new Uint8Array(t*t)}ne.prototype.set=function(t,e,r,n){let o=t*this.size+e;this.data[o]=r,n&&(this.reservedBit[o]=!0)};ne.prototype.get=function(t,e){return this.data[t*this.size+e]};ne.prototype.xor=function(t,e,r){this.data[t*this.size+e]^=r};ne.prototype.isReserved=function(t,e){return this.reservedBit[t*this.size+e]};jt.exports=ne});var Xt=h(ye=>{var eo=R().getSymbolSize;ye.getRowColCoords=function(e){if(e===1)return[];let r=Math.floor(e/7)+2,n=eo(e),o=n===145?26:Math.ceil((n-13)/(2*r-2))*2,s=[n-7];for(let i=1;i<r-1;i++)s[i]=s[i-1]-o;return s.push(6),s.reverse()};ye.getPositions=function(e){let r=[],n=ye.getRowColCoords(e),o=n.length;for(let s=0;s<o;s++)for(let i=0;i<o;i++)s===0&&i===0||s===0&&i===o-1||s===o-1&&i===0||r.push([n[s],n[i]]);return r}});var rr=h(tr=>{var to=R().getSymbolSize,er=7;tr.getPositions=function(e){let r=to(e);return[[0,0],[r-er,0],[0,r-er]]}});var nr=h(b=>{b.Patterns={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7};var N={N1:3,N2:3,N3:40,N4:10};b.isValid=function(e){return e!=null&&e!==""&&!isNaN(e)&&e>=0&&e<=7};b.from=function(e){return b.isValid(e)?parseInt(e,10):void 0};b.getPenaltyN1=function(e){let r=e.size,n=0,o=0,s=0,i=null,a=null;for(let u=0;u<r;u++){o=s=0,i=a=null;for(let l=0;l<r;l++){let c=e.get(u,l);c===i?o++:(o>=5&&(n+=N.N1+(o-5)),i=c,o=1),c=e.get(l,u),c===a?s++:(s>=5&&(n+=N.N1+(s-5)),a=c,s=1)}o>=5&&(n+=N.N1+(o-5)),s>=5&&(n+=N.N1+(s-5))}return n};b.getPenaltyN2=function(e){let r=e.size,n=0;for(let o=0;o<r-1;o++)for(let s=0;s<r-1;s++){let i=e.get(o,s)+e.get(o,s+1)+e.get(o+1,s)+e.get(o+1,s+1);(i===4||i===0)&&n++}return n*N.N2};b.getPenaltyN3=function(e){let r=e.size,n=0,o=0,s=0;for(let i=0;i<r;i++){o=s=0;for(let a=0;a<r;a++)o=o<<1&2047|e.get(i,a),a>=10&&(o===1488||o===93)&&n++,s=s<<1&2047|e.get(a,i),a>=10&&(s===1488||s===93)&&n++}return n*N.N3};b.getPenaltyN4=function(e){let r=0,n=e.data.length;for(let s=0;s<n;s++)r+=e.data[s];return Math.abs(Math.ceil(r*100/n/5)-10)*N.N4};function ro(t,e,r){switch(t){case b.Patterns.PATTERN000:return(e+r)%2===0;case b.Patterns.PATTERN001:return e%2===0;case b.Patterns.PATTERN010:return r%3===0;case b.Patterns.PATTERN011:return(e+r)%3===0;case b.Patterns.PATTERN100:return(Math.floor(e/2)+Math.floor(r/3))%2===0;case b.Patterns.PATTERN101:return e*r%2+e*r%3===0;case b.Patterns.PATTERN110:return(e*r%2+e*r%3)%2===0;case b.Patterns.PATTERN111:return(e*r%3+(e+r)%2)%2===0;default:throw new Error("bad maskPattern:"+t)}}b.applyMask=function(e,r){let n=r.size;for(let o=0;o<n;o++)for(let s=0;s<n;s++)r.isReserved(s,o)||r.xor(s,o,ro(e,s,o))};b.getBestMask=function(e,r){let n=Object.keys(b.Patterns).length,o=0,s=1/0;for(let i=0;i<n;i++){r(i),b.applyMask(i,e);let a=b.getPenaltyN1(e)+b.getPenaltyN2(e)+b.getPenaltyN3(e)+b.getPenaltyN4(e);b.applyMask(i,e),a<s&&(s=a,o=i)}return o}});var tt=h(et=>{var D=Ce(),be=[1,1,1,1,1,1,1,1,1,1,2,2,1,2,2,4,1,2,4,4,2,4,4,4,2,4,6,5,2,4,6,6,2,5,8,8,4,5,8,8,4,5,8,11,4,8,10,11,4,9,12,16,4,9,16,16,6,10,12,18,6,10,17,16,6,11,16,19,6,13,18,21,7,14,21,25,8,16,20,25,8,17,23,25,9,17,23,34,9,18,25,30,10,20,27,32,12,21,29,35,12,23,34,37,12,25,34,40,13,26,35,42,14,28,38,45,15,29,40,48,16,31,43,51,17,33,45,54,18,35,48,57,19,37,51,60,19,38,53,63,20,40,56,66,21,43,59,70,22,45,62,74,24,47,65,77,25,49,68,81],we=[7,10,13,17,10,16,22,28,15,26,36,44,20,36,52,64,26,48,72,88,36,64,96,112,40,72,108,130,48,88,132,156,60,110,160,192,72,130,192,224,80,150,224,264,96,176,260,308,104,198,288,352,120,216,320,384,132,240,360,432,144,280,408,480,168,308,448,532,180,338,504,588,196,364,546,650,224,416,600,700,224,442,644,750,252,476,690,816,270,504,750,900,300,560,810,960,312,588,870,1050,336,644,952,1110,360,700,1020,1200,390,728,1050,1260,420,784,1140,1350,450,812,1200,1440,480,868,1290,1530,510,924,1350,1620,540,980,1440,1710,570,1036,1530,1800,570,1064,1590,1890,600,1120,1680,1980,630,1204,1770,2100,660,1260,1860,2220,720,1316,1950,2310,750,1372,2040,2430];et.getBlocksCount=function(e,r){switch(r){case D.L:return be[(e-1)*4+0];case D.M:return be[(e-1)*4+1];case D.Q:return be[(e-1)*4+2];case D.H:return be[(e-1)*4+3];default:return}};et.getTotalCodewordsCount=function(e,r){switch(r){case D.L:return we[(e-1)*4+0];case D.M:return we[(e-1)*4+1];case D.Q:return we[(e-1)*4+2];case D.H:return we[(e-1)*4+3];default:return}}});var or=h(xe=>{var oe=new Uint8Array(512),Ee=new Uint8Array(256);(function(){let e=1;for(let r=0;r<255;r++)oe[r]=e,Ee[e]=r,e<<=1,e&256&&(e^=285);for(let r=255;r<512;r++)oe[r]=oe[r-255]})();xe.log=function(e){if(e<1)throw new Error("log("+e+")");return Ee[e]};xe.exp=function(e){return oe[e]};xe.mul=function(e,r){return e===0||r===0?0:oe[Ee[e]+Ee[r]]}});var sr=h(se=>{var rt=or();se.mul=function(e,r){let n=new Uint8Array(e.length+r.length-1);for(let o=0;o<e.length;o++)for(let s=0;s<r.length;s++)n[o+s]^=rt.mul(e[o],r[s]);return n};se.mod=function(e,r){let n=new Uint8Array(e);for(;n.length-r.length>=0;){let o=n[0];for(let i=0;i<r.length;i++)n[i]^=rt.mul(r[i],o);let s=0;for(;s<n.length&&n[s]===0;)s++;n=n.slice(s)}return n};se.generateECPolynomial=function(e){let r=new Uint8Array([1]);for(let n=0;n<e;n++)r=se.mul(r,new Uint8Array([1,rt.exp(n)]));return r}});var ur=h((bi,ar)=>{var ir=sr();function nt(t){this.genPoly=void 0,this.degree=t,this.degree&&this.initialize(this.degree)}nt.prototype.initialize=function(e){this.degree=e,this.genPoly=ir.generateECPolynomial(this.degree)};nt.prototype.encode=function(e){if(!this.genPoly)throw new Error("Encoder not initialized");let r=new Uint8Array(e.length+this.degree);r.set(e);let n=ir.mod(r,this.genPoly),o=this.degree-n.length;if(o>0){let s=new Uint8Array(this.degree);return s.set(n,o),s}return n};ar.exports=nt});var ot=h(cr=>{cr.isValid=function(e){return!isNaN(e)&&e>=1&&e<=40}});var st=h(M=>{var lr="[0-9]+",no="[A-Z $%*+\\-./:]+",ie="(?:[u3000-u303F]|[u3040-u309F]|[u30A0-u30FF]|[uFF00-uFFEF]|[u4E00-u9FAF]|[u2605-u2606]|[u2190-u2195]|u203B|[u2010u2015u2018u2019u2025u2026u201Cu201Du2225u2260]|[u0391-u0451]|[u00A7u00A8u00B1u00B4u00D7u00F7])+";ie=ie.replace(/u/g,"\\u");var oo="(?:(?![A-Z0-9 $%*+\\-./:]|"+ie+`)(?:.|[\r
+]))+`;M.KANJI=new RegExp(ie,"g");M.BYTE_KANJI=new RegExp("[^A-Z0-9 $%*+\\-./:]+","g");M.BYTE=new RegExp(oo,"g");M.NUMERIC=new RegExp(lr,"g");M.ALPHANUMERIC=new RegExp(no,"g");var so=new RegExp("^"+ie+"$"),io=new RegExp("^"+lr+"$"),ao=new RegExp("^[A-Z0-9 $%*+\\-./:]+$");M.testKanji=function(e){return so.test(e)};M.testNumeric=function(e){return io.test(e)};M.testAlphanumeric=function(e){return ao.test(e)}});var _=h(w=>{var uo=ot(),it=st();w.NUMERIC={id:"Numeric",bit:1,ccBits:[10,12,14]};w.ALPHANUMERIC={id:"Alphanumeric",bit:2,ccBits:[9,11,13]};w.BYTE={id:"Byte",bit:4,ccBits:[8,16,16]};w.KANJI={id:"Kanji",bit:8,ccBits:[8,10,12]};w.MIXED={bit:-1};w.getCharCountIndicator=function(e,r){if(!e.ccBits)throw new Error("Invalid mode: "+e);if(!uo.isValid(r))throw new Error("Invalid version: "+r);return r>=1&&r<10?e.ccBits[0]:r<27?e.ccBits[1]:e.ccBits[2]};w.getBestModeForData=function(e){return it.testNumeric(e)?w.NUMERIC:it.testAlphanumeric(e)?w.ALPHANUMERIC:it.testKanji(e)?w.KANJI:w.BYTE};w.toString=function(e){if(e&&e.id)return e.id;throw new Error("Invalid mode")};w.isValid=function(e){return e&&e.bit&&e.ccBits};function co(t){if(typeof t!="string")throw new Error("Param is not a string");switch(t.toLowerCase()){case"numeric":return w.NUMERIC;case"alphanumeric":return w.ALPHANUMERIC;case"kanji":return w.KANJI;case"byte":return w.BYTE;default:throw new Error("Unknown mode: "+t)}}w.from=function(e,r){if(w.isValid(e))return e;try{return co(e)}catch{return r}}});var mr=h(v=>{var Te=R(),lo=tt(),dr=Ce(),L=_(),at=ot(),pr=7973,fr=Te.getBCHDigit(pr);function fo(t,e,r){for(let n=1;n<=40;n++)if(e<=v.getCapacity(n,r,t))return n}function gr(t,e){return L.getCharCountIndicator(t,e)+4}function po(t,e){let r=0;return t.forEach(function(n){let o=gr(n.mode,e);r+=o+n.getBitsLength()}),r}function go(t,e){for(let r=1;r<=40;r++)if(po(t,r)<=v.getCapacity(r,e,L.MIXED))return r}v.from=function(e,r){return at.isValid(e)?parseInt(e,10):r};v.getCapacity=function(e,r,n){if(!at.isValid(e))throw new Error("Invalid QR Code version");typeof n=="undefined"&&(n=L.BYTE);let o=Te.getSymbolTotalCodewords(e),s=lo.getTotalCodewordsCount(e,r),i=(o-s)*8;if(n===L.MIXED)return i;let a=i-gr(n,e);switch(n){case L.NUMERIC:return Math.floor(a/10*3);case L.ALPHANUMERIC:return Math.floor(a/11*2);case L.KANJI:return Math.floor(a/13);case L.BYTE:default:return Math.floor(a/8)}};v.getBestVersionForData=function(e,r){let n,o=dr.from(r,dr.M);if(Array.isArray(e)){if(e.length>1)return go(e,o);if(e.length===0)return 1;n=e[0]}else n=e;return fo(n.mode,n.getLength(),o)};v.getEncodedBits=function(e){if(!at.isValid(e)||e<7)throw new Error("Invalid QR Code version");let r=e<<12;for(;Te.getBCHDigit(r)-fr>=0;)r^=pr<<Te.getBCHDigit(r)-fr;return e<<12|r}});var br=h(yr=>{var ut=R(),Cr=1335,mo=21522,hr=ut.getBCHDigit(Cr);yr.getEncodedBits=function(e,r){let n=e.bit<<3|r,o=n<<10;for(;ut.getBCHDigit(o)-hr>=0;)o^=Cr<<ut.getBCHDigit(o)-hr;return(n<<10|o)^mo}});var Er=h((Pi,wr)=>{var ho=_();function G(t){this.mode=ho.NUMERIC,this.data=t.toString()}G.getBitsLength=function(e){return 10*Math.floor(e/3)+(e%3?e%3*3+1:0)};G.prototype.getLength=function(){return this.data.length};G.prototype.getBitsLength=function(){return G.getBitsLength(this.data.length)};G.prototype.write=function(e){let r,n,o;for(r=0;r+3<=this.data.length;r+=3)n=this.data.substr(r,3),o=parseInt(n,10),e.put(o,10);let s=this.data.length-r;s>0&&(n=this.data.substr(r),o=parseInt(n,10),e.put(o,s*3+1))};wr.exports=G});var Tr=h((Ii,xr)=>{var Co=_(),ct=["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"," ","$","%","*","+","-",".","/",":"];function z(t){this.mode=Co.ALPHANUMERIC,this.data=t}z.getBitsLength=function(e){return 11*Math.floor(e/2)+6*(e%2)};z.prototype.getLength=function(){return this.data.length};z.prototype.getBitsLength=function(){return z.getBitsLength(this.data.length)};z.prototype.write=function(e){let r;for(r=0;r+2<=this.data.length;r+=2){let n=ct.indexOf(this.data[r])*45;n+=ct.indexOf(this.data[r+1]),e.put(n,11)}this.data.length%2&&e.put(ct.indexOf(this.data[r]),6)};xr.exports=z});var Pr=h((ki,Sr)=>{var yo=_();function H(t){this.mode=yo.BYTE,typeof t=="string"?this.data=new TextEncoder().encode(t):this.data=new Uint8Array(t)}H.getBitsLength=function(e){return e*8};H.prototype.getLength=function(){return this.data.length};H.prototype.getBitsLength=function(){return H.getBitsLength(this.data.length)};H.prototype.write=function(t){for(let e=0,r=this.data.length;e<r;e++)t.put(this.data[e],8)};Sr.exports=H});var kr=h((Ai,Ir)=>{var bo=_(),wo=R();function Y(t){this.mode=bo.KANJI,this.data=t}Y.getBitsLength=function(e){return e*13};Y.prototype.getLength=function(){return this.data.length};Y.prototype.getBitsLength=function(){return Y.getBitsLength(this.data.length)};Y.prototype.write=function(t){let e;for(e=0;e<this.data.length;e++){let r=wo.toSJIS(this.data[e]);if(r>=33088&&r<=40956)r-=33088;else if(r>=57408&&r<=60351)r-=49472;else throw new Error("Invalid SJIS character: "+this.data[e]+`
+Make sure your charset is UTF-8`);r=(r>>>8&255)*192+(r&255),t.put(r,13)}};Ir.exports=Y});var Ar=h((Mi,lt)=>{"use strict";var ae={single_source_shortest_paths:function(t,e,r){var n={},o={};o[e]=0;var s=ae.PriorityQueue.make();s.push(e,0);for(var i,a,u,l,c,d,p,C,E;!s.empty();){i=s.pop(),a=i.value,l=i.cost,c=t[a]||{};for(u in c)c.hasOwnProperty(u)&&(d=c[u],p=l+d,C=o[u],E=typeof o[u]=="undefined",(E||C>p)&&(o[u]=p,s.push(u,p),n[u]=a))}if(typeof r!="undefined"&&typeof o[r]=="undefined"){var T=["Could not find a path from ",e," to ",r,"."].join("");throw new Error(T)}return n},extract_shortest_path_from_predecessor_list:function(t,e){for(var r=[],n=e,o;n;)r.push(n),o=t[n],n=t[n];return r.reverse(),r},find_path:function(t,e,r){var n=ae.single_source_shortest_paths(t,e,r);return ae.extract_shortest_path_from_predecessor_list(n,r)},PriorityQueue:{make:function(t){var e=ae.PriorityQueue,r={},n;t=t||{};for(n in e)e.hasOwnProperty(n)&&(r[n]=e[n]);return r.queue=[],r.sorter=t.sorter||e.default_sorter,r},default_sorter:function(t,e){return t.cost-e.cost},push:function(t,e){var r={value:t,cost:e};this.queue.push(r),this.queue.sort(this.sorter)},pop:function(){return this.queue.shift()},empty:function(){return this.queue.length===0}}};typeof lt!="undefined"&&(lt.exports=ae)});var Nr=h(K=>{var m=_(),Dr=Er(),_r=Tr(),Lr=Pr(),Or=kr(),ue=st(),Se=R(),Eo=Ar();function Mr(t){return unescape(encodeURIComponent(t)).length}function ce(t,e,r){let n=[],o;for(;(o=t.exec(r))!==null;)n.push({data:o[0],index:o.index,mode:e,length:o[0].length});return n}function Br(t){let e=ce(ue.NUMERIC,m.NUMERIC,t),r=ce(ue.ALPHANUMERIC,m.ALPHANUMERIC,t),n,o;return Se.isKanjiModeEnabled()?(n=ce(ue.BYTE,m.BYTE,t),o=ce(ue.KANJI,m.KANJI,t)):(n=ce(ue.BYTE_KANJI,m.BYTE,t),o=[]),e.concat(r,n,o).sort(function(i,a){return i.index-a.index}).map(function(i){return{data:i.data,mode:i.mode,length:i.length}})}function dt(t,e){switch(e){case m.NUMERIC:return Dr.getBitsLength(t);case m.ALPHANUMERIC:return _r.getBitsLength(t);case m.KANJI:return Or.getBitsLength(t);case m.BYTE:return Lr.getBitsLength(t)}}function xo(t){return t.reduce(function(e,r){let n=e.length-1>=0?e[e.length-1]:null;return n&&n.mode===r.mode?(e[e.length-1].data+=r.data,e):(e.push(r),e)},[])}function To(t){let e=[];for(let r=0;r<t.length;r++){let n=t[r];switch(n.mode){case m.NUMERIC:e.push([n,{data:n.data,mode:m.ALPHANUMERIC,length:n.length},{data:n.data,mode:m.BYTE,length:n.length}]);break;case m.ALPHANUMERIC:e.push([n,{data:n.data,mode:m.BYTE,length:n.length}]);break;case m.KANJI:e.push([n,{data:n.data,mode:m.BYTE,length:Mr(n.data)}]);break;case m.BYTE:e.push([{data:n.data,mode:m.BYTE,length:Mr(n.data)}])}}return e}function So(t,e){let r={},n={start:{}},o=["start"];for(let s=0;s<t.length;s++){let i=t[s],a=[];for(let u=0;u<i.length;u++){let l=i[u],c=""+s+u;a.push(c),r[c]={node:l,lastCount:0},n[c]={};for(let d=0;d<o.length;d++){let p=o[d];r[p]&&r[p].node.mode===l.mode?(n[p][c]=dt(r[p].lastCount+l.length,l.mode)-dt(r[p].lastCount,l.mode),r[p].lastCount+=l.length):(r[p]&&(r[p].lastCount=l.length),n[p][c]=dt(l.length,l.mode)+4+m.getCharCountIndicator(l.mode,e))}}o=a}for(let s=0;s<o.length;s++)n[o[s]].end=0;return{map:n,table:r}}function Rr(t,e){let r,n=m.getBestModeForData(t);if(r=m.from(e,n),r!==m.BYTE&&r.bit<n.bit)throw new Error('"'+t+'" cannot be encoded with mode '+m.toString(r)+`.
+ Suggested mode is: `+m.toString(n));switch(r===m.KANJI&&!Se.isKanjiModeEnabled()&&(r=m.BYTE),r){case m.NUMERIC:return new Dr(t);case m.ALPHANUMERIC:return new _r(t);case m.KANJI:return new Or(t);case m.BYTE:return new Lr(t)}}K.fromArray=function(e){return e.reduce(function(r,n){return typeof n=="string"?r.push(Rr(n,null)):n.data&&r.push(Rr(n.data,n.mode)),r},[])};K.fromString=function(e,r){let n=Br(e,Se.isKanjiModeEnabled()),o=To(n),s=So(o,r),i=Eo.find_path(s.map,"start","end"),a=[];for(let u=1;u<i.length-1;u++)a.push(s.table[i[u]].node);return K.fromArray(xo(a))};K.rawSplit=function(e){return K.fromArray(Br(e,Se.isKanjiModeEnabled()))}});var Ur=h(vr=>{var Ie=R(),ft=Ce(),Po=Wt(),Io=Zt(),ko=Xt(),Ao=rr(),mt=nr(),ht=tt(),Mo=ur(),Pe=mr(),Ro=br(),Do=_(),pt=Nr();function _o(t,e){let r=t.size,n=Ao.getPositions(e);for(let o=0;o<n.length;o++){let s=n[o][0],i=n[o][1];for(let a=-1;a<=7;a++)if(!(s+a<=-1||r<=s+a))for(let u=-1;u<=7;u++)i+u<=-1||r<=i+u||(a>=0&&a<=6&&(u===0||u===6)||u>=0&&u<=6&&(a===0||a===6)||a>=2&&a<=4&&u>=2&&u<=4?t.set(s+a,i+u,!0,!0):t.set(s+a,i+u,!1,!0))}}function Lo(t){let e=t.size;for(let r=8;r<e-8;r++){let n=r%2===0;t.set(r,6,n,!0),t.set(6,r,n,!0)}}function Oo(t,e){let r=ko.getPositions(e);for(let n=0;n<r.length;n++){let o=r[n][0],s=r[n][1];for(let i=-2;i<=2;i++)for(let a=-2;a<=2;a++)i===-2||i===2||a===-2||a===2||i===0&&a===0?t.set(o+i,s+a,!0,!0):t.set(o+i,s+a,!1,!0)}}function Bo(t,e){let r=t.size,n=Pe.getEncodedBits(e),o,s,i;for(let a=0;a<18;a++)o=Math.floor(a/3),s=a%3+r-8-3,i=(n>>a&1)===1,t.set(o,s,i,!0),t.set(s,o,i,!0)}function gt(t,e,r){let n=t.size,o=Ro.getEncodedBits(e,r),s,i;for(s=0;s<15;s++)i=(o>>s&1)===1,s<6?t.set(s,8,i,!0):s<8?t.set(s+1,8,i,!0):t.set(n-15+s,8,i,!0),s<8?t.set(8,n-s-1,i,!0):s<9?t.set(8,15-s-1+1,i,!0):t.set(8,15-s-1,i,!0);t.set(n-8,8,1,!0)}function No(t,e){let r=t.size,n=-1,o=r-1,s=7,i=0;for(let a=r-1;a>0;a-=2)for(a===6&&a--;;){for(let u=0;u<2;u++)if(!t.isReserved(o,a-u)){let l=!1;i<e.length&&(l=(e[i]>>>s&1)===1),t.set(o,a-u,l),s--,s===-1&&(i++,s=7)}if(o+=n,o<0||r<=o){o-=n,n=-n;break}}}function vo(t,e,r){let n=new Po;r.forEach(function(u){n.put(u.mode.bit,4),n.put(u.getLength(),Do.getCharCountIndicator(u.mode,t)),u.write(n)});let o=Ie.getSymbolTotalCodewords(t),s=ht.getTotalCodewordsCount(t,e),i=(o-s)*8;for(n.getLengthInBits()+4<=i&&n.put(0,4);n.getLengthInBits()%8!==0;)n.putBit(0);let a=(i-n.getLengthInBits())/8;for(let u=0;u<a;u++)n.put(u%2?17:236,8);return Uo(n,t,e)}function Uo(t,e,r){let n=Ie.getSymbolTotalCodewords(e),o=ht.getTotalCodewordsCount(e,r),s=n-o,i=ht.getBlocksCount(e,r),a=n%i,u=i-a,l=Math.floor(n/i),c=Math.floor(s/i),d=c+1,p=l-c,C=new Mo(p),E=0,T=new Array(i),Q=new Array(i),F=0,de=new Uint8Array(t.buffer);for(let k=0;k<i;k++){let Ae=k<u?c:d;T[k]=de.slice(E,E+Ae),Q[k]=C.encode(T[k]),E+=Ae,F=Math.max(F,Ae)}let $=new Uint8Array(n),J=0,f,y;for(f=0;f<F;f++)for(y=0;y<i;y++)f<T[y].length&&($[J++]=T[y][f]);for(f=0;f<p;f++)for(y=0;y<i;y++)$[J++]=Q[y][f];return $}function Fo(t,e,r,n){let o;if(Array.isArray(t))o=pt.fromArray(t);else if(typeof t=="string"){let l=e;if(!l){let c=pt.rawSplit(t);l=Pe.getBestVersionForData(c,r)}o=pt.fromString(t,l||40)}else throw new Error("Invalid data");let s=Pe.getBestVersionForData(o,r);if(!s)throw new Error("The amount of data is too big to be stored in a QR Code");if(!e)e=s;else if(e<s)throw new Error(`
+The chosen QR Code version cannot contain this amount of data.
+Minimum version required to store current data is: `+s+`.
+`);let i=vo(e,r,o),a=Ie.getSymbolSize(e),u=new Io(a);return _o(u,e),Lo(u),Oo(u,e),gt(u,r,0),e>=7&&Bo(u,e),No(u,i),isNaN(n)&&(n=mt.getBestMask(u,gt.bind(null,u,r))),mt.applyMask(n,u),gt(u,r,n),{modules:u,version:e,errorCorrectionLevel:r,maskPattern:n,segments:o}}vr.create=function(e,r){if(typeof e=="undefined"||e==="")throw new Error("No input text");let n=ft.M,o,s;return typeof r!="undefined"&&(n=ft.from(r.errorCorrectionLevel,ft.M),o=Pe.from(r.version),s=mt.from(r.maskPattern),r.toSJISFunc&&Ie.setToSJISFunction(r.toSJISFunc)),Fo(e,o,n,s)}});var Ct=h(U=>{function Fr(t){if(typeof t=="number"&&(t=t.toString()),typeof t!="string")throw new Error("Color should be defined as hex string");let e=t.slice().replace("#","").split("");if(e.length<3||e.length===5||e.length>8)throw new Error("Invalid hex color: "+t);(e.length===3||e.length===4)&&(e=Array.prototype.concat.apply([],e.map(function(n){return[n,n]}))),e.length===6&&e.push("F","F");let r=parseInt(e.join(""),16);return{r:r>>24&255,g:r>>16&255,b:r>>8&255,a:r&255,hex:"#"+e.slice(0,6).join("")}}U.getOptions=function(e){e||(e={}),e.color||(e.color={});let r=typeof e.margin=="undefined"||e.margin===null||e.margin<0?4:e.margin,n=e.width&&e.width>=21?e.width:void 0,o=e.scale||4;return{width:n,scale:n?4:o,margin:r,color:{dark:Fr(e.color.dark||"#000000ff"),light:Fr(e.color.light||"#ffffffff")},type:e.type,rendererOpts:e.rendererOpts||{}}};U.getScale=function(e,r){return r.width&&r.width>=e+r.margin*2?r.width/(e+r.margin*2):r.scale};U.getImageWidth=function(e,r){let n=U.getScale(e,r);return Math.floor((e+r.margin*2)*n)};U.qrToImageData=function(e,r,n){let o=r.modules.size,s=r.modules.data,i=U.getScale(o,n),a=Math.floor((o+n.margin*2)*i),u=n.margin*i,l=[n.color.light,n.color.dark];for(let c=0;c<a;c++)for(let d=0;d<a;d++){let p=(c*a+d)*4,C=n.color.light;if(c>=u&&d>=u&&c<a-u&&d<a-u){let E=Math.floor((c-u)/i),T=Math.floor((d-u)/i);C=l[s[E*o+T]?1:0]}e[p++]=C.r,e[p++]=C.g,e[p++]=C.b,e[p]=C.a}}});var $r=h(ke=>{var yt=Ct();function $o(t,e,r){t.clearRect(0,0,e.width,e.height),e.style||(e.style={}),e.height=r,e.width=r,e.style.height=r+"px",e.style.width=r+"px"}function Vo(){try{return document.createElement("canvas")}catch{throw new Error("You need to specify a canvas element")}}ke.render=function(e,r,n){let o=n,s=r;typeof o=="undefined"&&(!r||!r.getContext)&&(o=r,r=void 0),r||(s=Vo()),o=yt.getOptions(o);let i=yt.getImageWidth(e.modules.size,o),a=s.getContext("2d"),u=a.createImageData(i,i);return yt.qrToImageData(u.data,e,o),$o(a,s,i),a.putImageData(u,0,0),s};ke.renderToDataURL=function(e,r,n){let o=n;typeof o=="undefined"&&(!r||!r.getContext)&&(o=r,r=void 0),o||(o={});let s=ke.render(e,r,o),i=o.type||"image/png",a=o.rendererOpts||{};return s.toDataURL(i,a.quality)}});var Gr=h(qr=>{var qo=Ct();function Vr(t,e){let r=t.a/255,n=e+'="'+t.hex+'"';return r<1?n+" "+e+'-opacity="'+r.toFixed(2).slice(1)+'"':n}function bt(t,e,r){let n=t+e;return typeof r!="undefined"&&(n+=" "+r),n}function Go(t,e,r){let n="",o=0,s=!1,i=0;for(let a=0;a<t.length;a++){let u=Math.floor(a%e),l=Math.floor(a/e);!u&&!s&&(s=!0),t[a]?(i++,a>0&&u>0&&t[a-1]||(n+=s?bt("M",u+r,.5+l+r):bt("m",o,0),o=0,s=!1),u+1<e&&t[a+1]||(n+=bt("h",i),i=0)):o++}return n}qr.render=function(e,r,n){let o=qo.getOptions(r),s=e.modules.size,i=e.modules.data,a=s+o.margin*2,u=o.color.light.a?"<path "+Vr(o.color.light,"fill")+' d="M0 0h'+a+"v"+a+'H0z"/>':"",l="<path "+Vr(o.color.dark,"stroke")+' d="'+Go(i,s,o.margin)+'"/>',c='viewBox="0 0 '+a+" "+a+'"',p='<svg xmlns="http://www.w3.org/2000/svg" '+(o.width?'width="'+o.width+'" height="'+o.width+'" ':"")+c+' shape-rendering="crispEdges">'+u+l+`</svg>
+`;return typeof n=="function"&&n(null,p),p}});var Hr=h(le=>{var zo=Kt(),wt=Ur(),zr=$r(),Ho=Gr();function Et(t,e,r,n,o){let s=[].slice.call(arguments,1),i=s.length,a=typeof s[i-1]=="function";if(!a&&!zo())throw new Error("Callback required as last argument");if(a){if(i<2)throw new Error("Too few arguments provided");i===2?(o=r,r=e,e=n=void 0):i===3&&(e.getContext&&typeof o=="undefined"?(o=n,n=void 0):(o=n,n=r,r=e,e=void 0))}else{if(i<1)throw new Error("Too few arguments provided");return i===1?(r=e,e=n=void 0):i===2&&!e.getContext&&(n=r,r=e,e=void 0),new Promise(function(u,l){try{let c=wt.create(r,n);u(t(c,e,n))}catch(c){l(c)}})}try{let u=wt.create(r,n);o(null,t(u,e,n))}catch(u){o(u)}}le.create=wt.create;le.toCanvas=Et.bind(null,zr.render);le.toDataURL=Et.bind(null,zr.renderToDataURL);le.toString=Et.bind(null,function(t,e,r){return Ho.render(t,r)})});var Yo={};Zr(Yo,{BACKGROUND_BEANS_SVG:()=>zt,BEAN_TILE_SVG:()=>Gt,CATEGORY_LABELS:()=>Un,COFFEE_CATEGORIES:()=>vt,CURRENCY:()=>sn,DEFAULT_SUB_TIER:()=>It,DEFAULT_TIER:()=>on,DEFAULT_TIER_GROUP:()=>Pt,LOGO_SVG:()=>He,MAX_QUANTITY_PER_LINE:()=>re,MODIFIER_LIMITS:()=>I,ORDER_STATUSES:()=>Qn,ORDER_STATUS_LABELS:()=>Jn,QR_PREFIX:()=>me,RULES:()=>g,SHORT_CODE_LENGTH:()=>Fe,SITE:()=>un,SIZES:()=>Fn,SUB_TIERS:()=>W,TIERS:()=>Me,TIER_GROUPS:()=>j,WEEKDAYS:()=>pe,assertCents:()=>x,brand:()=>Ht,canReleasePass:()=>In,canTransition:()=>Wn,checkCanPost:()=>Hn,checkOverageConfirmed:()=>$t,checkPassAvailable:()=>Ne,checkPickupTime:()=>ze,checkRedeemable:()=>On,colors:()=>S,contrastRatio:()=>Mt,dayBounds:()=>_e,dayKey:()=>X,describeOptions:()=>Nn,distanceMiles:()=>At,firstName:()=>En,focusRing:()=>Ze,fonts:()=>Ke,formatCents:()=>fn,formatHour:()=>xn,formatHours:()=>Gn,formatMiles:()=>hn,getTier:()=>cn,gradient:()=>Ye,hasGrantForPeriod:()=>Pn,isCoffeeCategory:()=>he,isOpenAt:()=>Ge,isTierId:()=>ln,isWithin:()=>ee,issueQr:()=>Dn,logoSvg:()=>qt,looksLikeFood:()=>qe,luminance:()=>Be,meetsAA:()=>yn,monthBounds:()=>Le,monthEconomics:()=>kn,nextStatus:()=>jn,normalizeShortCode:()=>Ln,orderPayout:()=>q,overageCoveredByUpgrade:()=>Mn,overageIsCharged:()=>Dt,overageProcessingFee:()=>_t,parseQrPayload:()=>_n,passBalance:()=>Ot,pickupSlots:()=>zn,planFor:()=>dn,planRenewal:()=>Sn,previousWeekBounds:()=>mn,priceOrder:()=>Ft,qrSecondsRemaining:()=>Bn,qrToSvg:()=>Yr.toString,radii:()=>Qe,resolveOptions:()=>Ve,shadows:()=>We,shopStats:()=>wn,shopsNear:()=>Cn,spacing:()=>Je,splitOrder:()=>Rt,splitPassValue:()=>ge,starterModifierGroups:()=>vn,suggestUpgrade:()=>An,sumCents:()=>pn,summarizePayout:()=>bn,touchTarget:()=>je,tzOffsetMs:()=>Re,upgradeNowCost:()=>Nt,upgradeOffer:()=>Bt,upgradeTarget:()=>ve,validateHours:()=>qn,validateMenuItem:()=>Vn,validateModifierGroups:()=>$e,validateOrder:()=>Kn,validatePassEntry:()=>Tn,validateStory:()=>Yn,weekBounds:()=>Z,zonedParts:()=>A,zonedTimeToUtc:()=>O});var V={$comment:"Membership plans. Each tier (number of Daily Passes) comes in sub-tiers (how much one pass covers). Edit names, pass counts, daily maxes and prices here; no code changes needed. Amounts are in cents. stripePriceEnv names the env var holding that plan's Stripe Price ID.",currency:"usd",defaultTier:"macchiato",defaultSubTier:"double_shot",subTiers:[{id:"decaf",name:"Decaf",maxPassValueCents:400,blurb:"For the no-fuss crew: a great cup of drip, black or your way."},{id:"double_shot",name:"Double Shot",maxPassValueCents:800,blurb:"For the menu explorers who chase every new seasonal pour."}],tiers:[{id:"affogato",name:"Affogato",passesPerMonth:5,blurb:"A treat most weeks.",plans:{decaf:{priceCents:2e3,stripePriceEnv:"STRIPE_PRICE_AFFOGATO_DECAF"},double_shot:{priceCents:4e3,stripePriceEnv:"STRIPE_PRICE_AFFOGATO_DOUBLE_SHOT"}}},{id:"macchiato",name:"Macchiato",passesPerMonth:12,blurb:"Your regular few mornings a week.",plans:{decaf:{priceCents:4800,stripePriceEnv:"STRIPE_PRICE_MACCHIATO_DECAF"},double_shot:{priceCents:9600,stripePriceEnv:"STRIPE_PRICE_MACCHIATO_DOUBLE_SHOT"}}},{id:"double_espresso",name:"Double Espresso",passesPerMonth:20,blurb:"Just about every workday.",plans:{decaf:{priceCents:8e3,stripePriceEnv:"STRIPE_PRICE_DOUBLE_ESPRESSO_DECAF",blurb:"Perfect for the daily black coffee commuter!"},double_shot:{priceCents:16e3,stripePriceEnv:"STRIPE_PRICE_DOUBLE_ESPRESSO_DOUBLE_SHOT",blurb:"The ultimate daily latte fuel tank."}}}]};var Tt={$comment:"Platform-wide business rules shared by web, consumer app and shop app. Amounts in cents.",passesPerDay:1,upgradeNudgeAfterOverages:2,upgradeMinPassesLeft:3,minOverageChargeCents:50,overageProcessingFeeBps:290,overageProcessingFeeFixedCents:30,commissionBps:1200,qrTtlSeconds:30,timeZone:"America/New_York",shopStoryMaxChars:300,postMaxChars:280,postsPerShopPerDay:1,minPickupLeadMinutes:5,maxPickupLeadMinutes:120};var St={$comment:`Marketing copy settings. launchCity fills the landing page's "New in [City]" sticker.`,launchCity:"West Orange"};var W=V.subTiers,j=V.tiers.map(t=>{var r;let e={};for(let n of W){let o=t.plans[n.id];if(!o)throw new Error(`tiers.json: ${t.id} is missing the ${n.id} plan`);e[n.id]={id:`${t.id}_${n.id}`,group:t.id,subTier:n.id,name:`${t.name} \xB7 ${n.name}`,tierName:t.name,subTierName:n.name,priceCents:o.priceCents,passesPerMonth:t.passesPerMonth,maxPassValueCents:n.maxPassValueCents,blurb:(r=o.blurb)!=null?r:t.blurb,stripePriceEnv:o.stripePriceEnv}}return{id:t.id,name:t.name,passesPerMonth:t.passesPerMonth,blurb:t.blurb,plans:e}}),Me=j.flatMap(t=>W.map(e=>t.plans[e.id])),Pt=V.defaultTier,It=V.defaultSubTier,on=`${Pt}_${It}`,sn=V.currency,{$comment:es,...an}=Tt,g=Object.freeze(an),un=Object.freeze({launchCity:St.launchCity});function cn(t){let e=Me.find(r=>r.id===t);if(!e)throw new Error(`Unknown plan: ${t}`);return e}function ln(t){return typeof t=="string"&&Me.some(e=>e.id===t)}function dn(t,e){let r=j.find(n=>n.id===t);if(!r)throw new Error(`Unknown tier: ${t}`);return r.plans[e]}function x(t,e="amount"){if(!Number.isInteger(t))throw new Error(`${e} must be integer cents, got ${t}`)}function fn(t,e={}){let r=t<0,n=Math.abs(t),o=Math.floor(n/100).toLocaleString("en-US"),s=n%100,i=s===0&&!e.showZeroCents?`$${o}`:`$${o}.${String(s).padStart(2,"0")}`;return r?`-${i}`:i}function pn(t){let e=0;for(let r of t)x(r),e+=r;return e}var kt=new Map;function gn(t){let e=kt.get(t);return e||(e=new Intl.DateTimeFormat("en-US",{timeZone:t,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",weekday:"short"}),kt.set(t,e)),e}var pe=["sun","mon","tue","wed","thu","fri","sat"];function A(t,e){var n;let r={};for(let o of gn(e).formatToParts(t))r[o.type]=o.value;return{year:Number(r.year),month:Number(r.month),day:Number(r.day),hour:Number(r.hour)%24,minute:Number(r.minute),second:Number(r.second),weekday:((n=r.weekday)!=null?n:"Sun").slice(0,3).toLowerCase()}}function Re(t,e){let r=A(t,e);return Date.UTC(r.year,r.month-1,r.day,r.hour,r.minute,r.second)-Math.floor(t.getTime()/1e3)*1e3}function O(t,e,r,n,o,s){let i=Date.UTC(t,e-1,r,n,o),a=i-Re(new Date(i),s);return a=i-Re(new Date(a),s),new Date(a)}function De(t,e,r,n){let o=new Date(Date.UTC(t,e-1,r+n));return[o.getUTCFullYear(),o.getUTCMonth()+1,o.getUTCDate()]}function X(t,e){let r=A(t,e);return`${r.year}-${String(r.month).padStart(2,"0")}-${String(r.day).padStart(2,"0")}`}function _e(t,e){let r=A(t,e),[n,o,s]=De(r.year,r.month,r.day,1);return{start:O(r.year,r.month,r.day,0,0,e),end:O(n,o,s,0,0,e)}}function Z(t,e){let r=A(t,e),n=(pe.indexOf(r.weekday)+6)%7,[o,s,i]=De(r.year,r.month,r.day,-n),[a,u,l]=De(r.year,r.month,r.day,7-n);return{start:O(o,s,i,0,0,e),end:O(a,u,l,0,0,e)}}function Le(t,e){let r=A(t,e),n=r.month===12?r.year+1:r.year,o=r.month===12?1:r.month+1;return{start:O(r.year,r.month,1,0,0,e),end:O(n,o,1,0,0,e)}}function mn(t,e){let r=Z(t,e);return Z(new Date(r.start.getTime()-12*36e5),e)}function ee(t,e){let r=t.getTime();return r>=e.start.getTime()&&r<e.end.getTime()}function At(t,e){let n=a=>a*Math.PI/180,o=n(e.lat-t.lat),s=n(e.lng-t.lng),i=Math.sin(o/2)**2+Math.cos(n(t.lat))*Math.cos(n(e.lat))*Math.sin(s/2)**2;return 2*3958.8*Math.asin(Math.min(1,Math.sqrt(i)))}function hn(t){return t<.1?"Right here":`${t<10?t.toFixed(1):Math.round(t)} mi`}function Cn(t,e){return t.map(r=>({...r,distanceMiles:At(e,r)})).filter(r=>r.distanceMiles<=e.radiusMiles).sort((r,n)=>r.distanceMiles-n.distanceMiles)}function Oe(t){let e=t/255;return e<=.04045?e/12.92:((e+.055)/1.055)**2.4}function Be(t){let e=/^#?([0-9a-f]{6})$/i.exec(t);if(!e||!e[1])throw new Error(`bad hex color: ${t}`);let r=parseInt(e[1],16);return .2126*Oe(r>>16&255)+.7152*Oe(r>>8&255)+.0722*Oe(r&255)}function Mt(t,e){let[r,n]=[Be(t),Be(e)].sort((o,s)=>s-o);return(r+.05)/(n+.05)}function yn(t,e,r="text"){return Mt(t,e)>=(r==="text"?4.5:3)}function Rt(t,e=g.commissionBps){if(x(t,"grossCents"),t<0)throw new Error("grossCents cannot be negative");if(!Number.isInteger(e)||e<0||e>1e4)throw new Error(`invalid commissionBps: ${e}`);let r=Math.floor((t*e+5e3)/1e4);return{grossCents:t,commissionCents:r,netCents:t-r}}function Dt(t,e=g.minOverageChargeCents){return t>=e}function _t(t,e=g){if(x(t,"overageCents"),!Dt(t,e.minOverageChargeCents))return 0;let r=Math.floor((t*e.overageProcessingFeeBps+5e3)/1e4)+e.overageProcessingFeeFixedCents;return Math.min(t,r)}function q(t,e=g.commissionBps){var o;let r=Rt(t.passCoveredCents,e);x(t.overageCents,"overageCents");let n=(o=t.overageFeeCents)!=null?o:_t(t.overageCents);if(x(n,"overageFeeCents"),n<0||n>t.overageCents)throw new Error("processing fee must be between 0 and the overage");return{passCoveredCents:t.passCoveredCents,commissionCents:r.commissionCents,passNetCents:r.netCents,overageCents:t.overageCents,processingFeeCents:n,shopCents:r.netCents+t.overageCents-n}}function bn(t,e=g.commissionBps){let r=0,n=0,o=0,s=0;for(let a of t){let u=q(a,e);r+=u.passCoveredCents,n+=u.commissionCents,o+=u.overageCents,s+=u.processingFeeCents}let i=r-n;return{grossCents:r,commissionCents:n,netCents:i,overageTotalCents:o,processingFeesCents:s,transferCents:i+o-s,orderCount:t.length}}function wn(t,e,r=g.timeZone){var T,Q,F,de,$,J;let n=_e(e,r),o=Z(e,r),s=Le(e,r),i=t.filter(f=>f.status==="picked_up").map(f=>{var y;return{...f,at:new Date((y=f.redeemedAt)!=null?y:f.createdAt)}}).sort((f,y)=>f.at.getTime()-y.at.getTime()),a={today:0,week:0,month:0},u={today:0,week:0,month:0},l=new Map,c=Array.from({length:24},(f,y)=>({hour:y,count:0})),d=new Map,p=new Set,C=0;for(let f of i)if(d.has(f.memberId)||d.set(f.memberId,f.at.getTime()),ee(f.at,n)&&(a.today++,u.today+=f.totalCents),ee(f.at,o)&&(a.week++,u.week+=f.totalCents,C+=q({passCoveredCents:(Q=f.passCoveredCents)!=null?Q:f.totalCents-((T=f.overageCents)!=null?T:0),overageCents:(F=f.overageCents)!=null?F:0,overageFeeCents:(de=f.overageFeeCents)!=null?de:void 0}).shopCents),ee(f.at,s)){a.month++,u.month+=f.totalCents,p.add(f.memberId);let y=c[A(f.at,r).hour];y&&y.count++;for(let k of f.items)l.set(k.name,(($=l.get(k.name))!=null?$:0)+k.quantity)}let E=0;for(let f of p)((J=d.get(f))!=null?J:0)>=s.start.getTime()&&E++;return{redemptions:a,grossCents:u,topItems:[...l].map(([f,y])=>({name:f,quantity:y})).sort((f,y)=>y.quantity-f.quantity).slice(0,5),busiestHours:c.filter(f=>f.count>0).sort((f,y)=>y.count-f.count||f.hour-y.hour),members:{new:E,returning:p.size-E},estimatedWeeklyPayoutCents:C}}function En(t){return(t!=null?t:"").trim().split(/\s+/)[0]||"Member"}function xn(t){let e=t>=12?"pm":"am";return`${t%12===0?12:t%12}${e}`}var Lt={grant:1,release:1,use:-1,expire:-1};function Tn(t){if(!Number.isInteger(t.passes)||t.passes===0)throw new Error("passes must be a non-zero integer");if(Math.sign(t.passes)!==Lt[t.type])throw new Error(`${t.type} entries must be ${Lt[t.type]>0?"positive":"negative"}`)}function Ot(t,e){let r=new Date(e).getTime(),n=0;for(let o of t)new Date(o.periodStart).getTime()===r&&(n+=o.passes);return Math.max(0,n)}function Sn(t){let e=[],r=t.previousPeriodStart;if(r&&new Date(r).getTime()!==new Date(t.newPeriodStart).getTime()){let n=Ot(t.previousEntries,r);n>0&&e.push({passes:-n,type:"expire",periodStart:r,note:`${n} unused pass${n===1?"":"es"} expired at renewal`})}return e.push({passes:t.tier.passesPerMonth,type:"grant",periodStart:t.newPeriodStart,note:`${t.tier.name}: ${t.tier.passesPerMonth} Daily Passes`}),e}function Pn(t,e){let r=new Date(e).getTime();return t.some(n=>n.type==="grant"&&new Date(n.periodStart).getTime()===r)}function In(t,e){return new Date(t).getTime()===new Date(e).getTime()}function Ne(t){var r;let e=X(t.now,(r=t.timeZone)!=null?r:g.timeZone);return t.passDaysUsed.filter(n=>n===e).length>=g.passesPerDay?{ok:!1,code:"PASS_USED_TODAY",message:"You've already used today's pass. See you tomorrow!"}:t.passesLeft<1?{ok:!1,code:"NO_PASSES_LEFT",message:"You've used all your Daily Passes this month. They reset on your renewal date."}:{ok:!0,passDay:e,passesLeftAfter:t.passesLeft-1}}function ge(t,e){if(x(t,"totalCents"),x(e,"maxPassValueCents"),t<0||e<0)throw new Error("amounts cannot be negative");let r=Math.min(t,e);return{totalCents:t,passCoveredCents:r,overageCents:t-r}}function kn(t,e,r=g.commissionBps){if(e.length>t.passesPerMonth)throw new Error("more passes used than the tier includes");let n=0,o=0,s=0,i=0;for(let a of e){let u=ge(a,t.maxPassValueCents),l=q({passCoveredCents:u.passCoveredCents,overageCents:u.overageCents},r);n+=u.passCoveredCents,o+=u.overageCents,s+=l.shopCents,i+=l.passNetCents}return{passesUsed:e.length,passesUnused:t.passesPerMonth-e.length,coveredCents:n,overageCents:o,shopCents:s,platformCents:t.priceCents-i}}function ve(t){let e=j.find(n=>n.id===t.group);if(!e)return null;let r=W.filter(n=>n.maxPassValueCents>t.maxPassValueCents).sort((n,o)=>n.maxPassValueCents-o.maxPassValueCents)[0];return r?e.plans[r.id]:null}function Bt(t,e,r=g.upgradeMinPassesLeft){return e<r?null:ve(t)}function Nt(t,e){if(e.group!==t.group)throw new Error("upgrades stay within the same tier");if(e.maxPassValueCents<=t.maxPassValueCents)throw new Error("not an upgrade");return e.priceCents-t.priceCents}function An(t){var n;let e=Bt(t.plan,t.passesLeft);if(!e)return null;let r=t.periodOrders.filter(o=>o.status!=="cancelled"&&o.overageCents>0);return r.length<((n=t.minOverageOrders)!=null?n:g.upgradeNudgeAfterOverages)?null:{from:t.plan,to:e,overageOrders:r.length,overagePaidCents:r.reduce((o,s)=>o+s.overageCents,0),passesLeft:t.passesLeft,upgradeNowCents:Nt(t.plan,e),newMonthlyPriceCents:e.priceCents,monthlyDifferenceCents:e.priceCents-t.plan.priceCents}}function Mn(t,e){let r=ve(t);if(!r)return 0;let n=Math.max(0,e-t.maxPassValueCents),o=Math.max(0,e-r.maxPassValueCents);return n-o}var me="SIPPY1:",Ue="23456789ABCDEFGHJKMNPQRSTUVWXYZ",Fe=6;function Rn(t){let e=new Uint8Array(t);return globalThis.crypto.getRandomValues(e),e}function Dn(t,e=g.qrTtlSeconds,r=Rn){let n=Array.from(r(24),i=>i.toString(16).padStart(2,"0")).join(""),o=r(Fe),s=Array.from(o,i=>Ue[i%Ue.length]).join("");return{token:n,shortCode:s,issuedAt:t,expiresAt:new Date(t.getTime()+e*1e3),payload:me+n}}function _n(t){let e=t.trim();if(!e.startsWith(me))return null;let r=e.slice(me.length);return/^[0-9a-f]{48}$/.test(r)?r:null}function Ln(t){let e=t.toUpperCase().replace(/[\s-]/g,"");if(e.length!==Fe)return null;for(let r of e)if(!Ue.includes(r))return null;return e}function On(t,e,r){return t.redeemedAt?{ok:!1,code:"ALREADY_REDEEMED",message:"This code was already redeemed."}:t.orderStatus==="cancelled"?{ok:!1,code:"ORDER_CANCELLED",message:"This order was cancelled."}:t.orderStatus==="picked_up"?{ok:!1,code:"ALREADY_REDEEMED",message:"This order was already picked up."}:t.orderShopId!==e?{ok:!1,code:"WRONG_SHOP",message:"This order belongs to a different shop."}:r.getTime()>=new Date(t.expiresAt).getTime()?{ok:!1,code:"EXPIRED",message:"This code expired. Ask the member to refresh their QR."}:{ok:!0}}function Bn(t,e){return Math.max(0,Math.ceil((new Date(t).getTime()-e.getTime())/1e3))}var I={groupsPerItem:6,optionsPerGroup:12,maxOptionPriceCents:500,nameMaxChars:30};function $e(t){var r,n;if(!Array.isArray(t))return{ok:!1,message:"Customizations must be a list."};if(t.length>I.groupsPerItem)return{ok:!1,message:`Up to ${I.groupsPerItem} customization groups per drink.`};let e=new Set;for(let o of t){let s=String((r=o==null?void 0:o.name)!=null?r:"").trim();if(!(o!=null&&o.id)||e.has(o.id))return{ok:!1,message:"Each customization group needs its own id."};if(e.add(o.id),!s||s.length>I.nameMaxChars)return{ok:!1,message:`Give each group a name up to ${I.nameMaxChars} characters.`};if(!Array.isArray(o.options)||o.options.length===0)return{ok:!1,message:`Add at least one option to \u201C${s}\u201D.`};if(o.options.length>I.optionsPerGroup)return{ok:!1,message:`Up to ${I.optionsPerGroup} options in \u201C${s}\u201D.`};if(!Number.isInteger(o.maxSelect)||o.maxSelect<1||o.maxSelect>o.options.length)return{ok:!1,message:`\u201C${s}\u201D: choose how many options a member can pick (1 to ${o.options.length}).`};let i=new Set;for(let a of o.options){let u=String((n=a==null?void 0:a.name)!=null?n:"").trim();if(!(a!=null&&a.id)||i.has(a.id))return{ok:!1,message:`Each option in \u201C${s}\u201D needs its own id.`};if(i.add(a.id),!u||u.length>I.nameMaxChars)return{ok:!1,message:`Option names in \u201C${s}\u201D must be 1 to ${I.nameMaxChars} characters.`};if(qe(u))return{ok:!1,message:`\u201C${u}\u201D looks like food. Customizations are for coffee only.`};try{x(a.priceCents)}catch{return{ok:!1,message:`\u201C${u}\u201D: price must be a whole number of cents.`}}if(a.priceCents<0||a.priceCents>I.maxOptionPriceCents)return{ok:!1,message:`\u201C${u}\u201D: options can add $0 to $${I.maxOptionPriceCents/100}.`}}}return{ok:!0}}function Ve(t,e,r){var u,l;let n=r!=null?r:[],o=e!=null?e:[];if(new Set(n).size!==n.length)return{ok:!1,message:`Pick each option for ${t} once.`};let s=[],i=new Map;for(let c of n){let d=null;for(let p of o){let C=p.options.find(E=>E.id===c);C&&(d={groupId:p.id,groupName:p.name,optionId:C.id,name:C.name,priceCents:C.priceCents})}if(!d)return{ok:!1,message:`One of the options for ${t} isn't available any more.`};s.push(d),i.set(d.groupId,((u=i.get(d.groupId))!=null?u:0)+1)}for(let c of o){let d=(l=i.get(c.id))!=null?l:0;if(d>c.maxSelect)return{ok:!1,message:c.maxSelect===1?`Pick one ${c.name.toLowerCase()} for ${t}.`:`Pick up to ${c.maxSelect} in ${c.name} for ${t}.`};if(c.required&&d===0)return{ok:!1,message:`Choose a ${c.name.toLowerCase()} for ${t}.`}}let a=new Map;return o.forEach((c,d)=>c.options.forEach((p,C)=>a.set(p.id,d*100+C))),s.sort((c,d)=>{var p,C;return((p=a.get(c.optionId))!=null?p:0)-((C=a.get(d.optionId))!=null?C:0)}),{ok:!0,chosen:s,extraCents:s.reduce((c,d)=>c+d.priceCents,0)}}function Nn(t){return(t!=null?t:[]).map(e=>e.name).join(", ")}function vn(){return[{id:"milk",name:"Milk",required:!1,maxSelect:1,options:[{id:"whole",name:"Whole milk",priceCents:0},{id:"oat",name:"Oat milk",priceCents:75},{id:"almond",name:"Almond milk",priceCents:75}]},{id:"shots",name:"Espresso",required:!1,maxSelect:1,options:[{id:"extra-shot",name:"Extra shot",priceCents:100}]},{id:"syrups",name:"Syrups",required:!1,maxSelect:2,options:[{id:"vanilla",name:"Vanilla",priceCents:50},{id:"caramel",name:"Caramel",priceCents:50},{id:"hazelnut",name:"Hazelnut",priceCents:50}]}]}var vt=["espresso","brewed","cold","specialty"],Un={espresso:"Espresso drinks",brewed:"Brewed coffee",cold:"Cold coffee",specialty:"Specialty coffee"},Fn=["8 oz","12 oz","16 oz","20 oz","single","double"],$n=["bagel","bar","biscotti","biscuit","bread","brownie","burrito","cake","cookie","croissant","danish","donut","doughnut","egg","empanada","food","granola","muffin","oatmeal","pastry","pie","quiche","salad","sandwich","scone","snack","soup","taco","toast","waffle","wrap","yogurt"],Ut=new RegExp(`\\b(${$n.join("|")})s?\\b`,"i");function qe(t){return Ut.test(t)}function he(t){return typeof t=="string"&&vt.includes(t)}function Vn(t){let e=t.name.trim();if(e.length<2||e.length>60)return{ok:!1,field:"name",message:"Name must be 2 to 60 characters."};if(!he(t.category))return{ok:!1,field:"category",message:"Only coffee categories are allowed. Food isn't sold through Sippy Brew."};if(Ut.test(e))return{ok:!1,field:"name",message:"That looks like a food item. Only coffee can be listed."};if(!t.size.trim()||t.size.length>20)return{ok:!1,field:"size",message:"Add a size, like 12 oz."};try{x(t.priceCents)}catch{return{ok:!1,field:"priceCents",message:"Price must be a whole number of cents."}}if(t.priceCents<100||t.priceCents>2e3)return{ok:!1,field:"priceCents",message:"Price must be between $1 and $20."};if(t.modifierGroups){let r=$e(t.modifierGroups);if(!r.ok)return{ok:!1,field:"modifierGroups",message:r.message}}return{ok:!0}}function te(t){let e=/^(\d{1,2}):(\d{2})$/.exec(t);if(!e)throw new Error(`bad time: ${t}`);return Number(e[1])*60+Number(e[2])}function qn(t){for(let e of pe){let r=t[e];if(r)try{if(te(r.open)>=te(r.close))return`${e}: closing time must be after opening time`}catch{return`${e}: use HH:MM times`}}return null}function Ge(t,e,r=g.timeZone){let n=A(e,r),o=t[n.weekday];if(!o)return!1;let s=n.hour*60+n.minute;return s>=te(o.open)&&s<te(o.close)}function Gn(t){if(!t)return"Closed";let e=r=>{let n=te(r),o=Math.floor(n/60),s=n%60,i=o>=12?"pm":"am",a=o%12===0?12:o%12;return s?`${a}:${String(s).padStart(2,"0")}${i}`:`${a}${i}`};return`${e(t.open)}\u2013${e(t.close)}`}function ze(t,e,r,n=g.timeZone,o=g){let s=(t.getTime()-e.getTime())/6e4;return s<o.minPickupLeadMinutes-1?{ok:!1,code:"INVALID_PICKUP",message:`Pick a time at least ${o.minPickupLeadMinutes} minutes from now.`}:s>o.maxPickupLeadMinutes?{ok:!1,code:"INVALID_PICKUP",message:`Pickup must be within ${o.maxPickupLeadMinutes/60} hours.`}:Ge(r,t,n)?{ok:!0}:{ok:!1,code:"INVALID_PICKUP",message:"The shop is closed at that time."}}function zn(t,e,r=g.timeZone,n=g){let s=Math.ceil((t.getTime()+n.minPickupLeadMinutes*6e4)/3e5)*3e5,i=t.getTime()+n.maxPickupLeadMinutes*6e4,a=[];for(let u=s;u<=i;u+=3e5){let l=new Date(u);Ge(e,l,r)&&a.push(l)}return a}function Hn(t,e,r,n=g.timeZone){let o=t.trim();if(o.length<3)return{ok:!1,code:"POST_INVALID",message:"Write a little more."};if(o.length>g.postMaxChars)return{ok:!1,code:"POST_INVALID",message:`Keep it under ${g.postMaxChars} characters.`};let s=X(r,n);return e.filter(a=>a===s).length>=g.postsPerShopPerDay?{ok:!1,code:"POST_LIMIT",message:"You've already posted today. Come back tomorrow."}:{ok:!0,postDay:s}}function Yn(t){return t.trim().length===0?"Tell members a little about your shop.":t.length>g.shopStoryMaxChars?`Keep your story to ${g.shopStoryMaxChars} characters.`:null}var re=4;function Ft(t,e,r){var i,a;if(t.length===0)return{ok:!1,code:"EMPTY_ORDER",message:"Add at least one coffee."};let n=new Map;for(let u of t){if(!Number.isInteger(u.quantity)||u.quantity<1||u.quantity>re)return{ok:!1,code:"INVALID_QUANTITY",message:`Quantity must be 1 to ${re}.`};let l=[...(i=u.optionIds)!=null?i:[]].sort(),c=`${u.menuItemId}|${l.join(",")}`,d=n.get(c);n.set(c,{menuItemId:u.menuItemId,quantity:((a=d==null?void 0:d.quantity)!=null?a:0)+u.quantity,optionIds:l})}let o=[],s=0;for(let{menuItemId:u,quantity:l,optionIds:c}of n.values()){let d=e.find(T=>T.id===u&&T.shopId===r);if(!d)return{ok:!1,code:"ITEM_NOT_FOUND",message:"One of those items isn't on this shop's menu."};if(!he(d.category))return{ok:!1,code:"NOT_COFFEE",message:"Only coffee can be ordered."};if(!d.available||d.soldOutToday)return{ok:!1,code:"ITEM_UNAVAILABLE",message:`${d.name} is sold out right now.`};if(l>re)return{ok:!1,code:"INVALID_QUANTITY",message:`Quantity must be 1 to ${re}.`};x(d.priceCents);let p=Ve(d.name,d.modifierGroups,c);if(!p.ok)return{ok:!1,code:"INVALID_OPTIONS",message:p.message};let C=d.priceCents+p.extraCents,E=C*l;s+=E,o.push({menuItemId:u,name:d.name,quantity:l,unitPriceCents:C,lineTotalCents:E,options:p.chosen})}return{ok:!0,lines:o,totalCents:s}}function Kn(t,e){var c;let r=e.now,n=e.subscription;if(!n||!["active","trialing"].includes(n.status)||new Date(n.currentPeriodEnd).getTime()<=r.getTime())return{ok:!1,code:"NO_ACTIVE_SUBSCRIPTION",message:"Choose a plan to start ordering."};if(e.shop.status!=="active")return{ok:!1,code:"SHOP_NOT_ACTIVE",message:"This shop isn't taking orders right now."};let o=Ft(t,e.menu,e.shop.id);if(!o.ok)return o;let s=(c=e.timeZone)!=null?c:g.timeZone,i=Ne({passesLeft:e.passesLeft,passDaysUsed:e.passDaysUsed,now:r,timeZone:s});if(!i.ok)return i;let a=ze(e.pickupAt,r,e.shop.hours,s);if(!a.ok)return a;let u=ge(o.totalCents,e.maxPassValueCents),l=$t(u.overageCents,e.confirmedOverageCents);return l.ok?{ok:!0,totalCents:o.totalCents,lines:o.lines,passCoveredCents:u.passCoveredCents,overageCents:u.overageCents,passDay:i.passDay,passesLeftAfter:i.passesLeftAfter}:l}function $t(t,e){return t===0?{ok:!0}:e===t?{ok:!0}:{ok:!1,code:"OVERAGE_CONFIRMATION_REQUIRED",overageCents:t,message:`This order is $${(t/100).toFixed(2)} over your pass. Please confirm the overage to continue.`}}var Qn=["received","preparing","ready","picked_up","cancelled"],Jn={received:"Received",preparing:"Preparing",ready:"Ready",picked_up:"Picked up",cancelled:"Cancelled"},Vt={received:["preparing","ready","cancelled"],preparing:["ready","cancelled"],ready:["picked_up","cancelled"],picked_up:[],cancelled:[]};function Wn(t,e){return Vt[t].includes(e)}function jn(t){let e=Vt[t].find(r=>r!=="cancelled");return e!=null?e:null}var He=`<svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sippy Brew">
+<circle cx="130" cy="130" r="124" fill="#D9C4A3"/>
+<rect x="226" y="118" width="26" height="24" rx="10" fill="#FBF6EC" stroke="#B4A08A" stroke-width="2"/>
+<circle cx="130" cy="130" r="108" fill="#FBF6EC" stroke="#B4A08A" stroke-width="2"/>
+<circle cx="130" cy="130" r="90" fill="#3B2A1E"/>
+<g fill="#C68E4E" opacity="0.5">
+<circle cx="72" cy="88" r="6"/><circle cx="188" cy="80" r="4"/><circle cx="196" cy="184" r="7"/><circle cx="66" cy="176" r="5"/>
+</g>
+<text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-family="Caprasimo, serif" font-size="66" fill="#F3E5C7" transform="translate(130 130) scale(0.94 1.16)">SB</text>
+</svg>`;function qt(t={}){let e=He;return t.size!==void 0&&(e=e.replace("<svg ",`<svg width="${t.size}" height="${t.size}" `)),t.fontFamily&&(e=e.replace('font-family="Caprasimo, serif"',`font-family="${t.fontFamily}"`)),e}var Gt=`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+<g opacity="0.06">
+<g transform="translate(30 40) rotate(20)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+<g transform="translate(120 110) rotate(-35)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+<g transform="translate(70 150) rotate(60)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+</g>
+</svg>`,zt=`<svg aria-hidden="true" width="100%" height="100%">
+<defs><pattern id="beans" width="180" height="180" patternUnits="userSpaceOnUse">
+<g opacity="0.06">
+<g transform="translate(30 40) rotate(20)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+<g transform="translate(120 110) rotate(-35)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+<g transform="translate(70 150) rotate(60)"><ellipse rx="9" ry="6" fill="#241A13"/><path d="M-7 0 Q0 -3 7 0" fill="none" stroke="#FBF6EC" stroke-width="1.4" stroke-linecap="round"/></g>
+</g></pattern></defs>
+<rect width="100%" height="100%" fill="url(#beans)"/>
+</svg>`;var S={espresso:"#3B2A1E",pecan:"#6B4F3A",burntSugar:"#A8642F",burntSugarInk:"#8E5226",caramel:"#C68E4E",honey:"#E0A847",latte:"#D9C4A3",vanillaBean:"#F3E5C7",creamSwirl:"#FBF6EC",skyBlue:"#87CEEB",danger:"#9B2C2C",success:"#2F6B3A"},Ye={hero:{from:S.burntSugar,to:S.creamSwirl,angleDeg:160},css:`linear-gradient(160deg, ${S.burntSugar} 0%, ${S.caramel} 35%, ${S.creamSwirl} 100%)`,stops:[S.burntSugar,S.caramel,S.creamSwirl]},Ke={heading:"Caprasimo",body:"Nunito",native:{heading:"Caprasimo_400Regular",body:"Nunito_400Regular",bodySemi:"Nunito_600SemiBold",bodyBold:"Nunito_700Bold",bodyExtraBold:"Nunito_800ExtraBold"}},Qe={sm:12,md:14,lg:16,pill:999},Je={xs:4,sm:8,md:12,lg:16,xl:24,xxl:32,xxxl:48},We={card:"0 6px 24px -8px rgba(59, 42, 30, 0.18), 0 2px 6px rgba(59, 42, 30, 0.06)",lift:"0 14px 40px -12px rgba(59, 42, 30, 0.28)",native:{card:{shadowColor:S.espresso,shadowOpacity:.12,shadowRadius:14,shadowOffset:{width:0,height:6},elevation:3}}},je={min:48},Ze={css:`0 0 0 3px ${S.skyBlue}, 0 0 0 5px ${S.espresso}`},Ht={colors:S,gradient:Ye,fonts:Ke,radii:Qe,spacing:Je,shadows:We,touchTarget:je,focusRing:Ze};var Yr=Xr(Hr());return en(Yo);})();
+</script>
+<script>/* Sippy Brew tappable demo. Business rules come from the real @sippy/core bundle (window.SippyCore). */
+(function () {
+  "use strict";
+  var S = window.SippyCore;
+  var KEY = "sippy-demo-v3";
+  var TZ = S.RULES.timeZone;
+  var ALL_DAY = { sun: { open: "00:00", close: "23:59" }, mon: { open: "00:00", close: "23:59" }, tue: { open: "00:00", close: "23:59" }, wed: { open: "00:00", close: "23:59" }, thu: { open: "00:00", close: "23:59" }, fri: { open: "00:00", close: "23:59" }, sat: { open: "00:00", close: "23:59" } };
+
+  var BASE_SHOPS = [
+    { id: "main", name: "Main Street Roasters", address: "25 Main St, West Orange", miles: 0.3, hours: "6:30am–6pm",
+      story: "Small-batch roasting in the back room every Tuesday. Every shot pulled like it's the first.",
+      menu: [["espresso", "Espresso", "double", 325, "espresso"], ["cortado", "Cortado", "4.5 oz", 425, "espresso"], ["latte", "Latte", "12 oz", 525, "espresso"],
+             ["maple", "Maple Cinnamon Latte", "16 oz", 650, "specialty"], ["drip", "House Drip", "12 oz", 275, "brewed"], ["cold", "Cold Brew", "16 oz", 500, "cold"], ["mocha", "Big Mocha", "20 oz", 875, "specialty"]] },
+    { id: "eagle", name: "Eagle Rock Espresso", address: "450 Eagle Rock Ave, West Orange", miles: 1.1, hours: "7am–5pm",
+      story: "A bright corner café with a single-origin pour-over of the week. Neighbors, laptops and dogs welcome.",
+      menu: [["americano", "Americano", "12 oz", 350, "espresso"], ["capp", "Cappuccino", "8 oz", 450, "espresso"], ["flat", "Flat White", "8 oz", 475, "espresso"],
+             ["pour", "Pour-Over", "10 oz", 450, "brewed"], ["iced", "Iced Latte", "16 oz", 575, "cold"], ["nitro", "Nitro Cold Brew", "12 oz", 550, "cold"]] },
+    { id: "valley", name: "Pleasant Valley Coffee Co.", address: "500 Pleasant Valley Way, West Orange", miles: 1.8, hours: "7am–3pm",
+      story: "Family-run since 2009. Cardamom lattes from our grandmother's recipe.",
+      menu: [["vespresso", "Espresso", "single", 275, "espresso"], ["cardamom", "Cardamom Latte", "12 oz", 600, "specialty"], ["vmocha", "Mocha", "12 oz", 575, "specialty"],
+             ["vdrip", "Drip Coffee", "16 oz", 300, "brewed"], ["viced", "Iced Coffee", "16 oz", 375, "cold"]] },
+  ].map(function (s) {
+    s.menu = s.menu.map(function (m) {
+      var mods = m[4] === "espresso" || m[4] === "specialty" ? S.starterModifierGroups() : m[4] === "cold" ? S.starterModifierGroups().slice(0, 1) : [];
+      return { id: m[0], name: m[1], size: m[2], priceCents: m[3], category: m[4], shopId: s.id, modifierGroups: mods };
+    });
+    return s;
+  });
+  function allShops() { return BASE_SHOPS.concat(state.customShops || []).map(function (x) { return withExtras(x); }); }
+  function withExtras(x) {
+    var menu = x.menu.concat((state.extraMenu || {})[x.id] || []).map(function (m) {
+      var own = (state.mods || {})[m.id];
+      return Object.assign({}, m, { modifierGroups: own || m.modifierGroups || [] });
+    });
+    return Object.assign({}, x, { menu: menu });
+  }
+  function shopById(id) {
+    var list = BASE_SHOPS.concat(state.customShops || []);
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return withExtras(list[i]);
+    return withExtras(BASE_SHOPS[0]);
+  }
+  function isPaused(id) { return !!(state.paused || {})[id]; }
+  /** Admin-controlled listing status. Sample shops start active; newly listed shops start pending. */
+  function shopStatus(id) { return (state.shopStatus || {})[id] || "active"; }
+  function isSpotlight(id) { return !!(state.spotlight || {})[id]; }
+  /** Members only see approved (active) shops; spotlighted shops come first. */
+  function memberShops() {
+    return allShops().filter(function (x) { return shopStatus(x.id) === "active"; })
+      .sort(function (a, b) { return (isSpotlight(b.id) ? 1 : 0) - (isSpotlight(a.id) ? 1 : 0); });
+  }
+  var ADMIN_PASSWORD = "sippy-admin";
+
+  function fresh() {
+    return { screen: "landing", selectedTier: S.DEFAULT_TIER, user: null, tierId: null, passesLeft: 0, passDaysUsed: [], dayOffset: 0,
+      session: null, tab: "shops", shopTab: "orders", counterShop: "main", detail: null, cart: [], customize: null, picked: [], cqty: 1, mods: {}, editMods: null, confirmedOverage: null, pickupIdx: 0,
+      orders: [], tickets: [], soldOut: {}, customShops: [], extraMenu: {}, paused: {}, shopError: null, shopStatus: {}, spotlight: {}, adminTab: "overview", adminError: null, pickSub: S.DEFAULT_SUB_TIER, upgradeConfirm: false,
+      error: null, scan: null, sheet: null, authMode: "signup" };
+  }
+  var state = fresh();
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved && saved.screen) state = Object.assign(fresh(), saved, { sheet: null, scan: null, error: null }); } catch (e) {}
+  delete state["view"];
+  if (state.screen === "app" && state.session !== "member" && state.session !== "shop") state.session = state.user && state.tierId ? "member" : null;
+  if (state.screen === "app" && !state.session) state.screen = "landing";
+  function save() { try { var c = Object.assign({}, state); delete c.sheet; delete c.scan; delete c.error; localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) {} }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 2600);
+  }
+
+  // Demo clock: "Start a new day" moves the calendar forward so you can use another pass.
+  function now() { return new Date(Date.now() + state.dayOffset * 864e5); }
+  function money(c) { return S.formatCents(c, { showZeroCents: c % 100 !== 0 }); }
+  function money2(c) { return S.formatCents(c, { showZeroCents: true }); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
+  function tier() { return state.tierId ? S.getTier(state.tierId) : null; }
+  function firstName() { return state.user ? esc((state.user.name || "Member").split(" ")[0]) : "Member"; }
+  var timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: TZ });
+  var dateFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: TZ });
+
+  var LOGO = S.LOGO_SVG;
+  var BEANS = '<svg class="hero-beans" viewBox="0 0 120 80" aria-hidden="true">' +
+    '<g class="drop" style="--d:0s"><g class="dance"><ellipse cx="30" cy="40" rx="14" ry="9" fill="#A8642F"/><path d="M22 40 Q30 36 38 40" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round"/></g></g>' +
+    '<g class="drop" style="--d:0.15s"><g class="dance"><ellipse cx="60" cy="30" rx="14" ry="9" fill="#6B4F3A"/><path d="M52 30 Q60 26 68 30" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round"/></g></g>' +
+    '<g class="drop" style="--d:0.3s"><g class="dance"><ellipse cx="90" cy="46" rx="14" ry="9" fill="#E0A847"/><path d="M82 46 Q90 42 98 46" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round"/></g></g></svg>';
+  var ICONS = {
+    map: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14"/>',
+    cup: '<path d="M4 9h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V9Zm12 1h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3m4-3v3"/>',
+    user: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0"/>',
+    list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+    scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3m8 0h3a1 1 0 0 1 1 1v3m0 8v3a1 1 0 0 1-1 1h-3m-8 0H5a1 1 0 0 1-1-1v-3M7 12h10"/>',
+    chart: '<path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/>',
+  };
+
+  // ---------------------------------------------------------------- QR tickets (30s, single use)
+  function latestTicket(orderId) {
+    var t = null;
+    state.tickets.forEach(function (x) { if (x.orderId === orderId && (!t || x.issuedAt > t.issuedAt)) t = x; });
+    return t;
+  }
+  function issueTicket(orderId) {
+    var nowMs = Date.now();
+    state.tickets.forEach(function (x) { if (x.orderId === orderId && !x.redeemedAt && x.expiresAt > nowMs) x.expiresAt = nowMs; });
+    var q = S.issueQr(new Date(nowMs));
+    var t = { orderId: orderId, token: q.token, shortCode: q.shortCode, payload: q.payload, issuedAt: nowMs, expiresAt: q.expiresAt.getTime(), redeemedAt: null };
+    state.tickets.push(t);
+    if (state.tickets.length > 60) state.tickets = state.tickets.slice(-60);
+    return t;
+  }
+  function liveTicket(orderId) {
+    var t = latestTicket(orderId);
+    if (!t || t.expiresAt - Date.now() <= 4000) t = issueTicket(orderId);
+    return t;
+  }
+
+  // ---------------------------------------------------------------- Screens
+  function planCards(action, selectedId) {
+    var sub = state.pickSub || S.DEFAULT_SUB_TIER;
+    var current = S.SUB_TIERS.filter(function (x) { return x.id === sub; })[0];
+    var sw = '<div class="subswitch" role="radiogroup" aria-label="How much each pass covers">' + S.SUB_TIERS.map(function (x) {
+      return '<button role="radio" aria-checked="' + (x.id === sub) + '" data-a="pick-sub" data-id="' + x.id + '"><b>' + x.name + '</b><span>up to ' + money(x.maxPassValueCents) + "/day</span></button>";
+    }).join("") + '</div><p class="muted small" style="padding:0 4px">' + esc(current.blurb) + "</p>";
+    var cards = S.TIER_GROUPS.map(function (g) {
+      var t = g.plans[sub], pop = g.id === S.DEFAULT_TIER_GROUP, sel = selectedId === t.id;
+      return '<button class="tier' + (pop ? " popular" : "") + (sel ? " selected" : "") + '" data-a="' + action + '" data-id="' + t.id + '" aria-pressed="' + sel + '" aria-label="' + t.name + ", " + money(t.priceCents) + " a month, " + t.passesPerMonth + ' passes">' +
+        (pop ? '<span class="badge honey">Most popular</span>' : "") +
+        '<span class="name">' + g.name + '</span><span class="price">' + money(t.priceCents) + '</span>' +
+        '<span class="meta" style="margin-top:10px">' + t.passesPerMonth + ' passes</span><span class="meta">up to ' + money(t.maxPassValueCents) + "/day</span></button>";
+    }).join("");
+    return sw + '<div class="tiers">' + cards + "</div>";
+  }
+
+  function landing() {
+    var tiers = planCards("pick-tier", null);
+    return '<div class="topbar"><span class="logo">' + LOGO + '</span><button class="pill dark" data-a="login">Log in</button></div>' +
+      '<section class="card hero"><span class="sticker" style="align-self:flex-start">New in ' + esc(S.SITE.launchCity) + '</span>' +
+      '<h1>Your neighborhood, brewed daily.</h1><p class="muted" style="font-size:1.0625rem">One monthly pass. Any local coffee shop.</p>' +
+      '<div class="cta"><button class="pill honey" data-a="get-pass">Get my pass</button>' + BEANS + "</div></section>" +
+      '<h2 class="section-title">Pick your pass</h2>' + tiers +
+      '<h2 class="section-title">How it works</h2><ol class="steps"><li><span class="dot">1</span>Pick a pass</li><li><span class="dot">2</span>Order ahead from a shop near you</li><li><span class="dot">3</span>Scan at the counter. Sip.</li></ol>' +
+      '<p class="demo-note">Own a coffee shop? <button class="linkbtn" data-a="shop-signup">List your shop</button> · <button class="linkbtn" data-a="shop-login">Shop log in</button></p>' +
+      '<p class="demo-note">This is a working demo with sample shops. No real payments are made.</p>';
+  }
+
+  function shopLogin() {
+    return '<div class="topbar"><button class="back" data-a="home">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">Shop log in</h1>' +
+      '<p class="muted" style="padding:0 4px">For coffee shops only. Member accounts can\'t open the shop side.</p>' +
+      '<form class="card stack" data-form="shop-login">' +
+      '<label class="field" for="s-shop">Shop<select class="input" id="s-shop" name="shop">' +
+      allShops().map(function (x) { return '<option value="' + x.id + '"' + (x.id === state.counterShop ? " selected" : "") + ">" + esc(x.name) + "</option>"; }).join("") + "</select></label>" +
+      '<label class="field" for="s-email">Shop email<input class="input" id="s-email" name="email" type="email" autocomplete="username" value="owner@shop.example"></label>' +
+      '<label class="field" for="s-pass">Password<input class="input" id="s-pass" name="password" type="password" autocomplete="current-password" value="demo-password"></label>' +
+      '<button class="btn" type="submit">Log in to the shop app</button></form>' +
+      '<button class="btn line" data-a="shop-signup">New here? List your coffee shop</button>' +
+      '<p class="demo-note">Demo: any details work. Each shop account runs one shop.</p>';
+  }
+
+  // Merchant sign-up: list a coffee shop (like a delivery app's merchant onboarding).
+  function shopSignup() {
+    var row = function (i, name, size, price, cat) {
+      return '<div class="stack" style="gap:6px;border-top:1px solid var(--latte);padding-top:10px">' +
+        '<label class="field" for="m' + i + '-name">Coffee ' + (i + 1) + '<input class="input" id="m' + i + '-name" name="m' + i + '-name" value="' + name + '"></label>' +
+        '<div class="row" style="gap:8px;align-items:flex-end"><label class="field grow" for="m' + i + '-size">Size<input class="input" id="m' + i + '-size" name="m' + i + '-size" value="' + size + '"></label>' +
+        '<label class="field grow" for="m' + i + '-price">Price ($)<input class="input" id="m' + i + '-price" name="m' + i + '-price" inputmode="decimal" value="' + price + '"></label></div>' +
+        '<label class="field" for="m' + i + '-cat">Category<select class="input" id="m' + i + '-cat" name="m' + i + '-cat">' +
+        S.COFFEE_CATEGORIES.map(function (c) { return '<option value="' + c + '"' + (c === cat ? " selected" : "") + ">" + S.CATEGORY_LABELS[c] + "</option>"; }).join("") + "</select></label></div>";
+    };
+    return '<div class="topbar"><button class="back" data-a="shop-login">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">List your coffee shop</h1>' +
+      '<p class="muted" style="padding:0 4px">Get pickup orders from members nearby and weekly payouts to your bank.</p>' +
+      (state.shopError ? '<div class="alert" role="alert">' + esc(state.shopError) + "</div>" : "") +
+      '<form class="stack" data-form="shop-signup">' +
+      '<div class="card stack"><b>Your account</b>' +
+      '<label class="field" for="o-name">Your name<input class="input" id="o-name" name="owner" autocomplete="name" value="Jordan Reyes"></label>' +
+      '<label class="field" for="o-email">Shop email<input class="input" id="o-email" name="email" type="email" autocomplete="email" value="hello@yourshop.example"></label>' +
+      '<label class="field" for="o-pass">Password<input class="input" id="o-pass" name="password" type="password" autocomplete="new-password" value="demo-password"></label></div>' +
+      '<div class="card stack"><b>Your shop</b>' +
+      '<label class="field" for="b-name">Business name<input class="input" id="b-name" name="name" value="Corner Cup Coffee"></label>' +
+      '<label class="field" for="b-addr">Street address<input class="input" id="b-addr" name="address" autocomplete="street-address" value="88 Northfield Ave, West Orange"></label>' +
+      '<div class="row" style="gap:8px;align-items:flex-end"><label class="field grow" for="b-open">Opens<input class="input" id="b-open" name="open" type="time" value="07:00"></label>' +
+      '<label class="field grow" for="b-close">Closes<input class="input" id="b-close" name="close" type="time" value="17:00"></label></div>' +
+      '<label class="field" for="b-story">Your story <span class="muted small" style="font-weight:400">(up to ' + S.RULES.shopStoryMaxChars + ' characters)</span><textarea class="input" id="b-story" name="story" rows="3" maxlength="' + S.RULES.shopStoryMaxChars + '">Neighborhood espresso bar with a bright window seat and the friendliest baristas on Northfield.</textarea></label></div>' +
+      '<div class="card stack"><b>Starter menu</b><span class="muted small">Coffee only. Food can\'t be sold through the app. Leave a row blank to skip it.</span>' +
+      row(0, "Latte", "12 oz", "5.00", "espresso") + row(1, "House Drip", "12 oz", "3.00", "brewed") + row(2, "Cold Brew", "16 oz", "4.75", "cold") + "</div>" +
+      '<div class="card stack"><b>Payouts</b><span class="muted">In the real app you connect your bank through Stripe here. You keep 88% of what a member\'s pass covers, plus 100% of any overage less card processing, paid every Monday.</span></div>' +
+      '<button class="btn" type="submit">List my shop</button></form>';
+  }
+
+  function signup() {
+    var login = state.authMode === "login";
+    return '<div class="topbar"><button class="back" data-a="home">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">' + (login ? "Welcome back" : "Get your pass") + "</h1>" +
+      '<form class="card stack" data-form="signup">' +
+      (login ? "" : '<label class="field" for="f-name">Name<input class="input" id="f-name" name="name" autocomplete="name" value="Dana Kowalski" required></label>') +
+      '<label class="field" for="f-email">Email<input class="input" id="f-email" name="email" type="email" autocomplete="email" value="dana@example.com" required></label>' +
+      '<label class="field" for="f-pass">Password<input class="input" id="f-pass" name="password" type="password" autocomplete="' + (login ? "current-password" : "new-password") + '" value="demo-password"></label>' +
+      '<button class="btn" type="submit">' + (login ? "Log in" : "Create account") + "</button>" +
+      '<button class="btn ghost" type="button" data-a="toggle-auth">' + (login ? "New here? Create an account" : "Have an account? Log in") + "</button></form>" +
+      '<p class="demo-note">Demo: any details work.</p>';
+  }
+
+  function plans() {
+    var cards = planCards("select-tier", state.selectedTier);
+    var t = S.getTier(state.selectedTier);
+    return '<div class="topbar"><button class="back" data-a="' + (state.tierId ? "close-plans" : "home") + '">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">Choose your pass</h1>' + cards +
+      '<div class="card stack"><p><b>' + t.name + "</b>: " + t.passesPerMonth + " Daily Passes a month. Each pass covers the first " + money2(t.maxPassValueCents) +
+      " of that day's order. Unused passes expire at renewal.</p>" +
+      '<button class="btn" data-a="checkout">Continue · ' + money(t.priceCents) + "/month</button></div>";
+  }
+
+  function checkoutSheet() {
+    var t = S.getTier(state.selectedTier);
+    return '<div class="sheet-back" data-a="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="Checkout" data-stop>' +
+      '<p class="badge">Demo checkout</p><h2 style="font-size:1.6rem">' + t.name + " · " + money(t.priceCents) + "/month</h2>" +
+      '<p class="muted">In the real app this opens Stripe Checkout, so card numbers never touch Sippy Brew. Nothing is charged here.</p>' +
+      '<button class="btn" data-a="pay">Pay ' + money(t.priceCents) + " (demo)</button>" +
+      '<button class="btn ghost" data-a="close-sheet">Cancel</button></div></div>';
+  }
+
+  function appTop() {
+    if (state.session === "admin") {
+      return '<div class="topbar"><span class="row" style="gap:10px"><span class="logo">' + LOGO + '</span><span class="badge">Admin</span></span>' +
+        '<button class="pill dark" data-a="sign-out">Sign out</button></div>';
+    }
+    if (state.session === "shop") {
+      return '<div class="topbar"><span class="row" style="gap:10px"><span class="logo">' + LOGO + '</span><span class="badge sky">Shop</span></span>' +
+        '<button class="pill dark" data-a="sign-out">Sign out</button></div>';
+    }
+    return '<div class="topbar"><span class="logo">' + LOGO + "</span></div>";
+  }
+
+  // ---- Member app
+  function passStatus() {
+    var today = S.dayKey(now(), TZ);
+    if (state.passDaysUsed.indexOf(today) >= 0) return '<span class="badge">Today\'s pass used</span>';
+    if (state.passesLeft < 1) return '<span class="badge">No passes left</span>';
+    return '<span class="badge sky">Today\'s pass ready</span>';
+  }
+
+  function upgradeInfo() {
+    var t = tier(); if (!t) return null;
+    var to = S.upgradeOffer(t, state.passesLeft); if (!to) return null;
+    var periodOrders = state.orders.map(function (o) { return { overageCents: o.overageCents, status: o.status }; });
+    var nudge = S.suggestUpgrade({ plan: t, periodOrders: periodOrders, passesLeft: state.passesLeft });
+    var over = periodOrders.filter(function (o) { return o.status !== "cancelled" && o.overageCents > 0; });
+    return { to: to, suggested: !!nudge, overageOrders: over.length, overagePaid: over.reduce(function (a, o) { return a + o.overageCents; }, 0), nowCents: S.upgradeNowCost(t, to) };
+  }
+
+  function upgradeCard(u, nudge) {
+    var n = state.passesLeft;
+    return '<div class="card stack" style="' + (nudge ? "border:2px solid var(--honey)" : "") + '">' +
+      (nudge ? "<b>You've paid " + money2(u.overagePaid) + " in overages this month</b><span class=\"muted small\">" + u.overageOrders + " of your orders went over your pass. On <b>" + u.to.name + "</b>, each pass covers up to " + money2(u.to.maxPassValueCents) + ".</span>"
+        : "<b>Move up to " + u.to.name + '</b><span class="muted small">Each pass covers up to ' + money2(u.to.maxPassValueCents) + ", so lattes and specialty drinks are covered.</span>") +
+      '<span class="small">Pay the monthly difference, <b>' + money2(u.nowCents) + "</b>, now. Your " + n + " remaining " + (n === 1 ? "pass covers" : "passes cover") + " up to " + money2(u.to.maxPassValueCents) + " right away, and from your next renewal it's " + money(u.to.priceCents) + "/month.</span>" +
+      (state.upgradeConfirm ? '<button class="btn" data-a="upgrade-confirm">Confirm and pay ' + money2(u.nowCents) + ' (demo)</button><button class="btn ghost" data-a="upgrade-cancel">Not now</button>'
+        : '<button class="' + (nudge ? "pill honey" : "btn line") + '" style="width:100%" data-a="upgrade-start">Upgrade to ' + u.to.subTierName + "</button>") + "</div>";
+  }
+
+  function shopsTab() {
+    var t = tier();
+    var up = upgradeInfo();
+    var list = memberShops().map(function (s) {
+      return '<button class="card shop-card" data-a="open-shop" data-id="' + s.id + '"><span class="thumb"><span class="logo" style="width:40px;height:40px">' + LOGO + '</span></span>' +
+        '<span class="grow stack" style="gap:2px"><b style="font-family:var(--head);font-weight:400;font-size:1.2rem">' + esc(s.name) + '</b>' +
+        '<span class="muted small">' + esc(s.address) + '</span><span class="small"><b>' + (isPaused(s.id) ? "Not taking orders" : "Open now") + "</b> · " + s.hours + " · " + s.miles + ' mi' + (isSpotlight(s.id) ? ' · <span class="badge honey">Spotlight</span>' : s.custom ? ' · <span class="badge sky">New</span>' : "") + '</span>' +
+        '<span class="muted small">' + esc(s.story) + "</span></span></button>";
+    }).join("");
+    return '<div class="row between" style="padding:0 4px"><h1 style="font-size:2rem">Hi, ' + firstName() + "</h1>" + passStatus() + "</div>" +
+      (up && up.suggested ? upgradeCard(up, true) : "") +
+      '<div class="card stack" style="gap:8px"><div class="row between"><span class="muted small">Daily Passes left this month</span><b class="num">' + state.passesLeft + " of " + t.passesPerMonth + "</b></div>" +
+      '<div class="meter" role="meter" aria-label="Passes left" aria-valuemin="0" aria-valuemax="' + t.passesPerMonth + '" aria-valuenow="' + state.passesLeft + '"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
+      '<span class="muted small">Each pass covers the first ' + money2(t.maxPassValueCents) + " of one day's order.</span></div>" +
+      '<h2 class="section-title">Shops near you</h2><div class="stack">' + list + "</div>";
+  }
+
+  function menuForOrder(s) {
+    return s.menu.map(function (m) { return { id: m.id, shopId: s.id, name: m.name, priceCents: m.priceCents, category: m.category, available: true, soldOutToday: !!state.soldOut[m.id], modifierGroups: m.modifierGroups }; });
+  }
+
+  function customizeSheet(s) {
+    var m = s.menu.filter(function (x) { return x.id === state.customize; })[0]; if (!m) return "";
+    var extra = 0;
+    var groups = m.modifierGroups.map(function (g) {
+      var single = g.maxSelect === 1;
+      return '<fieldset class="stack" style="gap:8px;border:0;padding:0;margin:0"><legend class="row between" style="width:100%"><b>' + esc(g.name) + '</b><span class="muted small">' + (g.required ? "Required · " : "") + (single ? "Pick one" : "Pick up to " + g.maxSelect) + "</span></legend>" +
+        g.options.map(function (o) {
+          var on = state.picked.indexOf(o.id) >= 0; if (on) extra += o.priceCents;
+          return '<button class="opt' + (on ? " on" : "") + '" role="' + (single ? "radio" : "checkbox") + '" aria-checked="' + on + '" data-a="pick-opt" data-id="' + o.id + '" data-g="' + g.id + '"><span>' + (on ? "✓ " : "") + esc(o.name) + '</span><span class="muted small">' + (o.priceCents ? "+" + money2(o.priceCents) : "Free") + "</span></button>";
+        }).join("") + "</fieldset>";
+    }).join("");
+    var unit = m.priceCents + extra;
+    return '<div class="sheet-back" data-a="close-customize"><div class="sheet" role="dialog" aria-modal="true" aria-label="Customize ' + esc(m.name) + '" data-stop style="max-height:88vh;overflow:auto">' +
+      '<div class="row between"><div><h2 style="font-size:1.6rem">' + esc(m.name) + '</h2><span class="muted small">' + m.size + " · " + money2(m.priceCents) + '</span></div><button class="back" data-a="close-customize" aria-label="Close">✕</button></div>' +
+      groups +
+      '<span class="muted small">Customizations are priced by the shop. Your pass covers your order up to its daily max; anything more is an overage you confirm.</span>' +
+      (state.error ? '<div class="alert" role="alert">' + esc(state.error) + "</div>" : "") +
+      '<div class="row between"><div class="stepper"><button data-a="cqty" data-d="-1" aria-label="One fewer" ' + (state.cqty <= 1 ? "disabled" : "") + '>−</button><output aria-live="polite">' + state.cqty + '</output><button data-a="cqty" data-d="1" aria-label="One more" ' + (state.cqty >= S.MAX_QUANTITY_PER_LINE ? "disabled" : "") + '>+</button></div><span class="muted small">' + money2(unit) + " each</span></div>" +
+      '<button class="btn" data-a="add-custom">Add to order · ' + money2(unit * state.cqty) + "</button></div></div>";
+  }
+
+  function shopDetail(id) {
+    var s = shopById(id), t = tier();
+    var items = s.menu.map(function (m) {
+      var out = !!state.soldOut[m.id], custom = m.modifierGroups.length > 0;
+      var inCart = state.cart.filter(function (l) { return l.menuItemId === m.id; }).reduce(function (a, l) { return a + l.quantity; }, 0);
+      return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + "</b>" + (inCart ? ' <span class="badge sky">' + inCart + " in order</span>" : "") + '<div class="muted small">' + m.size + " · " + money2(m.priceCents) + (out ? ' · <span style="color:var(--danger);font-weight:700">Sold out</span>' : custom ? " · Customizable" : "") + "</div></div>" +
+        (out ? "" : '<button class="btn line" style="width:auto;padding:0 16px;min-height:44px;font-size:.95rem" data-a="' + (custom ? "open-customize" : "add-plain") + '" data-id="' + m.id + '">' + (custom ? "Customize" : "Add") + "</button>") + "</div>";
+    }).join("");
+    var priced = state.cart.length ? S.priceOrder(state.cart, menuForOrder(s), s.id) : null;
+    var lines = priced && priced.ok ? priced.lines : [];
+    var total = priced && priced.ok ? priced.totalCents : 0;
+    var cartHtml = state.cart.length ? '<div class="stack" style="gap:8px">' + state.cart.map(function (l, li) {
+      var key = l.optionIds.slice().sort().join(",");
+      var p = lines.filter(function (x) { return x.menuItemId === l.menuItemId && x.options.map(function (o) { return o.optionId; }).sort().join(",") === key; })[0];
+      var item = s.menu.filter(function (x) { return x.id === l.menuItemId; })[0];
+      return '<div class="row between" style="align-items:flex-start;border-bottom:1px solid var(--latte);padding-bottom:8px"><div class="grow"><b>' + l.quantity + "× " + esc(item ? item.name : "Item") + "</b>" +
+        (p && p.options.length ? '<div class="muted small">' + esc(S.describeOptions(p.options)) + "</div>" : "") +
+        '<div class="stepper" style="margin-top:6px"><button data-a="cart-bump" data-id="' + li + '" data-d="-1" aria-label="One fewer">−</button><button data-a="cart-bump" data-id="' + li + '" data-d="1" aria-label="One more" ' + (l.quantity >= S.MAX_QUANTITY_PER_LINE ? "disabled" : "") + ">+</button></div></div>" +
+        '<b class="num">' + (p ? money2(p.lineTotalCents) : "") + "</b></div>";
+    }).join("") + "</div>" : '<span class="muted">Add a coffee from the menu.</span>';
+    var split = S.splitPassValue(total, t.maxPassValueCents);
+    var pass = S.checkPassAvailable({ passesLeft: state.passesLeft, passDaysUsed: state.passDaysUsed, now: now(), timeZone: TZ });
+    var hasOver = split.overageCents > 0;
+    var confirmed = !hasOver || state.confirmedOverage === split.overageCents;
+    var slots = S.pickupSlots(now(), ALL_DAY, TZ).slice(0, 12);
+    var chips = slots.map(function (d, i) { return '<button class="chip" data-a="pickup" data-id="' + i + '" aria-pressed="' + (i === state.pickupIdx) + '">' + timeFmt.format(d) + "</button>"; }).join("");
+    var label = hasOver ? "Use pass + pay " + money2(split.overageCents) + " overage" : "Use today's pass";
+    return '<button class="back" data-a="back">‹ Shops</button>' +
+      '<div style="padding:0 4px" class="stack"><h1 style="font-size:2rem">' + esc(s.name) + '</h1><p class="muted">' + esc(s.address) + "</p><p>" + esc(s.story) + "</p></div>" +
+      '<div class="card">' + items + "</div>" +
+      '<div class="card stack"><h2 style="font-size:1.4rem">Your order</h2>' + cartHtml + (priced && !priced.ok ? '<div class="alert" role="alert">' + esc(priced.message) + "</div>" : "") +
+      '<div class="lines"><div class="row"><span class="muted">Pass covers (first ' + money2(t.maxPassValueCents) + ')</span><b class="num">' + money2(split.passCoveredCents) + "</b></div>" +
+      '<div class="row"><span class="muted">Overage</span><b class="num">' + money2(split.overageCents) + "</b></div>" +
+      '<div class="row total"><span>Order total</span><span class="num">' + money2(total) + "</span></div></div>" +
+      (hasOver ? '<div class="confirm"><b>This order is ' + money2(split.overageCents) + " over your pass.</b>" +
+        '<span class="muted small">' + (S.overageIsCharged(split.overageCents) ? "It's charged to your card on file when the shop hands over your order, at the shop's menu prices. It goes 100% to the shop." : "Overages under " + money2(S.RULES.minOverageChargeCents) + " are waived, so you won't be charged for this one.") + "</span>" +
+        '<label for="ov"><input id="ov" type="checkbox" data-a="confirm-overage" data-amount="' + split.overageCents + '" ' + (confirmed ? "checked" : "") + "><span>I confirm the " + money2(split.overageCents) + " overage. My pass covers " + money2(split.passCoveredCents) + " of the " + money2(total) + " total.</span></label>" +
+        (upgradeInfo() && S.overageCoveredByUpgrade(t, total) > 0 ? '<span class="small" style="background:var(--cream);border-radius:12px;padding:8px 10px">Tip: on <b>' + S.upgradeTarget(t).name + "</b>, " + money2(S.overageCoveredByUpgrade(t, total)) + ' of this overage would be covered by your pass. <button class="linkbtn" style="min-height:0;padding:0" data-a="goto-upgrade">See upgrade</button></span>' : "") +
+        "</div>" : "") +
+      '<span class="muted small">' + state.passesLeft + " of " + t.passesPerMonth + " passes left · one pass per day</span>" +
+      '<b>Pickup time</b><div class="chips">' + chips + "</div>" +
+      (!pass.ok && total > 0 ? '<div class="alert" role="alert">' + esc(pass.message) + "</div>" : "") +
+      (state.error ? '<div class="alert" role="alert">' + esc(state.error) + "</div>" : "") +
+      (isPaused(s.id) ? '<div class="alert" role="alert">This shop isn\'t taking orders right now.</div>' : "") +
+      '<button class="btn" data-a="place" data-id="' + s.id + '" ' + (total === 0 || !pass.ok || !confirmed || isPaused(s.id) || (priced && !priced.ok) ? "disabled" : "") + ">" + label + "</button></div>";
+  }
+
+  function orderById(id) { for (var i = 0; i < state.orders.length; i++) if (state.orders[i].id === id) return state.orders[i]; return null; }
+  var OPEN = ["received", "preparing", "ready"];
+  var LABEL = S.ORDER_STATUS_LABELS;
+
+  function qrDetail(id) {
+    var o = orderById(id); if (!o) return shopsTab();
+    var open = OPEN.indexOf(o.status) >= 0;
+    var title = o.status === "ready" ? "Ready for pickup!" : o.status === "picked_up" ? "Enjoy!" : o.status === "cancelled" ? "Order cancelled" : "Show this at the counter";
+    var items = o.items.map(function (i) { return "<div>" + i.quantity + "× " + esc(i.name) + ' <span class="muted">(' + i.size + ")</span>" + (i.options && i.options.length ? '<div class="muted small">' + esc(S.describeOptions(i.options)) + "</div>" : "") + "</div>"; }).join("");
+    var t = open ? liveTicket(id) : null;
+    return '<button class="back" data-a="back">‹ Back</button>' +
+      '<div class="qr-screen"><span class="muted small" style="text-transform:uppercase;letter-spacing:.08em;font-weight:800">' + esc(shopById(o.shopId).name) + "</span>" +
+      '<h1 style="font-size:1.9rem">' + title + '</h1><span class="badge ' + (o.status === "ready" ? "sky" : o.status === "picked_up" ? "ok" : o.status === "cancelled" ? "bad" : "") + '">' + LABEL[o.status] + "</span>" +
+      (open ? '<div class="qr-box" id="qr" role="img" aria-label="Pickup QR code"></div><span class="muted small">Or tell the barista</span><span class="code" id="qr-code">' + t.shortCode + '</span><span class="muted small" id="qr-left" aria-live="polite"></span>' +
+        '<p class="muted small">Codes refresh every 30 seconds and work once. On a real phone the screen goes to full brightness.</p>' : "") +
+      '<div style="align-self:stretch;text-align:left" class="stack"><span class="muted small">Pickup ' + timeFmt.format(new Date(o.pickupAt)) + "</span>" + items +
+      '<div class="lines"><div class="row"><span class="muted">Covered by your Daily Pass</span><span class="num">' + money2(o.passCoveredCents) + "</span></div>" +
+      (o.overageCents ? '<div class="row"><span class="muted">Overage you confirmed</span><span class="num">' + money2(o.overageCents) + "</span></div>" : "") +
+      '<div class="row total"><span>Order total</span><span class="num">' + money2(o.totalCents) + "</span></div></div></div></div>" +
+      (open ? '<p class="demo-note">Demo: to redeem it, sign out on the Account tab, then tap <b>Shop log in</b> on the home screen.</p>' : "");
+  }
+
+  function ordersTab() {
+    var row = function (o) {
+      return '<button class="card stack" style="gap:4px;text-align:left;width:100%;border:0' + (o.status === "ready" ? ";box-shadow:0 0 0 3px var(--sky)" : "") + '" data-a="open-order" data-id="' + o.id + '">' +
+        '<div class="row between"><b>' + esc(shopById(o.shopId).name) + '</b><span class="badge' + (o.status === "ready" ? " sky" : o.status === "picked_up" ? " ok" : o.status === "cancelled" ? " bad" : "") + '">' + LABEL[o.status] + "</span></div>" +
+        '<span class="muted small">' + dateFmt.format(new Date(o.createdAt)) + " · " + o.items.map(function (i) { return i.quantity + "× " + esc(i.name); }).join(", ") + "</span>" +
+        '<span class="small">Daily Pass' + (o.overageCents ? " + " + money2(o.overageCents) + " overage" : "") + "</span>" +
+        (OPEN.indexOf(o.status) >= 0 ? '<b style="color:var(--burnt-ink)">Show pickup QR →</b>' : "") + "</button>";
+    };
+    var open = state.orders.filter(function (o) { return OPEN.indexOf(o.status) >= 0; });
+    var past = state.orders.filter(function (o) { return OPEN.indexOf(o.status) < 0; });
+    return '<h1 style="font-size:2rem;padding:0 4px">Order</h1><button class="btn" data-a="tab" data-id="shops">Find a shop and order</button>' +
+      '<h2 class="section-title">Waiting for pickup</h2>' + (open.length ? '<div class="stack">' + open.map(row).join("") + "</div>" : '<div class="card muted">Nothing waiting. Order from any shop and your pickup QR shows up here.</div>') +
+      '<h2 class="section-title">History</h2>' + (past.length ? '<div class="stack">' + past.map(row).join("") + "</div>" : '<div class="card muted">No past orders yet.</div>');
+  }
+
+  function accountTab() {
+    var t = tier();
+    return '<h1 style="font-size:2rem;padding:0 4px">Account</h1>' +
+      '<div class="card stack" style="gap:6px"><span class="muted small">Signed in as</span><b>' + esc(state.user.name) + '</b><span class="muted small">' + esc(state.user.email) + "</span></div>" +
+      '<div class="card stack"><span class="muted small">Plan</span><h2 style="font-size:1.6rem">' + t.name + "</h2>" +
+      '<span class="muted">' + money(t.priceCents) + "/month · " + t.passesPerMonth + " passes · " + money2(t.maxPassValueCents) + " max per pass</span>" +
+      '<button class="btn line" data-a="change-plan">Change plan</button></div>' +
+      (upgradeInfo() ? upgradeCard(upgradeInfo(), upgradeInfo().suggested) : "") +
+      '<div class="card stack"><div class="row between"><span class="muted small">Daily Passes this month</span>' + passStatus() + "</div>" +
+      '<b style="font-size:1.75rem" class="num">' + state.passesLeft + ' <span class="muted" style="font-size:1rem;font-weight:400">of ' + t.passesPerMonth + " left</span></b>" +
+      '<div class="meter"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
+      '<span class="muted small">Unused passes expire at renewal. Nothing rolls over.</span></div>' +
+      '<div class="card stack"><b>Demo controls</b><span class="muted small">Today in the demo: ' + dateFmt.format(now()) + ". You get one pass a day, so move to the next day to order again.</span>" +
+      '<button class="btn line" data-a="new-day">Start the next day</button><button class="btn danger" data-a="reset">Reset the demo</button></div>' +
+      '<button class="btn line" data-a="sign-out">Sign out</button>';
+  }
+
+  // ---- Shop app
+  function counterPicker() {
+    var st = shopStatus(state.counterShop);
+    return '<p class="muted small" style="padding:0 4px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">' + esc(shopById(state.counterShop).name) + "</p>" +
+      (st === "pending" ? '<div class="alert ok" role="status" style="color:var(--espresso);border-color:var(--honey)">Your shop is waiting for approval. Members can\'t see it yet. We\'ll email you as soon as you\'re live.</div>' : "") +
+      (st === "paused" ? '<div class="alert" role="alert">Your shop is paused by Sippy Brew and hidden from members. Contact support.</div>' : "");
+  }
+
+  function shopOrdersTab() {
+    var list = state.orders.filter(function (o) { return o.shopId === state.counterShop && OPEN.indexOf(o.status) >= 0; });
+    var cards = list.map(function (o) {
+      var next = S.nextStatus(o.status);
+      return '<div class="card stack"' + (o.status === "ready" ? ' style="box-shadow:0 0 0 3px var(--sky)"' : "") + '><div class="row between"><h2 style="font-size:1.6rem">' + firstName() + '</h2><span class="badge' + (o.status === "ready" ? " sky" : "") + '">' + LABEL[o.status] + "</span></div>" +
+        '<span class="muted"><b>Pickup ' + timeFmt.format(new Date(o.pickupAt)) + "</b></span>" +
+        o.items.map(function (i) { return '<div style="font-size:1.2rem">' + i.quantity + "× " + esc(i.name) + ' <span class="muted">(' + i.size + ")</span>" + (i.options && i.options.length ? '<div style="font-size:1rem;font-weight:800;color:var(--burnt-ink)">' + esc(S.describeOptions(i.options)) + "</div>" : "") + "</div>"; }).join("") +
+        '<span class="muted small">' + money2(o.totalCents) + " · Daily Pass" + (o.overageCents ? " + " + money2(o.overageCents) + " overage (paid in app, 100% yours)" : "") + "</span>" +
+        (next && next !== "picked_up" ? '<button class="btn" data-a="advance" data-id="' + o.id + '">Mark ' + LABEL[next].toLowerCase() + "</button>" : "") +
+        (o.status === "ready" ? '<button class="btn" data-a="shop-tab" data-id="scan">Scan to hand off</button>' : "") +
+        '<button class="btn ghost" data-a="cancel" data-id="' + o.id + '">Cancel order</button></div>';
+    }).join("");
+    var accepting = !isPaused(state.counterShop);
+    return counterPicker() +
+      '<label class="card row between" for="accepting" style="cursor:pointer"><span class="stack" style="gap:2px"><b>' + (accepting ? "Accepting orders" : "Paused") + '</b><span class="muted small">' +
+      (accepting ? "Members can order from you now." : "Members can see your shop but can't order.") + '</span></span>' +
+      '<input id="accepting" type="checkbox" data-a="accepting" ' + (accepting ? "checked" : "") + ' style="width:26px;height:26px;accent-color:var(--success)"></label>' +
+      '<h1 style="font-size:2rem;padding:0 4px">Live orders</h1>' +
+      (cards ? '<div class="stack">' + cards + "</div>" : '<div class="card muted">No orders right now. New pickup orders show up here. (Demo: sign out, log in as a member, and order from this shop.)</div>');
+  }
+
+  function shopScanTab() {
+    var waiting = state.orders.filter(function (o) { return o.shopId === state.counterShop && OPEN.indexOf(o.status) >= 0; });
+    var hint = waiting.map(function (o) {
+      var t = latestTicket(o.id);
+      return '<button class="btn line" data-a="scan-phone" data-id="' + o.id + '">Scan ' + firstName() + "'s phone" + (t ? " (code " + t.shortCode + ")" : "") + "</button>";
+    }).join("");
+    var r = state.scan;
+    var result = r ? (r.ok
+      ? '<div class="alert ok" role="status"><div style="font-size:1.2rem">✓ Redeemed for ' + firstName() + "</div>" +
+        r.order.items.map(function (i) { return '<div style="font-weight:400;color:var(--espresso)">' + i.quantity + "× " + esc(i.name) + (i.options && i.options.length ? " · " + esc(S.describeOptions(i.options)) : "") + "</div>"; }).join("") +
+        '<div class="lines small" style="margin-top:8px;color:var(--espresso);font-weight:400">' +
+        '<div class="row"><span>Pass-covered value</span><span class="num">' + money2(r.pay.passCoveredCents) + "</span></div>" +
+        '<div class="row"><span>12% commission</span><span class="num">−' + money2(r.pay.commissionCents) + "</span></div>" +
+        (r.pay.overageCents ? '<div class="row"><span>Overage (100% yours)</span><span class="num">+' + money2(r.pay.overageCents) + '</span></div><div class="row"><span>Card processing on overage</span><span class="num">−' + money2(r.pay.processingFeeCents) + "</span></div>" : "") +
+        '<div class="row total"><span>Your payout for this order</span><span class="num" style="font-size:1rem">' + money2(r.pay.shopCents) + "</span></div></div></div>"
+      : '<div class="alert" role="alert">' + esc(r.message) + "</div>") : "";
+    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Scan</h1>' +
+      '<div class="card stack"><span class="muted small">On a real phone this is the camera. In the demo, tap to scan the member\'s screen, or type their code.</span>' +
+      (hint || '<span class="muted">No orders waiting for this shop.</span>') + "</div>" + result +
+      '<form class="card stack" data-form="code"><label class="field" for="code-in">Enter the 6-character code<input class="input" id="code-in" name="code" maxlength="7" autocomplete="off" autocapitalize="characters" style="font-family:ui-monospace,Menlo,monospace;font-size:1.6rem;letter-spacing:.25em;text-transform:uppercase" placeholder="ABC234"></label>' +
+      '<button class="btn" type="submit">Redeem code</button></form>';
+  }
+
+  function modsEditor(m) {
+    var groups = m.modifierGroups;
+    return '<form class="stack" data-form="mods" data-id="' + m.id + '" style="background:var(--vanilla);border-radius:16px;padding:12px;margin-bottom:10px">' +
+      '<span class="muted small">Price options at your normal menu prices. If a drink goes over what a member\'s pass covers, they pay the difference and you get 100% of it.</span>' +
+      (groups.length ? groups.map(function (g, gi) {
+        return '<div class="stack" style="gap:6px"><b>' + esc(g.name) + ' <span class="muted small" style="font-weight:600">' + (g.maxSelect === 1 ? "pick one" : "pick up to " + g.maxSelect) + "</span></b>" +
+          g.options.map(function (o, oi) {
+            return '<div class="row" style="gap:8px"><span class="grow">' + esc(o.name) + '</span><label class="row small" style="gap:4px">+$<input class="input" style="width:84px;min-height:44px" name="p-' + gi + "-" + oi + '" inputmode="decimal" value="' + (o.priceCents / 100).toFixed(2) + '" aria-label="Price for ' + esc(o.name) + '"></label></div>';
+          }).join("") + "</div>";
+      }).join("") : '<button class="btn line" type="button" data-a="starter-mods" data-id="' + m.id + '">Start with milk, extra shot and syrups</button>') +
+      (groups.length ? '<div class="stack" style="gap:6px;border-top:1px solid var(--latte);padding-top:8px"><b>Add an option</b>' +
+        '<select class="input" name="new-group" aria-label="Group">' + groups.map(function (g, gi) { return '<option value="' + gi + '">' + esc(g.name) + "</option>"; }).join("") + "</select>" +
+        '<div class="row" style="gap:8px"><input class="input grow" name="new-name" placeholder="e.g. Brown sugar syrup" aria-label="Option name"><input class="input" style="width:84px" name="new-price" inputmode="decimal" placeholder="0.50" aria-label="Option price"></div>' +
+        '<span class="muted small">Coffee only. Try adding a cookie to see it refused.</span></div>' : "") +
+      (state.shopError ? '<div class="alert" role="alert">' + esc(state.shopError) + "</div>" : "") +
+      (groups.length ? '<div class="row" style="gap:8px"><button class="btn small" type="submit" style="width:auto;padding:0 18px">Save</button><button class="btn ghost" type="button" data-a="clear-mods" data-id="' + m.id + '" style="width:auto">Remove all</button></div>' : "") +
+      "</form>";
+  }
+
+  function shopMenuTab() {
+    var s = shopById(state.counterShop);
+    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Menu</h1><div class="card">' +
+      s.menu.map(function (m) {
+        var out = !!state.soldOut[m.id];
+        return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + '</b><div class="muted small">' + m.size + " · " + money2(m.priceCents) + "</div></div>" +
+          '<div class="stack" style="gap:4px;align-items:flex-end"><label class="row small" style="font-weight:700;min-height:44px"><input type="checkbox" data-a="sold-out" data-id="' + m.id + '" ' + (out ? "checked" : "") + ' style="width:22px;height:22px;accent-color:var(--burnt)">Sold out today</label>' +
+          '<button class="linkbtn" style="min-height:36px;padding:0" data-a="edit-mods" data-id="' + m.id + '" aria-expanded="' + (state.editMods === m.id) + '">Customizations' + (m.modifierGroups.length ? " (" + m.modifierGroups.length + ")" : "") + "</button></div></div>" +
+          (state.editMods === m.id ? modsEditor(m) : (m.modifierGroups.length ? '<p class="muted small" style="margin:-4px 0 8px">' + esc(m.modifierGroups.map(function (g) { return g.name + ": " + g.options.map(function (o) { return o.name + (o.priceCents ? " +" + money2(o.priceCents) : ""); }).join(", "); }).join(" · ")) + "</p>" : ""));
+      }).join("") + "</div>" +
+      (state.shopError ? '<div class="alert" role="alert">' + esc(state.shopError) + "</div>" : "") +
+      '<form class="card stack" data-form="menu-add"><b>Add a coffee</b><span class="muted small">Coffee only. Try adding a muffin to see it blocked.</span>' +
+      '<label class="field" for="a-name">Name<input class="input" id="a-name" name="name" placeholder="Honey Oat Latte"></label>' +
+      '<div class="row" style="gap:8px;align-items:flex-end"><label class="field grow" for="a-size">Size<input class="input" id="a-size" name="size" value="12 oz"></label>' +
+      '<label class="field grow" for="a-price">Price ($)<input class="input" id="a-price" name="price" inputmode="decimal" placeholder="6.25"></label></div>' +
+      '<label class="field" for="a-cat">Category<select class="input" id="a-cat" name="category">' +
+      S.COFFEE_CATEGORIES.map(function (c) { return '<option value="' + c + '">' + S.CATEGORY_LABELS[c] + "</option>"; }).join("") + "</select></label>" +
+      '<button class="btn" type="submit">Add to menu</button></form>';
+  }
+
+  function shopDashTab() {
+    var mine = state.orders.filter(function (o) { return o.shopId === state.counterShop; }).map(function (o) {
+      return { id: o.id, memberId: "member", totalCents: o.totalCents, passCoveredCents: o.passCoveredCents, overageCents: o.overageCents, status: o.status, createdAt: o.createdAt, redeemedAt: o.redeemedAt, items: o.items.map(function (i) { return { name: i.name, quantity: i.quantity }; }) };
+    });
+    var st = S.shopStats(mine, now(), TZ);
+    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Today</h1><div class="stats">' +
+      '<div class="stat"><span class="muted small">Redemptions today</span><b>' + st.redemptions.today + "</b></div>" +
+      '<div class="stat"><span class="muted small">This week</span><b>' + st.redemptions.week + "</b></div>" +
+      '<div class="stat"><span class="muted small">Pass sales this month</span><b>' + money2(st.grossCents.month) + "</b></div>" +
+      '<div class="stat"><span class="muted small">Est. payout this week</span><b>' + money2(st.estimatedWeeklyPayoutCents) + "</b></div></div>" +
+      '<div class="card stack"><b>Top items</b>' + (st.topItems.length ? st.topItems.map(function (i, n) { return '<div class="row between"><span>' + (n + 1) + ". " + esc(i.name) + '</span><b class="num">' + i.quantity + "</b></div>"; }).join("") : '<span class="muted">No redemptions yet.</span>') + "</div>" +
+      payoutCard() + listingCard();
+  }
+
+  function payoutCard() {
+    var week = S.weekBounds(now(), TZ);
+    var done = state.orders.filter(function (o) { return o.shopId === state.counterShop && o.status === "picked_up" && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), week); });
+    var p = S.summarizePayout(done.map(function (o) { return { passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }; }));
+    var line = function (l, v, cls) { return '<div class="row between"><span class="muted">' + l + '</span><span class="num' + (cls || "") + '">' + v + "</span></div>"; };
+    return '<div class="card stack"><div class="row between"><b>This week\'s payout</b><span class="badge">Pays Monday</span></div><div class="lines">' +
+      line("Pass sales (" + p.orderCount + (p.orderCount === 1 ? " order)" : " orders)"), money2(p.grossCents)) +
+      line("12% commission", "−" + money2(p.commissionCents)) +
+      line("Overages (100% yours)", "+" + money2(p.overageTotalCents)) +
+      line("Card processing on overages", "−" + money2(p.processingFeesCents)) +
+      '<div class="row total"><span>Net payout</span><span class="num" style="font-size:1.25rem">' + money2(p.transferCents) + "</span></div></div>" +
+      '<span class="muted small">Sent to your bank through Stripe every Monday.</span></div>';
+  }
+
+  function listingCard() {
+    var sh = shopById(state.counterShop);
+    var st = shopStatus(sh.id);
+    var badge = st === "pending" ? '<span class="badge honey">Waiting for approval</span>' : st === "paused" ? '<span class="badge bad">Paused by admin</span>' : isPaused(sh.id) ? '<span class="badge">Not accepting orders</span>' : '<span class="badge ok">Live</span>';
+    return '<div class="card stack"><div class="row between"><b>Your listing</b>' + badge + "</div>" +
+      '<b style="font-family:var(--head);font-weight:400;font-size:1.3rem">' + esc(sh.name) + '</b><span class="muted">' + esc(sh.address) + "</span>" +
+      '<span class="small"><b>Hours</b> ' + esc(sh.hours) + '</span><span class="muted small">' + esc(sh.story) + "</span>" +
+      '<span class="small"><b>' + sh.menu.length + "</b> coffees on your menu</span></div>";
+  }
+
+  function tabs() {
+    var member = state.session === "member", admin = state.session === "admin";
+    var items = admin ? [["overview", "Overview", "chart"], ["shops", "Shops", "list"], ["members", "Members", "user"]]
+      : member ? [["shops", "Shops", "map"], ["orders", "Order", "cup"], ["account", "Account", "user"]] : [["orders", "Orders", "list"], ["scan", "Scan", "scan"], ["menu", "Menu", "cup"], ["dashboard", "Dashboard", "chart"]];
+    var cur = admin ? state.adminTab : member ? state.tab : state.shopTab;
+    var actName = admin ? "admin-tab" : member ? "tab" : "shop-tab";
+    return '<nav class="tabs" aria-label="Tabs"><div class="inner">' + items.map(function (it) {
+      var count = !member && !admin && it[0] === "orders" ? state.orders.filter(function (o) { return o.shopId === state.counterShop && o.status === "received"; }).length : 0;
+      if (admin && it[0] === "shops") count = allShops().filter(function (x) { return shopStatus(x.id) === "pending"; }).length;
+      return '<button class="tab" data-a="' + actName + '" data-id="' + it[0] + '"' + (cur === it[0] && !state.detail ? ' aria-current="page"' : "") + '><span class="ico" style="position:relative"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[it[2]] + "</svg>" +
+        (count ? '<span class="badge honey" style="position:absolute;top:-4px;right:2px;padding:0 6px;font-size:.7rem" aria-label="' + count + ' new">' + count + "</span>" : "") + "</span>" + it[1] + "</button>";
+    }).join("") + "</div></nav>";
+  }
+
+  // ---- Admin (hidden: no link anywhere; open the demo link with #admin)
+  function adminLogin() {
+    return '<div class="topbar"><span class="logo">' + LOGO + '</span><span class="badge">Admin</span></div>' +
+      '<h1 style="font-size:2rem;padding:0 4px">Admin sign in</h1>' +
+      '<p class="muted" style="padding:0 4px">Only platform admins can sign in here.</p>' +
+      (state.adminError ? '<div class="alert" role="alert">' + esc(state.adminError) + "</div>" : "") +
+      '<form class="card stack" data-form="admin-login">' +
+      '<label class="field" for="ad-email">Email<input class="input" id="ad-email" name="email" type="email" autocomplete="username" placeholder="you@sippybrew.com"></label>' +
+      '<label class="field" for="ad-pass">Password<input class="input" id="ad-pass" name="password" type="password" autocomplete="current-password"></label>' +
+      '<button class="btn" type="submit">Sign in</button></form>' +
+      '<button class="btn ghost" data-a="home">Back to the home screen</button>';
+  }
+
+  function statusBadge(st) {
+    return st === "pending" ? '<span class="badge honey">Pending</span>' : st === "paused" ? '<span class="badge bad">Paused</span>' : '<span class="badge ok">Active</span>';
+  }
+
+  function adminOverview() {
+    var t = tier();
+    var members = state.tierId ? 1 : 0;
+    var month = S.monthBounds(now(), TZ);
+    var redeemed = state.orders.filter(function (o) { return o.status === "picked_up" && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), month); });
+    var sum = S.summarizePayout(redeemed.map(function (o) { return { passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }; }));
+    var pending = allShops().filter(function (x) { return shopStatus(x.id) === "pending"; });
+    return '<h1 style="font-size:2rem;padding:0 4px">Overview</h1><div class="stats">' +
+      '<div class="stat"><span class="muted small">Active subscriptions</span><b>' + members + '</b><span class="muted small">' + (t ? t.name : "None yet") + "</span></div>" +
+      '<div class="stat"><span class="muted small">Monthly revenue</span><b>' + money(t ? t.priceCents : 0) + "</b></div>" +
+      '<div class="stat"><span class="muted small">Commission this month</span><b>' + money2(sum.commissionCents) + '</b><span class="muted small">' + sum.orderCount + " redemptions</span></div>" +
+      '<div class="stat"><span class="muted small">Failed payments</span><b>0</b></div></div>' +
+      '<div class="card stack"><div class="row between"><b>Shops waiting for approval</b><span class="badge ' + (pending.length ? "honey" : "") + '">' + pending.length + "</span></div>" +
+      (pending.length ? pending.map(function (x) {
+        return '<div class="row between" style="border-top:1px solid var(--latte);padding-top:10px"><div class="grow"><b>' + esc(x.name) + '</b><div class="muted small">' + esc(x.address) + '</div></div><button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">Approve</button></div>';
+      }).join("") : '<span class="muted">Nothing to review. New shops show up here when they list.</span>') + "</div>" +
+      '<div class="card stack"><b>Recent orders</b>' + (state.orders.length ? state.orders.slice(0, 6).map(function (o) {
+        return '<div class="row between small" style="border-top:1px solid var(--latte);padding-top:8px"><span class="grow">' + esc(shopById(o.shopId).name) + " · " + dateFmt.format(new Date(o.createdAt)) + '</span><span class="num">' + money2(o.totalCents) + "</span>" + '<span class="badge">' + LABEL[o.status] + "</span></div>";
+      }).join("") : '<span class="muted">No orders yet.</span>') + "</div>";
+  }
+
+  function adminShops() {
+    return '<h1 style="font-size:2rem;padding:0 4px">Shops</h1><div class="stack">' + allShops().map(function (x) {
+      var st = shopStatus(x.id), spot = isSpotlight(x.id);
+      return '<div class="card stack"><div class="row between"><b style="font-family:var(--head);font-weight:400;font-size:1.2rem">' + esc(x.name) + "</b>" + statusBadge(st) + "</div>" +
+        '<span class="muted small">' + esc(x.address) + " · " + x.menu.length + " coffees" + (isPaused(x.id) && st === "active" ? " · not accepting orders right now" : "") + "</span>" +
+        '<div class="row" style="flex-wrap:wrap;gap:8px">' +
+        (st === "pending" ? '<button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">Approve</button>' : "") +
+        (st === "active" ? '<button class="btn danger" style="width:auto;padding:0 18px" data-a="admin-pause" data-id="' + x.id + '">Pause</button>' : "") +
+        (st === "paused" ? '<button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">Resume</button>' : "") +
+        (st === "active" ? '<button class="btn line" style="width:auto;padding:0 18px;font-size:.95rem;min-height:44px" data-a="admin-spotlight" data-id="' + x.id + '" aria-pressed="' + spot + '">' + (spot ? "★ Spotlighted" : "Spotlight") + "</button>" : "") +
+        "</div></div>";
+    }).join("") + "</div>";
+  }
+
+  function adminMembers() {
+    var t = tier();
+    var used = t ? (state.passDaysUsed.length) : 0;
+    return '<h1 style="font-size:2rem;padding:0 4px">Members</h1>' +
+      (state.user ? '<div class="card stack" style="gap:4px"><div class="row between"><b>' + esc(state.user.name) + "</b>" + (t ? '<span class="badge sky">' + t.name + " · active</span>" : '<span class="badge">No plan</span>') + "</div>" +
+        '<span class="muted small">' + esc(state.user.email) + "</span>" +
+        (t ? '<span class="small">' + used + " passes used · " + state.passesLeft + " left this month · " + state.orders.length + " orders</span>" : "") + "</div>"
+        : '<div class="card muted">No members yet. Sign up on the home screen to create one.</div>') +
+      '<p class="demo-note">Members see only their own account. This list is visible to admins only.</p>';
+  }
+
+  // ---------------------------------------------------------------- Render
+  var root, qrTimer = null;
+  function render() {
+    var html = "";
+    if (state.screen === "landing") html = landing();
+    else if (state.screen === "signup") html = signup();
+    else if (state.screen === "plans") html = plans();
+    else if (state.screen === "shop-login") html = shopLogin();
+    else if (state.screen === "shop-signup") html = shopSignup();
+    else if (state.screen === "admin-login") html = adminLogin();
+    else {
+      html = appTop();
+      if (state.session === "admin") {
+        html += state.adminTab === "shops" ? adminShops() : state.adminTab === "members" ? adminMembers() : adminOverview();
+      } else if (state.session === "member") {
+        if (state.detail && state.detail.type === "shop") html += shopDetail(state.detail.id) + (state.customize ? customizeSheet(shopById(state.detail.id)) : "");
+        else if (state.detail && state.detail.type === "qr") html += qrDetail(state.detail.id);
+        else html += state.tab === "orders" ? ordersTab() : state.tab === "account" ? accountTab() : shopsTab();
+      } else {
+        html += state.shopTab === "scan" ? shopScanTab() : state.shopTab === "menu" ? shopMenuTab() : state.shopTab === "dashboard" ? shopDashTab() : shopOrdersTab();
+      }
+      html += tabs();
+    }
+    if (state.sheet === "checkout") html += checkoutSheet();
+    root.innerHTML = html;
+    save();
+    startQr();
+  }
+
+  function drawQr(t) {
+    var box = document.getElementById("qr");
+    if (!box) return;
+    S.qrToSvg(t.payload, { type: "svg", errorCorrectionLevel: "M", margin: 2, color: { dark: "#3B2A1E", light: "#FFFFFF" } }, function (err, svg) {
+      if (!err && box.isConnected) box.innerHTML = svg;
+    });
+    var code = document.getElementById("qr-code"); if (code) code.textContent = t.shortCode;
+  }
+  function startQr() {
+    clearInterval(qrTimer);
+    if (!(state.session === "member" && state.detail && state.detail.type === "qr")) return;
+    var id = state.detail.id, o = orderById(id);
+    if (!o || OPEN.indexOf(o.status) < 0) return;
+    var t = liveTicket(id); drawQr(t);
+    var tick = function () {
+      var cur = latestTicket(id);
+      var left = S.qrSecondsRemaining(new Date(cur.expiresAt), new Date());
+      if (left <= 4) { cur = issueTicket(id); save(); drawQr(cur); left = S.qrSecondsRemaining(new Date(cur.expiresAt), new Date()); }
+      var el = document.getElementById("qr-left"); if (el) el.textContent = "Refreshes in " + left + "s";
+    };
+    tick(); qrTimer = setInterval(tick, 500);
+  }
+
+  // ---------------------------------------------------------------- Actions
+  function addToCart(menuItemId, optionIds, quantity) {
+    var key = menuItemId + "|" + optionIds.slice().sort().join(",");
+    var existing = state.cart.filter(function (l) { return l.key === key; })[0];
+    if (existing) existing.quantity = Math.min(S.MAX_QUANTITY_PER_LINE, existing.quantity + quantity);
+    else state.cart.push({ key: key, menuItemId: menuItemId, optionIds: optionIds, quantity: quantity });
+    state.confirmedOverage = null; state.error = null;
+  }
+
+  function placeOrder(shopId) {
+    var s = shopById(shopId), t = tier(), n = now();
+    var lines = state.cart.map(function (l) { return { menuItemId: l.menuItemId, quantity: l.quantity, optionIds: l.optionIds }; });
+    var slots = S.pickupSlots(n, ALL_DAY, TZ);
+    var pickupAt = slots[Math.min(state.pickupIdx, slots.length - 1)];
+    var menu = menuForOrder(s);
+    var r = S.validateOrder(lines, {
+      shop: { id: s.id, status: isPaused(s.id) || shopStatus(s.id) !== "active" ? "paused" : "active", hours: ALL_DAY },
+      subscription: { status: "active", currentPeriodEnd: new Date(n.getTime() + 30 * 864e5).toISOString() },
+      menu: menu, passesLeft: state.passesLeft, passDaysUsed: state.passDaysUsed, maxPassValueCents: t.maxPassValueCents,
+      confirmedOverageCents: state.confirmedOverage, pickupAt: pickupAt, now: n, timeZone: TZ,
+    });
+    if (!r.ok) { state.error = r.message; return render(); }
+    var sizes = {}; s.menu.forEach(function (m) { sizes[m.id] = m.size; });
+    var id = "o" + Date.now().toString(36);
+    state.orders.unshift({ id: id, shopId: s.id, status: "received", totalCents: r.totalCents, passCoveredCents: r.passCoveredCents, overageCents: r.overageCents,
+      passDay: r.passDay, pickupAt: pickupAt.toISOString(), createdAt: n.toISOString(), redeemedAt: null,
+      items: r.lines.map(function (l) { return { name: l.name, size: sizes[l.menuItemId], quantity: l.quantity, options: l.options }; }) });
+    state.passesLeft = r.passesLeftAfter; state.passDaysUsed.push(r.passDay);
+    state.cart = []; state.confirmedOverage = null; state.error = null; state.counterShop = s.id;
+    state.detail = { type: "qr", id: id };
+    issueTicket(id);
+    render(); window.scrollTo(0, 0);
+    toast("Order placed. Your pass is used for today.");
+  }
+
+  function redeem(input) {
+    var nowMs = Date.now(), t = null;
+    if (input.orderId) t = latestTicket(input.orderId);
+    else {
+      var code = S.normalizeShortCode(input.code || "");
+      if (!code) { state.scan = { ok: false, message: "Codes are 6 letters and numbers." }; return render(); }
+      state.tickets.forEach(function (x) { if (x.shortCode === code && (!t || x.issuedAt > t.issuedAt)) t = x; });
+    }
+    if (!t) { state.scan = { ok: false, message: "That code wasn't found." }; return render(); }
+    var o = orderById(t.orderId);
+    var check = S.checkRedeemable({ expiresAt: new Date(t.expiresAt), redeemedAt: t.redeemedAt ? new Date(t.redeemedAt) : null, orderShopId: o.shopId, orderStatus: o.status }, state.counterShop, new Date(nowMs));
+    if (!check.ok) {
+      state.scan = { ok: false, message: check.message };
+      return render();
+    }
+    t.redeemedAt = nowMs; o.status = "picked_up"; o.redeemedAt = now().toISOString();
+    state.scan = { ok: true, order: o, pay: S.orderPayout({ passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }) };
+    render();
+  }
+
+  function act(a, el, ev) {
+    var id = el.getAttribute("data-id");
+    switch (a) {
+      case "get-pass": state.authMode = "signup"; state.selectedTier = S.planFor(S.DEFAULT_TIER_GROUP, state.pickSub || S.DEFAULT_SUB_TIER).id; state.screen = state.user ? (state.tierId ? "app" : "plans") : "signup"; break;
+      case "pick-sub": {
+        state.pickSub = id;
+        if (state.screen === "plans") state.selectedTier = S.planFor(S.getTier(state.selectedTier).group, id).id;
+        break;
+      }
+      case "upgrade-start": state.upgradeConfirm = true; break;
+      case "upgrade-cancel": state.upgradeConfirm = false; break;
+      case "goto-upgrade": state.detail = null; state.tab = "account"; state.upgradeConfirm = false; render(); return window.scrollTo(0, 0);
+      case "upgrade-confirm": {
+        var u = upgradeInfo(); if (!u) break;
+        state.tierId = u.to.id; state.upgradeConfirm = false;
+        render();
+        return toast("You're on " + u.to.name + ". Paid the " + money2(u.nowCents) + " monthly difference (demo).");
+      }
+      case "pick-tier": state.selectedTier = id; state.pickSub = S.getTier(id).subTier; state.authMode = "signup"; state.screen = state.user ? "plans" : "signup"; break;
+      case "login": state.authMode = "login"; state.screen = "signup"; break;
+      case "shop-login": state.screen = "shop-login"; state.shopError = null; break;
+      case "shop-signup": state.screen = "shop-signup"; state.shopError = null; break;
+      case "admin-tab": state.adminTab = id; break;
+      case "admin-approve": {
+        var wasPending = shopStatus(id) === "pending";
+        state.shopStatus[id] = "active";
+        render(); return toast(shopById(id).name + (wasPending ? " is approved and live for members. We emailed the owner." : " is live again."));
+      }
+      case "admin-pause": state.shopStatus[id] = "paused"; delete state.spotlight[id]; render(); return toast(shopById(id).name + " is paused and hidden from members.");
+      case "admin-spotlight": if (state.spotlight[id]) delete state.spotlight[id]; else state.spotlight[id] = true; render(); return toast(state.spotlight[id] ? "Spotlighted for members." : "Spotlight removed.");
+      case "sign-out": state.session = null; state.screen = "landing"; state.detail = null; state.scan = null; state.sheet = null; render(); return window.scrollTo(0, 0);
+      case "toggle-auth": state.authMode = state.authMode === "login" ? "signup" : "login"; break;
+      case "home": state.screen = "landing"; break;
+      case "select-tier": state.selectedTier = id; break;
+      case "checkout": state.sheet = "checkout"; break;
+      case "close-sheet": if (ev.target !== el && el.classList.contains("sheet-back")) return; state.sheet = null; break;
+      case "close-plans": state.screen = "app"; break;
+      case "pay": {
+        var changing = !!state.tierId;
+        var t = S.getTier(state.selectedTier);
+        state.tierId = t.id; state.sheet = null; state.screen = "app"; state.session = "member"; state.tab = changing ? "account" : "shops"; state.detail = null;
+        if (!changing) { state.passesLeft = t.passesPerMonth; state.passDaysUsed = []; }
+        else { state.passesLeft = Math.min(state.passesLeft, t.passesPerMonth); }
+        render(); window.scrollTo(0, 0);
+        return toast(changing ? "Plan changed to " + t.name + " (demo)." : "You're in! " + t.passesPerMonth + " Daily Passes loaded.");
+      }
+      case "change-plan": state.selectedTier = state.tierId; state.pickSub = S.getTier(state.tierId).subTier; state.screen = "plans"; break;
+      case "tab": state.tab = id; state.detail = null; break;
+      case "shop-tab": state.shopTab = id; state.scan = null; state.shopError = null; break;
+      case "open-shop": state.detail = { type: "shop", id: id }; state.cart = []; state.customize = null; state.confirmedOverage = null; state.pickupIdx = 0; state.error = null; render(); return window.scrollTo(0, 0);
+      case "open-order": state.detail = { type: "qr", id: id }; render(); return window.scrollTo(0, 0);
+      case "back": state.detail = null; state.error = null; break;
+      case "add-plain": addToCart(id, [], 1); break;
+      case "open-customize": state.customize = id; state.picked = []; state.cqty = 1; state.error = null; break;
+      case "close-customize": if (el.classList.contains("sheet-back") && ev.target !== el) return; state.customize = null; state.error = null; break;
+      case "pick-opt": {
+        var sh = shopById(state.detail.id), item = sh.menu.filter(function (x) { return x.id === state.customize; })[0];
+        var g = item.modifierGroups.filter(function (x) { return x.id === el.getAttribute("data-g"); })[0];
+        var ids = g.options.map(function (o) { return o.id; });
+        if (state.picked.indexOf(id) >= 0) state.picked = state.picked.filter(function (x) { return x !== id; });
+        else if (g.maxSelect === 1) state.picked = state.picked.filter(function (x) { return ids.indexOf(x) < 0; }).concat([id]);
+        else if (state.picked.filter(function (x) { return ids.indexOf(x) >= 0; }).length < g.maxSelect) state.picked = state.picked.concat([id]);
+        state.error = null; break;
+      }
+      case "cqty": state.cqty = Math.max(1, Math.min(S.MAX_QUANTITY_PER_LINE, state.cqty + Number(el.getAttribute("data-d")))); break;
+      case "add-custom": {
+        var sh2 = shopById(state.detail.id), it2 = sh2.menu.filter(function (x) { return x.id === state.customize; })[0];
+        var res = S.resolveOptions(it2.name, it2.modifierGroups, state.picked);
+        if (!res.ok) { state.error = res.message; break; }
+        addToCart(it2.id, state.picked.slice(), state.cqty); state.customize = null; state.error = null;
+        render(); return toast(it2.name + " added.");
+      }
+      case "cart-bump": {
+        var line = state.cart[Number(id)];
+        if (line) { line.quantity = Math.min(S.MAX_QUANTITY_PER_LINE, line.quantity + Number(el.getAttribute("data-d"))); if (line.quantity <= 0) state.cart.splice(Number(id), 1); }
+        state.confirmedOverage = null; break;
+      }
+      case "edit-mods": state.editMods = state.editMods === id ? null : id; state.shopError = null; break;
+      case "starter-mods": state.mods[id] = S.starterModifierGroups(); state.shopError = null; break;
+      case "clear-mods": state.mods[id] = []; state.editMods = null; render(); return toast("Customizations removed.");
+      case "pickup": state.pickupIdx = Number(id); break;
+      case "place": return placeOrder(id);
+      case "advance": {
+        var o = orderById(id), next = S.nextStatus(o.status);
+        if (next && next !== "picked_up") { o.status = next; toast(firstName() + "'s order is " + LABEL[next].toLowerCase() + "."); }
+        break;
+      }
+      case "cancel": {
+        var oc = orderById(id);
+        if (oc && OPEN.indexOf(oc.status) >= 0) {
+          oc.status = "cancelled";
+          var i = state.passDaysUsed.indexOf(oc.passDay); if (i >= 0) state.passDaysUsed.splice(i, 1);
+          state.passesLeft += 1;
+          toast("Order cancelled. The member's pass was returned.");
+        }
+        break;
+      }
+      case "scan-phone": return redeem({ orderId: id });
+      case "new-day": state.dayOffset += 1; render(); return toast("It's " + dateFmt.format(now()) + ". Today's pass is ready.");
+      case "reset": try { localStorage.removeItem(KEY); } catch (e) {} state = fresh(); render(); return window.scrollTo(0, 0);
+      default: return;
+    }
+    render();
+  }
+
+  function boot() {
+    root = document.getElementById("app");
+    document.addEventListener("click", function (ev) {
+      var el = ev.target.closest("[data-a]");
+      if (!el || el.tagName === "INPUT" || el.tagName === "SELECT") return;
+      if (el.classList.contains("sheet-back") && ev.target.closest("[data-stop]")) return;
+      act(el.getAttribute("data-a"), el, ev);
+    });
+    document.addEventListener("change", function (ev) {
+      var el = ev.target, a = el.getAttribute && el.getAttribute("data-a");
+      if (a === "confirm-overage") { state.confirmedOverage = el.checked ? Number(el.getAttribute("data-amount")) : null; render(); }
+      else if (a === "accepting") { state.paused[state.counterShop] = !el.checked; if (el.checked) delete state.paused[state.counterShop]; render(); toast(el.checked ? "You're accepting orders." : "Orders paused. Members can't order until you turn this back on."); }
+      else if (a === "sold-out") { state.soldOut[el.getAttribute("data-id")] = el.checked; if (!el.checked) delete state.soldOut[el.getAttribute("data-id")]; save(); toast(el.checked ? "Marked sold out for today." : "Back on the menu."); }
+    });
+    document.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var f = ev.target, kind = f.getAttribute("data-form");
+      if (kind === "signup") {
+        var name = (f.elements.name && f.elements.name.value.trim()) || (state.user && state.user.name) || "Dana Kowalski";
+        state.user = { name: name, email: f.elements.email.value.trim() || "dana@example.com" };
+        if (state.tierId) { state.session = "member"; state.screen = "app"; state.tab = "shops"; state.detail = null; } else state.screen = "plans";
+        render(); window.scrollTo(0, 0);
+      } else if (kind === "shop-login") {
+        state.session = "shop"; state.counterShop = f.elements.shop.value; state.shopTab = "orders"; state.screen = "app"; state.scan = null; state.detail = null;
+        render(); window.scrollTo(0, 0);
+      } else if (kind === "shop-signup") {
+        var v = function (n) { return (f.elements[n] && f.elements[n].value || "").trim(); };
+        var err = null;
+        if (v("name").length < 2) err = "Add your business name.";
+        else if (!v("address")) err = "Add your street address.";
+        else err = S.validateStory(v("story")) || S.validateHours({ mon: { open: v("open"), close: v("close") } });
+        var id = "c" + Date.now().toString(36), menu = [];
+        for (var i = 0; i < 3 && !err; i++) {
+          if (!v("m" + i + "-name")) continue;
+          var item = { name: v("m" + i + "-name"), size: v("m" + i + "-size"), priceCents: Math.round(Number(v("m" + i + "-price")) * 100), category: v("m" + i + "-cat") };
+          var ok = S.validateMenuItem(item);
+          if (!ok.ok) { err = "Coffee " + (i + 1) + ": " + ok.message; break; }
+          menu.push({ id: id + "-" + i, shopId: id, name: item.name, size: item.size, priceCents: item.priceCents, category: item.category });
+        }
+        if (!err && !menu.length) err = "Add at least one coffee to your menu.";
+        if (err) { state.shopError = err; render(); return window.scrollTo(0, 0); }
+        state.shopStatus[id] = "pending";
+        state.customShops.push({ id: id, name: v("name"), address: v("address"), miles: 0.6, custom: true,
+          hours: S.formatHours({ open: v("open"), close: v("close") }), story: v("story"), menu: menu });
+        state.session = "shop"; state.counterShop = id; state.shopTab = "dashboard"; state.screen = "app"; state.shopError = null; state.detail = null;
+        render(); window.scrollTo(0, 0);
+        toast("Your shop is listed! An admin reviews new shops before members can see them.");
+      } else if (kind === "menu-add") {
+        var item2 = { name: f.elements.name.value.trim(), size: f.elements.size.value.trim(), priceCents: Math.round(Number(f.elements.price.value) * 100), category: f.elements.category.value };
+        var res = S.validateMenuItem(item2);
+        if (!res.ok) { state.shopError = res.message; return render(); }
+        state.extraMenu[state.counterShop] = (state.extraMenu[state.counterShop] || []).concat([{ id: "x" + Date.now().toString(36), shopId: state.counterShop, name: item2.name, size: item2.size, priceCents: item2.priceCents, category: item2.category }]);
+        state.shopError = null; render(); toast(item2.name + " added to your menu.");
+      } else if (kind === "mods") {
+        var mid = f.getAttribute("data-id"), sh3 = shopById(state.counterShop);
+        var item3 = sh3.menu.filter(function (x) { return x.id === mid; })[0];
+        var groups = JSON.parse(JSON.stringify(item3.modifierGroups));
+        groups.forEach(function (g, gi) { g.options.forEach(function (o, oi) { var el2 = f.elements["p-" + gi + "-" + oi]; if (el2) o.priceCents = Math.round(Number(el2.value || 0) * 100); }); });
+        var newName = (f.elements["new-name"] && f.elements["new-name"].value || "").trim();
+        if (newName) {
+          var g2 = groups[Number(f.elements["new-group"].value)];
+          g2.options.push({ id: "o" + Date.now().toString(36), name: newName, priceCents: Math.round(Number(f.elements["new-price"].value || 0) * 100) });
+        }
+        var v2 = S.validateModifierGroups(groups);
+        if (!v2.ok) { state.shopError = v2.message; return render(); }
+        state.mods[mid] = groups; state.shopError = null; state.editMods = null;
+        render(); toast("Customizations saved. Members see them right away.");
+      } else if (kind === "code") {
+        redeem({ code: f.elements.code.value });
+      } else if (kind === "admin-login") {
+        if (f.elements.password.value !== ADMIN_PASSWORD || !f.elements.email.value.trim()) {
+          state.adminError = "That email and password don't match an admin account.";
+          return render();
+        }
+        state.session = "admin"; state.screen = "app"; state.adminTab = "overview"; state.adminError = null; state.detail = null;
+        render(); window.scrollTo(0, 0);
+      }
+    });
+    var openAdmin = function () {
+      if (location.hash === "#admin" && state.session !== "admin") { state.screen = "admin-login"; state.session = null; state.adminError = null; render(); window.scrollTo(0, 0); }
+    };
+    window.addEventListener("hashchange", openAdmin);
+    render();
+    openAdmin();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+})();
+</script>
+</body>
+</html>
