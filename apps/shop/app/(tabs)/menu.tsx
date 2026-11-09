@@ -40,7 +40,7 @@ export default function MenuScreen() {
       <Text variant="display" accessibilityRole="header">
         Menu
       </Text>
-      <Text color={colors.pecan}>“Sold out today” clears itself tomorrow. Add or edit items on the web portal.</Text>
+      <Text color={colors.pecan}>“Sold out today” clears itself tomorrow. Add items and set up customizations (milk, shots, syrups) on the web portal.</Text>
       {error && <ErrorNote message={error} />}
       {menu.loading ? (
         <Loading label="Loading menu" />
@@ -56,6 +56,11 @@ export default function MenuScreen() {
               <Text variant="small" color={colors.pecan}>
                 {CATEGORY_LABELS[m.category]} · {m.size} · {formatCents(m.priceCents, { showZeroCents: true })}
               </Text>
+              {m.modifierGroups.length > 0 && (
+                <Text variant="small">
+                  {m.modifierGroups.map((g) => `${g.name}: ${g.options.map((o) => o.name + (o.priceCents ? ` +${formatCents(o.priceCents, { showZeroCents: true })}` : "")).join(", ")}`).join(" · ")}
+                </Text>
+              )}
               <Toggle label="Available" value={m.available} onChange={(v) => patch(m, { available: v })} />
               <Toggle label="Sold out today" value={m.soldOutToday} onChange={(v) => patch(m, { soldOutToday: v })} />
             </Card>

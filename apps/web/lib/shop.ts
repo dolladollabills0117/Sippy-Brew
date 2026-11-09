@@ -17,6 +17,7 @@ import {
   validateMenuItem,
   validateStory,
   type MenuItemInput,
+  type ModifierGroup,
   type OrderStatus,
   type ShopHours,
 } from "@sippy/core";
@@ -184,7 +185,7 @@ export async function addMenuItem(s: Session, input: MenuItemInput) {
   const shop = await getOwnerShopRow(s);
   const { data, error } = await supabaseAdmin()
     .from("menu_items")
-    .insert({ shop_id: shop.id, name: input.name.trim(), size: input.size.trim(), price: input.priceCents, category: input.category })
+    .insert({ shop_id: shop.id, name: input.name.trim(), size: input.size.trim(), price: input.priceCents, category: input.category, modifier_groups: input.modifierGroups ?? [] })
     .select("*")
     .single();
   if (error) throw fromDbError(error);
@@ -194,18 +195,24 @@ export async function addMenuItem(s: Session, input: MenuItemInput) {
 export async function updateMenuItem(
   s: Session,
   id: string,
-  patch: { available?: boolean; soldOutToday?: boolean; priceCents?: number; name?: string; size?: string },
+  patch: { available?: boolean; soldOutToday?: boolean; priceCents?: number; name?: string; size?: string; modifierGroups?: ModifierGroup[] },
 ) {
   const shop = await getOwnerShopRow(s);
   const db = supabaseAdmin();
   const { data: row } = await db.from("menu_items").select("*").eq("id", id).maybeSingle();
   if (!row || row.shop_id !== shop.id) throw notFound("Menu item");
 
-  const next = { name: patch.name ?? row.name, size: patch.size ?? row.size, priceCents: patch.priceCents ?? row.price, category: row.category };
+  const next = {
+    name: patch.name ?? row.name,
+    size: patch.size ?? row.size,
+    priceCents: patch.priceCents ?? row.price,
+    category: row.category,
+    modifierGroups: patch.modifierGroups ?? (row.modifier_groups as ModifierGroup[]),
+  };
   const v = validateMenuItem(next);
   if (!v.ok) throw badRequest("BAD_MENU_ITEM", v.message);
 
-  const update: Record<string, unknown> = { name: next.name.trim(), size: next.size.trim(), price: next.priceCents };
+  const update: Record<string, unknown> = { name: next.name.trim(), size: next.size.trim(), price: next.priceCents, modifier_groups: next.modifierGroups ?? [] };
   if (patch.available !== undefined) update.available = Boolean(patch.available);
   if (patch.soldOutToday !== undefined) update.sold_out_on = patch.soldOutToday ? dayKey(new Date(), RULES.timeZone) : null;
   const { data, error } = await db.from("menu_items").update(update).eq("id", id).select("*").single();

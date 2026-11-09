@@ -10,40 +10,25 @@ import {
   overageIsCharged,
   overageCoveredByUpgrade,
   getTier,
+  describeOptions,
+  priceOrder,
+  type MenuItem,
 } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
+import { CustomizeSheet } from "../../components/CustomizeSheet";
+
+interface CartLine {
+  key: string;
+  menuItemId: string;
+  optionIds: string[];
+  quantity: number;
+}
 
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: RULES.timeZone });
-
-function Stepper({ name, value, onChange }: { name: string; value: number; onChange: (n: number) => void }) {
-  const btn = (label: string, delta: number, disabled: boolean, a11y: string) => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={a11y}
-      disabled={disabled}
-      onPress={() => {
-        void Haptics.selectionAsync();
-        onChange(value + delta);
-      }}
-      style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: colors.pecan, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.4 : 1 }}
-    >
-      <Text variant="button">{label}</Text>
-    </Pressable>
-  );
-  return (
-    <Row accessibilityLabel={`Quantity of ${name}`}>
-      {btn("−", -1, value === 0, `Remove one ${name}`)}
-      <Text variant="bodyBold" style={{ minWidth: 24, textAlign: "center" }} accessibilityLiveRegion="polite">
-        {value}
-      </Text>
-      {btn("+", 1, value >= MAX_QUANTITY_PER_LINE, `Add one ${name}`)}
-    </Row>
-  );
-}
 
 /**
  * Shop page + order flow: menu, today's pass, pickup time. If the order is over the pass, the
@@ -53,7 +38,8 @@ export default function ShopScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const detail = useLoad(() => api.getShop(id), [id]);
   const me = useLoad(() => api.me(), []);
-  const [qty, setQty] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [customizing, setCustomizing] = useState<MenuItem | null>(null);
   const [slot, setSlot] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +56,23 @@ export default function ShopScreen() {
   const summary = me.data;
   const menu = detail.data.menu;
   const available = menu.filter((m) => m.available && !m.soldOutToday);
-  const total = available.reduce((s, m) => s + (qty[m.id] ?? 0) * m.priceCents, 0);
+  // Price the cart with the same rules the server uses (drink + customizations).
+  const priced = cart.length ? priceOrder(cart, available, shop.id) : null;
+  const pricedLines = priced && priced.ok ? priced.lines : [];
+  const total = priced && priced.ok ? priced.totalCents : 0;
+  const lineFor = (l: CartLine) =>
+    pricedLines.find((p) => p.menuItemId === l.menuItemId && p.options.map((o) => o.optionId).sort().join(",") === [...l.optionIds].sort().join(","));
+  const addLine = (menuItemId: string, optionIds: string[], quantity: number) => {
+    void Haptics.selectionAsync();
+    const key = `${menuItemId}|${[...optionIds].sort().join(",")}`;
+    setCart((c) =>
+      c.some((l) => l.key === key)
+        ? c.map((l) => (l.key === key ? { ...l, quantity: Math.min(MAX_QUANTITY_PER_LINE, l.quantity + quantity) } : l))
+        : [...c, { key, menuItemId, optionIds, quantity }],
+    );
+  };
+  const bumpLine = (key: string, delta: number) =>
+    setCart((c) => c.map((l) => (l.key === key ? { ...l, quantity: Math.min(MAX_QUANTITY_PER_LINE, l.quantity + delta) } : l)).filter((l) => l.quantity > 0));
   const pass = summary ? checkPassAvailable({ passesLeft: summary.passesLeft, passDaysUsed: summary.passDaysUsed, now: new Date() }) : null;
   const split = splitPassValue(total, summary?.maxPassValueCents ?? 0);
   const blocker = pass && !pass.ok ? pass.message : null;
@@ -84,7 +86,7 @@ export default function ShopScreen() {
     setBusy(true);
     setError(null);
     try {
-      const items = Object.entries(qty).filter(([, n]) => n > 0).map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+      const items = cart.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity, optionIds: l.optionIds }));
       const { order } = await api.placeOrder({
         shopId: id,
         items,
@@ -102,6 +104,16 @@ export default function ShopScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: shop.name }} />
+      {customizing && (
+        <CustomizeSheet
+          item={customizing}
+          onClose={() => setCustomizing(null)}
+          onAdd={(optionIds, quantity) => {
+            addLine(customizing.id, optionIds, quantity);
+            setCustomizing(null);
+          }}
+        />
+      )}
       <View style={{ gap: spacing.sm }}>
         <Text variant="h1" accessibilityRole="header">
           {shop.name}
@@ -143,10 +155,17 @@ export default function ShopScreen() {
                         <Text variant="bodyBold">{m.name}</Text>
                         <Text variant="small" color={out ? colors.danger : colors.pecan}>
                           {m.size} · {formatCents(m.priceCents, { showZeroCents: true })}
-                          {out ? " · Sold out" : ""}
+                          {out ? " · Sold out" : m.modifierGroups.length ? " · Customizable" : ""}
                         </Text>
                       </View>
-                      {hasPlan && !out && <Stepper name={m.name} value={qty[m.id] ?? 0} onChange={(n) => setQty({ ...qty, [m.id]: n })} />}
+                      {hasPlan && !out && (
+                        <Button
+                          label={m.modifierGroups.length ? "Customize" : "Add"}
+                          variant="secondary"
+                          onPress={() => (m.modifierGroups.length ? setCustomizing(m) : addLine(m.id, [], 1))}
+                          accessibilityHint={m.modifierGroups.length ? `Choose options for ${m.name}` : `Add ${m.name} to your order`}
+                        />
+                      )}
                     </Row>
                   );
                 })}
@@ -164,6 +183,34 @@ export default function ShopScreen() {
         available.length > 0 && (
           <Card style={{ gap: spacing.md }}>
             <Text variant="h2">Order for pickup</Text>
+            {cart.length === 0 ? (
+              <Text color={colors.pecan}>Add a coffee from the menu.</Text>
+            ) : (
+              cart.map((l) => {
+                const p = lineFor(l);
+                const item = available.find((m) => m.id === l.menuItemId);
+                return (
+                  <Row key={l.key} style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text variant="bodyBold">
+                        {l.quantity}× {item?.name ?? "Unavailable"}
+                      </Text>
+                      {p && p.options.length > 0 && (
+                        <Text variant="small" color={colors.pecan}>
+                          {describeOptions(p.options)}
+                        </Text>
+                      )}
+                      <Row>
+                        <Button label="−" variant="secondary" onPress={() => bumpLine(l.key, -1)} accessibilityHint="One fewer" />
+                        <Button label="+" variant="secondary" disabled={l.quantity >= MAX_QUANTITY_PER_LINE} onPress={() => bumpLine(l.key, 1)} accessibilityHint="One more" />
+                      </Row>
+                    </View>
+                    <Text variant="bodyBold">{p ? money(p.lineTotalCents) : ""}</Text>
+                  </Row>
+                );
+              })
+            )}
+            {priced && !priced.ok && <ErrorNote message={priced.message} />}
             <Row style={{ justifyContent: "space-between" }}>
               <Text color={colors.pecan} style={{ flex: 1 }}>
                 Pass covers (first {money(summary!.maxPassValueCents)})
@@ -248,7 +295,7 @@ export default function ShopScreen() {
               label={hasOverage ? `Use pass + pay ${money(split.overageCents)} overage` : "Use today's pass"}
               onPress={place}
               loading={busy}
-              disabled={total === 0 || Boolean(blocker) || slots.length === 0 || !overageConfirmed}
+              disabled={total === 0 || Boolean(blocker) || slots.length === 0 || !overageConfirmed || Boolean(priced && !priced.ok)}
             />
           </Card>
         )

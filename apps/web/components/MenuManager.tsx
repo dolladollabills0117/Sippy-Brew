@@ -2,6 +2,7 @@
 import { CATEGORY_LABELS, COFFEE_CATEGORIES, validateMenuItem, type CoffeeCategory, type MenuItem } from "@sippy/core";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { ModifierEditor } from "./ModifierEditor";
 import { Alert, Button, Card, EmptyState, Field, Money, inputClass } from "./ui";
 
 function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
@@ -19,6 +20,7 @@ export function MenuManager({ initial }: { initial: MenuItem[] }) {
   const [form, setForm] = useState({ name: "", size: "12 oz", price: "", category: "espresso" as CoffeeCategory });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   async function patch(id: string, p: Parameters<typeof api.updateMenuItem>[1]) {
     const prev = items;
@@ -65,7 +67,8 @@ export function MenuManager({ initial }: { initial: MenuItem[] }) {
         ) : (
           <ul className="card divide-y divide-latte">
             {items.map((m) => (
-              <li key={m.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <li key={m.id} className="flex flex-col gap-3 px-5 py-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-bold text-espresso">
                     {m.name} <span className="font-normal text-pecan">· {m.size}</span>
@@ -77,10 +80,34 @@ export function MenuManager({ initial }: { initial: MenuItem[] }) {
                 <div className="flex flex-wrap items-center gap-3">
                   <Toggle label="Available" checked={m.available} onChange={(v) => patch(m.id, { available: v })} />
                   <Toggle label="Sold out today" checked={m.soldOutToday} onChange={(v) => patch(m.id, { soldOutToday: v })} />
+                  <Button size="sm" variant="secondary" aria-expanded={editing === m.id} onClick={() => setEditing(editing === m.id ? null : m.id)}>
+                    Customizations{m.modifierGroups.length ? ` (${m.modifierGroups.length})` : ""}
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(m)} aria-label={`Remove ${m.name}`}>
                     Remove
                   </Button>
                 </div>
+                </div>
+                {m.modifierGroups.length > 0 && editing !== m.id && (
+                  <p className="text-sm text-pecan">
+                    {m.modifierGroups.map((g) => `${g.name}: ${g.options.map((o) => o.name + (o.priceCents ? ` +$${(o.priceCents / 100).toFixed(2)}` : "")).join(", ")}`).join(" · ")}
+                  </p>
+                )}
+                {editing === m.id && (
+                  <ModifierEditor
+                    initial={m.modifierGroups}
+                    onCancel={() => setEditing(null)}
+                    onSave={async (groups) => {
+                      try {
+                        const { item } = await api.updateMenuItem(m.id, { modifierGroups: groups });
+                        setItems((l) => l.map((x) => (x.id === m.id ? item : x)));
+                        setEditing(null);
+                      } catch (e) {
+                        throw new Error(e instanceof ApiError ? e.message : "Couldn't save.");
+                      }
+                    }}
+                  />
+                )}
               </li>
             ))}
           </ul>

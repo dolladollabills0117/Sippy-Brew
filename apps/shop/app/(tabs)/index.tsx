@@ -1,4 +1,4 @@
-import { formatCents, nextStatus, ORDER_STATUS_LABELS, RULES, type Order } from "@sippy/core";
+import { describeOptions, formatCents, nextStatus, ORDER_STATUS_LABELS, RULES, type Order } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
@@ -70,9 +70,16 @@ export default function OrdersScreen() {
                   Pickup {timeFmt.format(new Date(o.pickupTime))}
                 </Text>
                 {o.items.map((i) => (
-                  <Text key={i.id} style={{ fontSize: 20, lineHeight: 26 }}>
-                    {i.quantity}× {i.name} ({i.size})
-                  </Text>
+                  <View key={i.id}>
+                    <Text style={{ fontSize: 20, lineHeight: 26 }}>
+                      {i.quantity}× {i.name} ({i.size})
+                    </Text>
+                    {i.options.length > 0 && (
+                      <Text variant="bodyBold" color={colors.burntSugarInk}>
+                        {describeOptions(i.options)}
+                      </Text>
+                    )}
+                  </View>
                 ))}
                 <Text variant="small" color={colors.pecan}>
                   {formatCents(o.totalCents, { showZeroCents: true })} · Daily Pass

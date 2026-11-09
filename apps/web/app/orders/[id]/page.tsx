@@ -1,4 +1,4 @@
-import { ORDER_STATUS_LABELS, RULES } from "@sippy/core";
+import { describeOptions, ORDER_STATUS_LABELS, RULES } from "@sippy/core";
 import { notFound } from "next/navigation";
 import { OrderStatusPoller } from "@/components/OrderStatusPoller";
 import { QrTicket } from "@/components/QrTicket";
@@ -40,6 +40,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             <li key={i.id} className="flex justify-between py-2">
               <span className="text-espresso">
                 {i.quantity}× {i.name} <span className="text-pecan">({i.size})</span>
+                {i.options.length > 0 && <span className="block text-sm text-pecan">{describeOptions(i.options)}</span>}
               </span>
               <Money cents={i.unitPriceCents * i.quantity} />
             </li>

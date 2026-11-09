@@ -2,6 +2,7 @@ import { RULES } from "../config";
 import { assertCents } from "../money";
 import { checkPickupTime, type ShopHours } from "./hours";
 import { isCoffeeCategory } from "./menu";
+import { resolveOptions, type ChosenOption, type ModifierGroup } from "./modifiers";
 import { checkPassAvailable, splitPassValue } from "./passes";
 
 export type OrderErrorCode =
@@ -15,7 +16,8 @@ export type OrderErrorCode =
   | "PASS_USED_TODAY"
   | "NO_PASSES_LEFT"
   | "OVERAGE_CONFIRMATION_REQUIRED"
-  | "INVALID_PICKUP";
+  | "INVALID_PICKUP"
+  | "INVALID_OPTIONS";
 
 export interface OrderError {
   ok: false;
@@ -26,6 +28,8 @@ export interface OrderError {
 export interface OrderLineInput {
   menuItemId: string;
   quantity: number;
+  /** Customization option ids the member picked for this drink. */
+  optionIds?: string[];
 }
 
 export interface MenuItemForOrder {
@@ -36,6 +40,7 @@ export interface MenuItemForOrder {
   category: string;
   available: boolean;
   soldOutToday: boolean;
+  modifierGroups?: ModifierGroup[];
 }
 
 export interface OrderContext {
@@ -62,8 +67,10 @@ export interface PricedLine {
   menuItemId: string;
   name: string;
   quantity: number;
+  /** Drink price plus its customizations. */
   unitPriceCents: number;
   lineTotalCents: number;
+  options: ChosenOption[];
 }
 
 export type OrderValidation =
@@ -82,18 +89,25 @@ export type OrderValidation =
 
 export const MAX_QUANTITY_PER_LINE = 4;
 
-/** Price an order from server-side menu data. Client-sent prices are never trusted. */
+/**
+ * Price an order from server-side menu data. Client-sent prices are never trusted. Each line's
+ * unit price is the drink plus the customizations picked; identical drinks with identical
+ * customizations are merged.
+ */
 export function priceOrder(lines: readonly OrderLineInput[], menu: readonly MenuItemForOrder[], shopId: string): { ok: true; lines: PricedLine[]; totalCents: number } | OrderError {
   if (lines.length === 0) return { ok: false, code: "EMPTY_ORDER", message: "Add at least one coffee." };
-  const merged = new Map<string, number>();
+  const merged = new Map<string, { menuItemId: string; quantity: number; optionIds: string[] }>();
   for (const l of lines) {
     if (!Number.isInteger(l.quantity) || l.quantity < 1 || l.quantity > MAX_QUANTITY_PER_LINE)
       return { ok: false, code: "INVALID_QUANTITY", message: `Quantity must be 1 to ${MAX_QUANTITY_PER_LINE}.` };
-    merged.set(l.menuItemId, (merged.get(l.menuItemId) ?? 0) + l.quantity);
+    const optionIds = [...(l.optionIds ?? [])].sort();
+    const key = `${l.menuItemId}|${optionIds.join(",")}`;
+    const prev = merged.get(key);
+    merged.set(key, { menuItemId: l.menuItemId, quantity: (prev?.quantity ?? 0) + l.quantity, optionIds });
   }
   const priced: PricedLine[] = [];
   let total = 0;
-  for (const [id, quantity] of merged) {
+  for (const { menuItemId: id, quantity, optionIds } of merged.values()) {
     const item = menu.find((m) => m.id === id && m.shopId === shopId);
     if (!item) return { ok: false, code: "ITEM_NOT_FOUND", message: "One of those items isn't on this shop's menu." };
     if (!isCoffeeCategory(item.category)) return { ok: false, code: "NOT_COFFEE", message: "Only coffee can be ordered." };
@@ -102,9 +116,12 @@ export function priceOrder(lines: readonly OrderLineInput[], menu: readonly Menu
     if (quantity > MAX_QUANTITY_PER_LINE)
       return { ok: false, code: "INVALID_QUANTITY", message: `Quantity must be 1 to ${MAX_QUANTITY_PER_LINE}.` };
     assertCents(item.priceCents);
-    const lineTotal = item.priceCents * quantity;
+    const opts = resolveOptions(item.name, item.modifierGroups, optionIds);
+    if (!opts.ok) return { ok: false, code: "INVALID_OPTIONS", message: opts.message };
+    const unit = item.priceCents + opts.extraCents;
+    const lineTotal = unit * quantity;
     total += lineTotal;
-    priced.push({ menuItemId: id, name: item.name, quantity, unitPriceCents: item.priceCents, lineTotalCents: lineTotal });
+    priced.push({ menuItemId: id, name: item.name, quantity, unitPriceCents: unit, lineTotalCents: lineTotal, options: opts.chosen });
   }
   return { ok: true, lines: priced, totalCents: total };
 }

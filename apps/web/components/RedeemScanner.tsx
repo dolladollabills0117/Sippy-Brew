@@ -114,7 +114,7 @@ export function RedeemScanner() {
                 <ul className="mt-1 font-normal text-espresso">
                   {result.order.items.map((i) => (
                     <li key={i.id}>
-                      {i.quantity}× {i.name} ({i.size})
+                      {i.quantity}× {i.name} ({i.size}){i.options.length ? ` · ${i.options.map((o) => o.name).join(", ")}` : ""}
                     </li>
                   ))}
                 </ul>

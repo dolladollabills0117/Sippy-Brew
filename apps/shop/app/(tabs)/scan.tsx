@@ -76,7 +76,7 @@ export default function ScanScreen() {
               </Text>
               {result.order.items.map((i) => (
                 <Text key={i.id} style={{ fontSize: 20, lineHeight: 26 }}>
-                  {i.quantity}× {i.name} ({i.size})
+                  {i.quantity}× {i.name} ({i.size}){i.options.length ? ` · ${i.options.map((o) => o.name).join(", ")}` : ""}
                 </Text>
               ))}
             </>

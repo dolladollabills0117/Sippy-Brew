@@ -19,6 +19,7 @@ import {
   overageProcessingFee,
   splitOrder,
   splitPassValue,
+  starterModifierGroups,
   summarizePayout,
   zonedTimeToUtc,
   zonedParts,
@@ -187,7 +188,18 @@ async function main() {
     const menu = await must(
       db
         .from("menu_items")
-        .insert(s.menu.map(([name, size, price, category], i) => ({ shop_id: shop.id, name, size, price, category, sort_order: i })))
+        .insert(
+          s.menu.map(([name, size, price, category], i) => ({
+            shop_id: shop.id,
+            name,
+            size,
+            price,
+            category,
+            sort_order: i,
+            // Espresso and specialty drinks get milk, extra shot and syrup options at the shop's prices.
+            modifier_groups: category === "espresso" || category === "specialty" ? starterModifierGroups() : [],
+          })),
+        )
         .select("id, name, size, price"),
       "menu",
     );

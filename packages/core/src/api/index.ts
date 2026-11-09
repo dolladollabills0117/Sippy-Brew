@@ -94,7 +94,7 @@ export function createApiClient(opts: ApiClientOptions) {
     redeem: (input: { qr?: string; shortCode?: string }) => request<{ order: Order }>("POST", "/api/shop/redeem", input),
     shopMenu: () => request<{ items: MenuItem[] }>("GET", "/api/shop/menu"),
     addMenuItem: (item: MenuItemInput) => request<{ item: MenuItem }>("POST", "/api/shop/menu", item),
-    updateMenuItem: (id: string, patch: Partial<Pick<MenuItem, "available" | "soldOutToday" | "priceCents" | "name" | "size">>) =>
+    updateMenuItem: (id: string, patch: Partial<Pick<MenuItem, "available" | "soldOutToday" | "priceCents" | "name" | "size" | "modifierGroups">>) =>
       request<{ item: MenuItem }>("PATCH", `/api/shop/menu/${id}`, patch),
     deleteMenuItem: (id: string) => request<{ ok: true }>("DELETE", `/api/shop/menu/${id}`),
     shopStats: () => request<{ stats: ShopStats; shop: Shop }>("GET", "/api/shop/stats"),

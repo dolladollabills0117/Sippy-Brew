@@ -2,6 +2,7 @@ import type { TierId } from "./config";
 import type { SavedArea } from "./geo";
 import type { ShopHours } from "./rules/hours";
 import type { CoffeeCategory } from "./rules/menu";
+import type { ChosenOption, ModifierGroup } from "./rules/modifiers";
 import type { OrderStatus } from "./rules/order";
 
 /** API shapes shared by apps/web, apps/consumer and apps/shop. Money is integer cents. */
@@ -59,6 +60,8 @@ export interface MenuItem {
   category: CoffeeCategory;
   available: boolean;
   soldOutToday: boolean;
+  /** Customizations the shop offers on this drink (milk, shots, syrups), with its prices. */
+  modifierGroups: ModifierGroup[];
 }
 
 export interface Post {
@@ -75,7 +78,10 @@ export interface OrderItem {
   name: string;
   size: string;
   quantity: number;
+  /** Drink price plus customizations. */
   unitPriceCents: number;
+  /** Customizations the member picked, as priced when they ordered. */
+  options: ChosenOption[];
 }
 
 export type OverageStatus = "none" | "authorized" | "captured" | "voided" | "failed" | "waived";

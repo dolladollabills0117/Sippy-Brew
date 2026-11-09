@@ -109,6 +109,9 @@ create table public.menu_items (
   available boolean not null default true,
   -- "Sold out today": the local date it was marked sold out. It clears itself the next day.
   sold_out_on date,
+  -- Customizations the shop offers (milk, shots, syrups) with its own prices; validated by
+  -- packages/core validateModifierGroups. Coffee only, no food add-ons.
+  modifier_groups jsonb not null default '[]'::jsonb check (jsonb_typeof(modifier_groups) = 'array'),
   sort_order integer not null default 0,
   archived boolean not null default false,
   created_at timestamptz not null default now()
@@ -164,7 +167,9 @@ create table public.order_items (
   name text not null,
   size text not null,
   quantity integer not null check (quantity between 1 and 4),
-  unit_price integer not null check (unit_price > 0)
+  -- Drink price plus the customizations picked, as priced at order time.
+  unit_price integer not null check (unit_price > 0),
+  options jsonb not null default '[]'::jsonb check (jsonb_typeof(options) = 'array')
 );
 create index order_items_order_idx on public.order_items (order_id);
 
@@ -319,7 +324,7 @@ create or replace function public.place_order(
   p_overage integer,
   p_max_pass_value integer,
   p_pass_day date,          -- local calendar day from packages/core dayKey()
-  p_items jsonb,            -- [{menu_item_id, name, size, quantity, unit_price}]
+  p_items jsonb,            -- [{menu_item_id, name, size, quantity, unit_price, options}]
   p_pickup timestamptz,
   p_overage_payment_intent text,
   p_overage_confirmed boolean
@@ -363,8 +368,9 @@ begin
                  else 'authorized'::overage_status end)
     returning id into v_order;
 
-  insert into order_items (order_id, menu_item_id, name, size, quantity, unit_price)
-    select v_order, (i ->> 'menu_item_id')::uuid, i ->> 'name', i ->> 'size', (i ->> 'quantity')::int, (i ->> 'unit_price')::int
+  insert into order_items (order_id, menu_item_id, name, size, quantity, unit_price, options)
+    select v_order, (i ->> 'menu_item_id')::uuid, i ->> 'name', i ->> 'size', (i ->> 'quantity')::int, (i ->> 'unit_price')::int,
+           coalesce(i -> 'options', '[]'::jsonb)
     from jsonb_array_elements(p_items) i;
 
   insert into pass_ledger (member_id, subscription_id, period_start, passes, type, order_id, note)

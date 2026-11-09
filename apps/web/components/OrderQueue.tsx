@@ -1,5 +1,5 @@
 "use client";
-import { nextStatus, ORDER_STATUS_LABELS, RULES, type Order } from "@sippy/core";
+import { describeOptions, nextStatus, ORDER_STATUS_LABELS, RULES, type Order } from "@sippy/core";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
@@ -67,6 +67,7 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
                 {o.items.map((i) => (
                   <li key={i.id}>
                     <strong>{i.quantity}×</strong> {i.name} <span className="text-pecan">({i.size})</span>
+                    {i.options.length > 0 && <span className="block text-base font-bold text-burnt-sugar-ink">{describeOptions(i.options)}</span>}
                   </li>
                 ))}
               </ul>

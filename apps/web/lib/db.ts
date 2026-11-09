@@ -53,6 +53,7 @@ export const mapMenuItem = (r: Row, now = new Date()): MenuItem => ({
   category: r.category,
   available: Boolean(r.available),
   soldOutToday: r.sold_out_on === dayKey(now, RULES.timeZone),
+  modifierGroups: Array.isArray(r.modifier_groups) ? r.modifier_groups : [],
 });
 
 export const ORDER_SELECT = "*, order_items(*), profiles:member_id(name), shops:shop_id(name)";
@@ -79,6 +80,7 @@ export const mapOrder = (r: Row): Order => ({
     size: i.size,
     quantity: i.quantity,
     unitPriceCents: i.unit_price,
+    options: Array.isArray(i.options) ? i.options : [],
   })),
 });
 

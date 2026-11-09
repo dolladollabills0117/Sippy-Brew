@@ -18,6 +18,16 @@ export function upgradeTarget(plan: Tier): Tier | null {
   return higher ? group.plans[higher.id] : null;
 }
 
+/**
+ * The upgrade to offer right now, or null. Hidden when only a few passes are left this period
+ * (fewer than `upgradeMinPassesLeft`), since the member would pay the full monthly difference
+ * for very little.
+ */
+export function upgradeOffer(plan: Tier, passesLeft: number, minPassesLeft: number = RULES.upgradeMinPassesLeft): Tier | null {
+  if (passesLeft < minPassesLeft) return null;
+  return upgradeTarget(plan);
+}
+
 /** What upgrading costs right now: the full monthly price difference between the two plans. */
 export function upgradeNowCost(from: Tier, to: Tier): number {
   if (to.group !== from.group) throw new Error("upgrades stay within the same tier");
@@ -55,7 +65,7 @@ export function suggestUpgrade(params: {
   passesLeft: number;
   minOverageOrders?: number;
 }): UpgradeSuggestion | null {
-  const to = upgradeTarget(params.plan);
+  const to = upgradeOffer(params.plan, params.passesLeft);
   if (!to) return null;
   const over = params.periodOrders.filter((o) => o.status !== "cancelled" && o.overageCents > 0);
   if (over.length < (params.minOverageOrders ?? RULES.upgradeNudgeAfterOverages)) return null;

@@ -9,7 +9,7 @@ import {
   overageIsCharged,
   suggestUpgrade,
   upgradeNowCost,
-  upgradeTarget,
+  upgradeOffer,
   RULES,
   validateOrder,
   type PassLedgerEntry,
@@ -71,7 +71,8 @@ export async function getAreas(memberId: string): Promise<SavedArea[]> {
 export async function getUpgradeOption(sub: Subscription | null, passesLeft: number): Promise<MemberSummary["upgrade"]> {
   if (!sub || !["active", "trialing"].includes(sub.status)) return null;
   const plan = getTier(sub.tier);
-  const to = upgradeTarget(plan);
+  // Hidden when only a few passes are left this period.
+  const to = upgradeOffer(plan, passesLeft);
   if (!to) return null;
   const { data } = await supabaseAdmin()
     .from("orders")
@@ -256,6 +257,7 @@ export async function placeOrder(
       size: sizes.get(l.menuItemId) ?? "",
       quantity: l.quantity,
       unit_price: l.unitPriceCents,
+      options: l.options,
     })),
     p_pickup: pickupAt.toISOString(),
     p_overage_payment_intent: paymentIntent,

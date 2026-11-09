@@ -21,7 +21,7 @@ describe("sub-tier upgrades", () => {
     const one = [{ overageCents: 125, status: "picked_up" }, { overageCents: 0, status: "picked_up" }];
     expect(suggestUpgrade({ plan, periodOrders: one, passesLeft: 3 })).toBeNull();
     const two = [...one, { overageCents: 175, status: "picked_up" }];
-    expect(suggestUpgrade({ plan, periodOrders: two, passesLeft: 2 })).toMatchObject({
+    expect(suggestUpgrade({ plan, periodOrders: two, passesLeft: 3 })).toMatchObject({
       to: { id: "affogato_double_shot" },
       overageOrders: 2,
       overagePaidCents: 300,
@@ -43,5 +43,18 @@ describe("sub-tier upgrades", () => {
     expect(overageCoveredByUpgrade(getTier("macchiato_decaf"), 950)).toBe(400); // $9.50: covers $4 of the $5.50 overage
     expect(overageCoveredByUpgrade(getTier("macchiato_decaf"), 300)).toBe(0);
     expect(overageCoveredByUpgrade(getTier("macchiato_double_shot"), 950)).toBe(0);
+  });
+});
+
+describe("hiding the upgrade when only a few passes are left", () => {
+  const overs = [{ overageCents: 125, status: "picked_up" }, { overageCents: 150, status: "picked_up" }];
+  it(`offers it with ${RULES.upgradeMinPassesLeft}+ passes left and hides it below that`, async () => {
+    const { upgradeOffer } = await import("../src");
+    const plan = getTier("macchiato_decaf");
+    expect(RULES.upgradeMinPassesLeft).toBe(3);
+    expect(upgradeOffer(plan, 3)?.id).toBe("macchiato_double_shot");
+    expect(upgradeOffer(plan, 2)).toBeNull();
+    expect(suggestUpgrade({ plan, periodOrders: overs, passesLeft: 3 })).not.toBeNull();
+    expect(suggestUpgrade({ plan, periodOrders: overs, passesLeft: 2 })).toBeNull();
   });
 });

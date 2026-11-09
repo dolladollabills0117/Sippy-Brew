@@ -10,6 +10,7 @@ export * from "./rules/upgrade";
 export * from "./rules/qr";
 export * from "./rules/commission";
 export * from "./rules/menu";
+export * from "./rules/modifiers";
 export * from "./rules/hours";
 export * from "./rules/posts";
 export * from "./rules/order";

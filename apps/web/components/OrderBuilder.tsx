@@ -9,6 +9,8 @@ import {
   overageIsCharged,
   overageCoveredByUpgrade,
   getTier,
+  describeOptions,
+  priceOrder,
   type MemberSummary,
   type MenuItem,
   type Shop,
@@ -16,7 +18,15 @@ import {
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { CustomizeDialog } from "./CustomizeDialog";
 import { Alert, Button, Card, EmptyState, Money } from "./ui";
+
+interface CartLine {
+  key: string;
+  menuItemId: string;
+  optionIds: string[];
+  quantity: number;
+}
 
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: RULES.timeZone });
 
@@ -27,7 +37,8 @@ const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-d
  */
 export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuItem[]; summary: MemberSummary }) {
   const router = useRouter();
-  const [qty, setQty] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [customizing, setCustomizing] = useState<MenuItem | null>(null);
   const slots = useMemo(() => pickupSlots(new Date(), shop.hours), [shop.hours]);
   const [pickup, setPickup] = useState<string>(slots[0]?.toISOString() ?? "");
   const [busy, setBusy] = useState(false);
@@ -36,7 +47,10 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
   const [confirmedOverage, setConfirmedOverage] = useState<number | null>(null);
 
   const available = menu.filter((m) => m.available && !m.soldOutToday);
-  const total = available.reduce((sum, m) => sum + (qty[m.id] ?? 0) * m.priceCents, 0);
+  // Price the cart with the same rules the server uses (drink + customizations).
+  const priced = cart.length ? priceOrder(cart, available, shop.id) : null;
+  const pricedLines = priced && priced.ok ? priced.lines : [];
+  const total = priced && priced.ok ? priced.totalCents : 0;
   const pass = checkPassAvailable({ passesLeft: summary.passesLeft, passDaysUsed: summary.passDaysUsed, now: new Date() });
   const split = splitPassValue(total, summary.maxPassValueCents);
   const blocker = !pass.ok ? pass.message : null;
@@ -45,17 +59,29 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
   const money = (c: number) => formatCents(c, { showZeroCents: true });
   const noPlan = !summary.subscription || !["active", "trialing"].includes(summary.subscription.status);
 
-  function bump(id: string, delta: number) {
-    setQty((q) => ({ ...q, [id]: Math.max(0, Math.min(MAX_QUANTITY_PER_LINE, (q[id] ?? 0) + delta)) }));
+  function addLine(menuItemId: string, optionIds: string[], quantity: number) {
+    const key = `${menuItemId}|${[...optionIds].sort().join(",")}`;
+    setCart((c) => {
+      const existing = c.find((l) => l.key === key);
+      if (existing) return c.map((l) => (l.key === key ? { ...l, quantity: Math.min(MAX_QUANTITY_PER_LINE, l.quantity + quantity) } : l));
+      return [...c, { key, menuItemId, optionIds, quantity }];
+    });
+  }
+
+  function bumpLine(key: string, delta: number) {
+    setCart((c) => c.map((l) => (l.key === key ? { ...l, quantity: Math.min(MAX_QUANTITY_PER_LINE, l.quantity + delta) } : l)).filter((l) => l.quantity > 0));
+  }
+
+  function lineFor(l: CartLine) {
+    const key = [...l.optionIds].sort().join(",");
+    return pricedLines.find((p) => p.menuItemId === l.menuItemId && p.options.map((o) => o.optionId).sort().join(",") === key);
   }
 
   async function submit() {
     setBusy(true);
     setError(null);
     try {
-      const items = Object.entries(qty)
-        .filter(([, n]) => n > 0)
-        .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+      const items = cart.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity, optionIds: l.optionIds }));
       const { order } = await api.placeOrder({
         shopId: shop.id,
         items,
@@ -79,6 +105,16 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      {customizing && (
+        <CustomizeDialog
+          item={customizing}
+          onClose={() => setCustomizing(null)}
+          onAdd={(optionIds, quantity) => {
+            addLine(customizing.id, optionIds, quantity);
+            setCustomizing(null);
+          }}
+        />
+      )}
       <Card className="p-0 sm:p-0">
         {available.length === 0 ? (
           <div className="p-6">
@@ -87,26 +123,28 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
         ) : (
           <ul className="divide-y divide-latte">
             {available.map((m) => {
-              const n = qty[m.id] ?? 0;
+              const customizable = m.modifierGroups.length > 0;
+              const inCart = cart.filter((l) => l.menuItemId === m.id).reduce((n, l) => n + l.quantity, 0);
               return (
                 <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-4">
-                  <div>
-                    <p className="font-bold text-espresso">{m.name}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-espresso">
+                      {m.name}
+                      {inCart > 0 && <span className="ml-2 rounded-full bg-sky-blue px-2 text-xs font-extrabold text-espresso">{inCart} in order</span>}
+                    </p>
                     <p className="text-sm text-pecan">
                       {m.size} · <Money cents={m.priceCents} />
+                      {customizable && " · Customizable"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2" role="group" aria-label={`Quantity of ${m.name}`}>
-                    <Button size="sm" variant="secondary" aria-label={`Remove one ${m.name}`} disabled={n === 0} onClick={() => bump(m.id, -1)}>
-                      −
-                    </Button>
-                    <span className="w-6 text-center text-lg font-extrabold tabular-nums" aria-live="polite">
-                      {n}
-                    </span>
-                    <Button size="sm" variant="secondary" aria-label={`Add one ${m.name}`} disabled={n >= MAX_QUANTITY_PER_LINE} onClick={() => bump(m.id, 1)}>
-                      +
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    aria-label={customizable ? `Customize ${m.name}` : `Add ${m.name}`}
+                    onClick={() => (customizable ? setCustomizing(m) : addLine(m.id, [], 1))}
+                  >
+                    {customizable ? "Customize" : "Add"}
+                  </Button>
                 </li>
               );
             })}
@@ -117,6 +155,36 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
       <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
         <Card>
           <h2 className="text-2xl text-espresso">Your order</h2>
+          {cart.length === 0 ? (
+            <p className="mt-3 text-pecan">Add a coffee from the menu.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-latte">
+              {cart.map((l) => {
+                const p = lineFor(l);
+                const item = available.find((m) => m.id === l.menuItemId);
+                return (
+                  <li key={l.key} className="flex items-start justify-between gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="font-bold text-espresso">
+                        {l.quantity}× {item?.name ?? "Unavailable"}
+                      </p>
+                      {p && p.options.length > 0 && <p className="text-sm text-pecan">{describeOptions(p.options)}</p>}
+                      <div className="mt-1 flex items-center gap-1" role="group" aria-label={`Quantity of ${item?.name ?? "item"}`}>
+                        <button type="button" className="grid h-9 w-9 place-items-center rounded-full border-2 border-pecan text-lg font-extrabold" aria-label="One fewer" onClick={() => bumpLine(l.key, -1)}>
+                          −
+                        </button>
+                        <button type="button" className="grid h-9 w-9 place-items-center rounded-full border-2 border-pecan text-lg font-extrabold disabled:opacity-40" aria-label="One more" disabled={l.quantity >= MAX_QUANTITY_PER_LINE} onClick={() => bumpLine(l.key, 1)}>
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <span className="font-bold tabular-nums text-espresso">{p ? money(p.lineTotalCents) : ""}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {priced && !priced.ok && <Alert tone="error">{priced.message}</Alert>}
           <dl className="mt-4 space-y-2">
             <div className="flex justify-between">
               <dt className="text-pecan">Pass covers (first {money(summary.maxPassValueCents)})</dt>
@@ -197,7 +265,7 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
           <div className="mt-5 flex flex-col gap-3">
             {blocker && total > 0 && <Alert tone="error">{blocker}</Alert>}
             {error && <Alert tone="error">{error}</Alert>}
-            <Button disabled={busy || total === 0 || Boolean(blocker) || !pickup || !overageConfirmed} onClick={submit}>
+            <Button disabled={busy || total === 0 || Boolean(blocker) || !pickup || !overageConfirmed || Boolean(priced && !priced.ok)} onClick={submit}>
               {busy ? "Placing order…" : hasOverage ? `Use pass + pay ${money(split.overageCents)} overage` : "Use today's pass"}
             </Button>
           </div>

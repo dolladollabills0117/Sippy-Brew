@@ -1,5 +1,5 @@
 import "server-only";
-import { getTier, isTierId, planRenewal, RULES, TIERS, upgradeNowCost, upgradeTarget, type PassLedgerEntry, type Subscription, type TierId } from "@sippy/core";
+import { getTier, isTierId, planRenewal, RULES, TIERS, upgradeNowCost, upgradeOffer, upgradeTarget, type PassLedgerEntry, type Subscription, type TierId } from "@sippy/core";
 import Stripe from "stripe";
 import type { Session } from "./auth";
 import { env } from "./env";
@@ -208,6 +208,9 @@ export async function voidOverage(paymentIntentId: string): Promise<void> {
 
 export async function upgradeSubTier(memberId: string, sub: Subscription, toPlan: unknown, confirmedCents: unknown, passesLeft: number) {
   const from = getTier(sub.tier);
+  if (upgradeTarget(from) && !upgradeOffer(from, passesLeft)) {
+    throw new AppError(409, "UPGRADE_NOT_OFFERED", `Upgrades are available while you have at least ${RULES.upgradeMinPassesLeft} passes left. You can switch plans for next month in billing.`);
+  }
   const to = upgradeTarget(from);
   if (!to || toPlan !== to.id) throw badRequest("BAD_UPGRADE", "That plan isn't an upgrade from your current one.");
   const cost = upgradeNowCost(from, to);

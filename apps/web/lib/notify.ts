@@ -1,5 +1,5 @@
 import "server-only";
-import { formatCents, type Order } from "@sippy/core";
+import { describeOptions, formatCents, type Order } from "@sippy/core";
 import { env } from "./env";
 import { supabaseAdmin } from "./supabase/server";
 
@@ -73,7 +73,7 @@ export async function notifyMemberRenewalReminder(memberId: string, tierName: st
 export async function notifyShopNewOrder(order: Order) {
   const { data: shop } = await supabaseAdmin().from("shops").select("owner_id").eq("id", order.shopId).maybeSingle();
   if (!shop) return;
-  const items = order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ");
+  const items = order.items.map((i) => `${i.quantity}× ${i.name}${i.options.length ? ` (${describeOptions(i.options)})` : ""}`).join(", ");
   await Promise.all([
     sendPush([shop.owner_id], "shop", `New order from ${order.memberFirstName}`, items, { orderId: order.id }),
     sendEmail(await emailOf(shop.owner_id), `New pickup order: ${order.memberFirstName}`, `${items}\nPickup at ${new Date(order.pickupTime).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" })}`),

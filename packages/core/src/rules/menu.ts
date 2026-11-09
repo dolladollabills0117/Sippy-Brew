@@ -1,4 +1,5 @@
 import { assertCents } from "../money";
+import { validateModifierGroups, type ModifierGroup } from "./modifiers";
 
 /** Coffee items only. Food is not sold through the app. */
 export const COFFEE_CATEGORIES = ["espresso", "brewed", "cold", "specialty"] as const;
@@ -20,6 +21,11 @@ const FOOD_WORDS = [
 ];
 const FOOD_RE = new RegExp(`\\b(${FOOD_WORDS.join("|")})s?\\b`, "i");
 
+/** True if a name reads like food (coffee only on Sippy Brew). */
+export function looksLikeFood(name: string): boolean {
+  return FOOD_RE.test(name);
+}
+
 export function isCoffeeCategory(c: unknown): c is CoffeeCategory {
   return typeof c === "string" && (COFFEE_CATEGORIES as readonly string[]).includes(c);
 }
@@ -29,6 +35,8 @@ export interface MenuItemInput {
   size: string;
   priceCents: number;
   category: string;
+  /** Optional drink customizations (milk, shots, syrups) with the shop's prices. */
+  modifierGroups?: ModifierGroup[];
 }
 
 export type MenuValidation = { ok: true } | { ok: false; field: keyof MenuItemInput; message: string };
@@ -47,5 +55,9 @@ export function validateMenuItem(item: MenuItemInput): MenuValidation {
   }
   if (item.priceCents < 100 || item.priceCents > 2000)
     return { ok: false, field: "priceCents", message: "Price must be between $1 and $20." };
+  if (item.modifierGroups) {
+    const m = validateModifierGroups(item.modifierGroups);
+    if (!m.ok) return { ok: false, field: "modifierGroups", message: m.message };
+  }
   return { ok: true };
 }
