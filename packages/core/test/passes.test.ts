@@ -10,6 +10,8 @@ import {
   splitPassValue,
   DEFAULT_TIER,
   orderPayout,
+  planFor,
+  TIER_GROUPS,
   overageIsCharged,
   overageProcessingFee,
   RULES,
@@ -23,13 +25,22 @@ const periodStart = "2026-11-01T14:00:00.000Z";
 const prevStart = "2026-10-01T14:00:00.000Z";
 
 describe("tier config", () => {
-  it("has the three tiers, each with an $8.00 max per pass", () => {
+  it("has three tiers, each in a Decaf ($4/day) and Double Shot ($8/day) sub-tier", () => {
     expect(TIERS.map((t) => [t.id, t.name, t.priceCents, t.passesPerMonth, t.maxPassValueCents])).toEqual([
-      ["affogato", "Affogato", 4000, 5, 800],
-      ["macchiato", "Macchiato", 9600, 12, 800],
-      ["double_espresso", "Double Espresso", 16000, 20, 800],
+      ["affogato_decaf", "Affogato · Decaf", 2000, 5, 400],
+      ["affogato_double_shot", "Affogato · Double Shot", 4000, 5, 800],
+      ["macchiato_decaf", "Macchiato · Decaf", 4800, 12, 400],
+      ["macchiato_double_shot", "Macchiato · Double Shot", 9600, 12, 800],
+      ["double_espresso_decaf", "Double Espresso · Decaf", 8000, 20, 400],
+      ["double_espresso_double_shot", "Double Espresso · Double Shot", 16000, 20, 800],
     ]);
-    expect(DEFAULT_TIER).toBe("macchiato");
+    expect(DEFAULT_TIER).toBe("macchiato_double_shot");
+    expect(TIER_GROUPS.map((g) => g.name)).toEqual(["Affogato", "Macchiato", "Double Espresso"]);
+    expect(planFor("double_espresso", "decaf").blurb).toBe("Perfect for the daily black coffee commuter!");
+  });
+
+  it("prices every plan at passes × daily max", () => {
+    for (const t of TIERS) expect(t.priceCents).toBe(t.passesPerMonth * t.maxPassValueCents);
   });
 });
 
@@ -61,7 +72,7 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
   });
 
   it("an Affogato member gets exactly 5 passes, then is blocked", () => {
-    const tier = getTier("affogato");
+    const tier = getTier("affogato_double_shot");
     const entries: PassLedgerEntry[] = [{ type: "grant", passes: tier.passesPerMonth, periodStart }];
     const days: string[] = [];
     let used = 0;
@@ -81,7 +92,7 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
   });
 
   it("monthEconomics rejects more uses than the tier includes", () => {
-    expect(() => monthEconomics(getTier("affogato"), [800, 800, 800, 800, 800, 800])).toThrow();
+    expect(() => monthEconomics(getTier("affogato_double_shot"), [800, 800, 800, 800, 800, 800])).toThrow();
   });
 
   it("a cancelled order releases its pass", () => {
@@ -97,6 +108,15 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
     expect(() => validatePassEntry({ type: "use", passes: 1, periodStart })).toThrow();
     expect(() => validatePassEntry({ type: "grant", passes: -5, periodStart })).toThrow();
     expect(() => validatePassEntry({ type: "use", passes: -1, periodStart })).not.toThrow();
+  });
+});
+
+describe("a Decaf pass covers the first $4.00", () => {
+  it("covers a $3.00 drip in full", () => {
+    expect(splitPassValue(300, getTier("macchiato_decaf").maxPassValueCents)).toEqual({ totalCents: 300, passCoveredCents: 300, overageCents: 0 });
+  });
+  it("a Decaf member can still order a latte and confirm the overage", () => {
+    expect(splitPassValue(525, getTier("macchiato_decaf").maxPassValueCents)).toEqual({ totalCents: 525, passCoveredCents: 400, overageCents: 125 });
   });
 });
 
@@ -133,7 +153,7 @@ describe("overage money: 100% to the shop, no commission, shop pays processing",
     expect(orderPayout({ passCoveredCents: 800, overageCents: 300, overageFeeCents: 39 }).shopCents).toBe(704 + 300 - 39);
   });
   it("overage never changes the platform's take", () => {
-    const tier = getTier("macchiato");
+    const tier = getTier("macchiato_double_shot");
     const plain = monthEconomics(tier, Array(12).fill(800));
     const over = monthEconomics(tier, Array(12).fill(950));
     expect(over.platformCents).toBe(plain.platformCents);
@@ -149,10 +169,13 @@ describe("overage money: 100% to the shop, no commission, shop pays processing",
 
 describe("commission: 12% of pass-covered value; shop gets 88%", () => {
   const cases: [string, number, number, number][] = [
-    // tier, passes used (each an $8.00 order), shop, platform
-    ["affogato", 5, 3520, 480],
-    ["macchiato", 12, 8448, 1152],
-    ["double_espresso", 20, 14080, 1920],
+    // plan, passes used (each order at or above the daily max), shop, platform
+    ["affogato_decaf", 5, 1760, 240],
+    ["affogato_double_shot", 5, 3520, 480],
+    ["macchiato_decaf", 12, 4224, 576],
+    ["macchiato_double_shot", 12, 8448, 1152],
+    ["double_espresso_decaf", 20, 7040, 960],
+    ["double_espresso_double_shot", 20, 14080, 1920],
   ];
   for (const [tierId, used, shop, platform] of cases) {
     it(`${getTier(tierId).name}: ${used} passes used → shop $${(shop / 100).toFixed(2)}, platform $${(platform / 100).toFixed(2)}`, () => {
@@ -164,7 +187,7 @@ describe("commission: 12% of pass-covered value; shop gets 88%", () => {
     });
   }
   it("the platform keeps the value of unused passes", () => {
-    const e = monthEconomics(getTier("affogato"), [800, 800, 800]); // 2 of 5 unused
+    const e = monthEconomics(getTier("affogato_double_shot"), [800, 800, 800]); // 2 of 5 unused
     expect(e).toMatchObject({ passesUnused: 2, shopCents: 3 * 704, platformCents: 4000 - 3 * 704 });
   });
 });
@@ -178,7 +201,7 @@ describe("unused passes expire on renewal and never carry over", () => {
   ];
 
   it("expires the 9 unused passes and grants a fresh 12", () => {
-    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("macchiato") })).toEqual([
+    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("macchiato_double_shot") })).toEqual([
       { type: "expire", passes: -9, periodStart: prevStart, note: expect.any(String) },
       { type: "grant", passes: 12, periodStart, note: expect.any(String) },
     ]);
@@ -188,7 +211,7 @@ describe("unused passes expire on renewal and never carry over", () => {
     for (const usedLast of [0, 3, 12]) {
       const previous: PassLedgerEntry[] = [{ type: "grant", passes: 12, periodStart: prevStart }];
       for (let i = 0; i < usedLast; i++) previous.push({ type: "use", passes: -1, periodStart: prevStart });
-      const all = [...previous, ...planRenewal({ previousEntries: previous, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("macchiato") })];
+      const all = [...previous, ...planRenewal({ previousEntries: previous, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("macchiato_double_shot") })];
       expect(passBalance(all, periodStart)).toBe(12);
       expect(passBalance(all, prevStart)).toBe(0);
       expect(all.reduce((s, e) => s + e.passes, 0)).toBe(12);
@@ -200,10 +223,10 @@ describe("unused passes expire on renewal and never carry over", () => {
   });
 
   it("first period only grants; downgrade grants the new tier's allowance", () => {
-    expect(planRenewal({ previousEntries: [], previousPeriodStart: null, newPeriodStart: periodStart, tier: getTier("double_espresso") })).toEqual([
+    expect(planRenewal({ previousEntries: [], previousPeriodStart: null, newPeriodStart: periodStart, tier: getTier("double_espresso_double_shot") })).toEqual([
       { type: "grant", passes: 20, periodStart, note: expect.any(String) },
     ]);
-    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("affogato") }).at(-1)).toMatchObject({ type: "grant", passes: 5 });
+    expect(planRenewal({ previousEntries: prev, previousPeriodStart: prevStart, newPeriodStart: periodStart, tier: getTier("affogato_double_shot") }).at(-1)).toMatchObject({ type: "grant", passes: 5 });
   });
 
   it("detects duplicate grants and won't release a pass from an expired period", () => {

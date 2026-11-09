@@ -1,34 +1,42 @@
 {
-  "$comment": "Membership tiers. Edit prices, pass counts and max pass values here; no code changes needed. Amounts are in cents. stripePriceEnv names the env var holding that tier's Stripe Price ID.",
+  "$comment": "Membership plans. Each tier (number of Daily Passes) comes in sub-tiers (how much one pass covers). Edit names, pass counts, daily maxes and prices here; no code changes needed. Amounts are in cents. stripePriceEnv names the env var holding that plan's Stripe Price ID.",
   "currency": "usd",
   "defaultTier": "macchiato",
+  "defaultSubTier": "double_shot",
+  "subTiers": [
+    { "id": "decaf", "name": "Decaf", "maxPassValueCents": 400, "blurb": "Drip coffee, black or with cream and sugar." },
+    { "id": "double_shot", "name": "Double Shot", "maxPassValueCents": 800, "blurb": "Lattes, cappuccinos and specialty drinks." }
+  ],
   "tiers": [
     {
       "id": "affogato",
       "name": "Affogato",
-      "priceCents": 4000,
       "passesPerMonth": 5,
-      "maxPassValueCents": 800,
       "blurb": "A treat most weeks.",
-      "stripePriceEnv": "STRIPE_PRICE_AFFOGATO"
+      "plans": {
+        "decaf": { "priceCents": 2000, "stripePriceEnv": "STRIPE_PRICE_AFFOGATO_DECAF" },
+        "double_shot": { "priceCents": 4000, "stripePriceEnv": "STRIPE_PRICE_AFFOGATO_DOUBLE_SHOT" }
+      }
     },
     {
       "id": "macchiato",
       "name": "Macchiato",
-      "priceCents": 9600,
       "passesPerMonth": 12,
-      "maxPassValueCents": 800,
       "blurb": "Your regular few mornings a week.",
-      "stripePriceEnv": "STRIPE_PRICE_MACCHIATO"
+      "plans": {
+        "decaf": { "priceCents": 4800, "stripePriceEnv": "STRIPE_PRICE_MACCHIATO_DECAF" },
+        "double_shot": { "priceCents": 9600, "stripePriceEnv": "STRIPE_PRICE_MACCHIATO_DOUBLE_SHOT" }
+      }
     },
     {
       "id": "double_espresso",
       "name": "Double Espresso",
-      "priceCents": 16000,
       "passesPerMonth": 20,
-      "maxPassValueCents": 800,
       "blurb": "Just about every workday.",
-      "stripePriceEnv": "STRIPE_PRICE_DOUBLE_ESPRESSO"
+      "plans": {
+        "decaf": { "priceCents": 8000, "stripePriceEnv": "STRIPE_PRICE_DOUBLE_ESPRESSO_DECAF", "blurb": "Perfect for the daily black coffee commuter!" },
+        "double_shot": { "priceCents": 16000, "stripePriceEnv": "STRIPE_PRICE_DOUBLE_ESPRESSO_DOUBLE_SHOT", "blurb": "The ultimate daily latte fuel tank." }
+      }
     }
   ]
 }

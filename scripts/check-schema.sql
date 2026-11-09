@@ -17,7 +17,7 @@ insert into shops (id, owner_id, name, address, lat, lng, status)
 insert into menu_items (id, shop_id, name, size, price, category)
   values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-00000000005a', 'Latte', '12 oz', 500, 'espresso');
 insert into subscriptions (id, member_id, tier, status, current_period_start, current_period_end, period_passes, period_max_pass_value)
-  values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a1', 'affogato', 'active', '2026-11-01T00:00Z', '2026-12-01T00:00Z', 2, 800);
+  values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a1', 'affogato_double_shot', 'active', '2026-11-01T00:00Z', '2026-12-01T00:00Z', 2, 800);
 -- Grant 2 passes (a short allowance so the cap is easy to hit).
 insert into pass_ledger (member_id, subscription_id, period_start, passes, type)
   values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000d1', '2026-11-01T00:00Z', 2, 'grant');

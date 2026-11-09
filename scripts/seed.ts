@@ -23,6 +23,7 @@ import {
   zonedTimeToUtc,
   zonedParts,
   type ShopHours,
+  type TierGroupId,
   type TierId,
 } from "../packages/core/src/index";
 
@@ -111,9 +112,10 @@ const SHOPS = [
 ] as const;
 
 const MEMBERS: { email: string; name: string; tier: TierId }[] = [
-  { email: "affogato@demo.sippybrew.test", name: "Sam Rivera", tier: "affogato" },
-  { email: "macchiato@demo.sippybrew.test", name: "Riley Okafor", tier: "macchiato" },
-  { email: "double@demo.sippybrew.test", name: "Dana Kowalski", tier: "double_espresso" },
+  { email: "affogato@demo.sippybrew.test", name: "Sam Rivera", tier: "affogato_decaf" },
+  { email: "macchiato@demo.sippybrew.test", name: "Riley Okafor", tier: "macchiato_double_shot" },
+  { email: "double@demo.sippybrew.test", name: "Dana Kowalski", tier: "double_espresso_double_shot" },
+  { email: "commuter@demo.sippybrew.test", name: "Chris Patel", tier: "double_espresso_decaf" },
 ];
 const ADMIN = { email: "admin@demo.sippybrew.test", name: "Avery Admin" };
 
@@ -250,14 +252,15 @@ async function main() {
 
     // Sample orders: one pass per day, leaving at least one pass for today. Every third visit
     // adds a second drink, so some orders go over $8.00 and show a confirmed overage.
-    const visitsBy: Record<TierId, number[]> = { affogato: [11, 8, 4], macchiato: [11, 9, 7, 5, 3, 1], double_espresso: [12, 11, 10, 9, 8, 6, 5, 3, 2, 1] };
-    for (const [vi, daysAgo] of visitsBy[m.tier].entries()) {
+    const visitsBy: Record<TierGroupId, number[]> = { affogato: [11, 8, 4], macchiato: [11, 9, 7, 5, 3, 1], double_espresso: [12, 11, 10, 9, 8, 6, 5, 3, 2, 1] };
+    for (const [vi, daysAgo] of visitsBy[tier.group].entries()) {
       const shop = shops[(mi + vi) % 3]!;
-      const item = shop.menu[(vi * 2 + mi) % shop.menu.length]!;
+      const byPrice = [...shop.menu].sort((a, b) => a.price - b.price);
+      const item = tier.subTier === "decaf" ? byPrice[vi % 2]! : shop.menu[(vi * 2 + mi) % shop.menu.length]!;
       const items = vi % 3 === 1 ? [item, shop.menu[(vi + 3) % shop.menu.length]!] : [item];
       await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items, at: localTime(daysAgo, 7 + ((vi + mi) % 4), 10 + vi * 3), redeemed: true, maxPassValue: tier.maxPassValueCents });
     }
-    if (m.tier === "double_espresso") {
+    if (m.tier === "double_espresso_double_shot") {
       const shop = shops[0]!;
       await insertOrder({ memberId, subId: sub.id, periodStart, shopId: shop.id, items: [shop.menu[2]!], at: new Date(Date.now() - 4 * 60_000), redeemed: false, maxPassValue: tier.maxPassValueCents });
     }

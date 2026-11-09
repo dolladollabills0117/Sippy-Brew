@@ -9,7 +9,11 @@ create extension if not exists pgcrypto;
 -- Enums
 -- ---------------------------------------------------------------------------
 create type public.user_role as enum ('member', 'shop_owner', 'admin');
-create type public.tier_id as enum ('affogato', 'macchiato', 'double_espresso');
+create type public.tier_id as enum (
+  'affogato_decaf', 'affogato_double_shot',
+  'macchiato_decaf', 'macchiato_double_shot',
+  'double_espresso_decaf', 'double_espresso_double_shot'
+);
 create type public.subscription_status as enum ('active', 'trialing', 'past_due', 'canceled', 'incomplete', 'unpaid');
 create type public.pass_ledger_type as enum ('grant', 'use', 'release', 'expire');
 create type public.overage_status as enum ('none', 'authorized', 'captured', 'voided', 'failed', 'waived');

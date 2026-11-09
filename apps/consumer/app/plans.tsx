@@ -1,22 +1,24 @@
-import { DEFAULT_TIER, formatCents, TIERS, type TierId } from "@sippy/core";
-import { api, Badge, Button, Card, colors, ErrorNote, errorMessage, Screen, spacing, Text } from "@sippy/mobile-ui";
+import { DEFAULT_SUB_TIER, DEFAULT_TIER_GROUP, formatCents, SUB_TIERS, TIER_GROUPS, type SubTierId, type TierId } from "@sippy/core";
+import { api, Badge, Button, Card, Chip, colors, ErrorNote, errorMessage, Row, Screen, spacing, Text } from "@sippy/mobile-ui";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 
 /**
- * Plans. Stripe Checkout opens in an in-app browser session; card numbers are entered on
- * Stripe's page and never handled by the app.
+ * Plans: pick Decaf or Double Shot, then a tier. Stripe Checkout opens in an in-app browser
+ * session; card numbers are entered on Stripe's page and never handled by the app.
  */
 export default function PlansScreen() {
+  const [sub, setSub] = useState<SubTierId>(DEFAULT_SUB_TIER);
   const [busy, setBusy] = useState<TierId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const current = SUB_TIERS.find((s) => s.id === sub)!;
 
-  async function choose(tier: TierId) {
-    setBusy(tier);
+  async function choose(plan: TierId) {
+    setBusy(plan);
     setError(null);
     try {
-      const { url } = await api.checkout(tier, "sippybrew://account");
+      const { url } = await api.checkout(plan, "sippybrew://account");
       const result = await WebBrowser.openAuthSessionAsync(url, "sippybrew://account");
       if (result.type === "success" && result.url.includes("checkout=success")) router.replace("/account");
     } catch (e) {
@@ -29,27 +31,33 @@ export default function PlansScreen() {
   return (
     <Screen>
       <Text variant="h1" accessibilityRole="header">
-        Choose your plan
+        Choose your pass
       </Text>
-      <Text color={colors.pecan}>One Daily Pass per day at any participating shop. Passes reset monthly.</Text>
+      <Row accessibilityRole="radiogroup" style={{ flexWrap: "wrap" }}>
+        {SUB_TIERS.map((s) => (
+          <Chip key={s.id} label={`${s.name} · ${formatCents(s.maxPassValueCents)}/day`} selected={sub === s.id} onPress={() => setSub(s.id)} />
+        ))}
+      </Row>
+      <Text color={colors.pecan}>{current.blurb} One Daily Pass per day at any participating shop. Passes reset monthly.</Text>
       {error && <ErrorNote message={error} />}
-      {TIERS.map((t) => {
-        const hl = t.id === DEFAULT_TIER;
+      {TIER_GROUPS.map((g) => {
+        const plan = g.plans[sub];
+        const hl = g.id === DEFAULT_TIER_GROUP;
         return (
-          <Card key={t.id} accent={hl} style={{ gap: spacing.sm }}>
+          <Card key={g.id} accent={hl} style={{ gap: spacing.sm }}>
             {hl && <Badge label="Most popular" />}
-            <Text variant="h2">{t.name}</Text>
+            <Text variant="h2">{g.name}</Text>
             <Text variant="stat">
-              {formatCents(t.priceCents)}
+              {formatCents(plan.priceCents)}
               <Text color={colors.pecan}> / month</Text>
             </Text>
             <Text>
-              {t.passesPerMonth} Daily Passes · {formatCents(t.maxPassValueCents, { showZeroCents: true })} max per pass
+              {plan.passesPerMonth} Daily Passes · {formatCents(plan.maxPassValueCents, { showZeroCents: true })} max per pass
             </Text>
             <Text variant="small" color={colors.pecan}>
-              {t.blurb} Unused passes don’t roll over.
+              {plan.blurb} Unused passes don’t roll over.
             </Text>
-            <Button label="Choose this plan" variant={hl ? "primary" : "secondary"} loading={busy === t.id} disabled={busy !== null} onPress={() => choose(t.id)} />
+            <Button label={`Choose ${plan.name}`} variant={hl ? "primary" : "secondary"} loading={busy === plan.id} disabled={busy !== null} onPress={() => choose(plan.id)} />
           </Card>
         );
       })}

@@ -16,7 +16,7 @@ import {
 
 describe("tier lookup", () => {
   it("throws on unknown tiers", () => {
-    expect(TIERS).toHaveLength(3);
+    expect(TIERS).toHaveLength(6);
     expect(() => getTier("nope")).toThrow();
   });
 });

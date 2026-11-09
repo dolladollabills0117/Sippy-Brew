@@ -26,23 +26,25 @@ docs/OPEN_DECISIONS.md   Decisions the owner still needs to make
 
 Tiers live in [`packages/core/config/tiers.json`](packages/core/config/tiers.json):
 
-| Tier | Price | Daily Passes / month | Max per pass |
+Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **Decaf** covers up to $4.00 a day, for drip coffee black or with cream and sugar; **Double Shot** covers up to $8.00, for lattes and specialty drinks. The sub-tier is a price cap, not a drink restriction: a Decaf member can order a latte and confirm the overage.
+
+| Tier | Passes / month | Decaf ($4/day) | Double Shot ($8/day) |
 | --- | --- | --- | --- |
-| Affogato | $40 | 5 | $8.00 |
-| Macchiato (most popular) | $96 | 12 | $8.00 |
-| Double Espresso | $160 | 20 | $8.00 |
+| Affogato | 5 | $20 / month | $40 / month |
+| Macchiato (most popular) | 12 | $48 / month | $96 / month |
+| Double Espresso | 20 | $80 / month | $160 / month |
 
 - Coffee only. Menus can't contain food categories, and food-sounding names are rejected.
 - One pass per member per calendar day (America/New_York), at one shop.
-- The pass covers the **first $8.00** of that day's order.
-- If the order is over $8.00, the member pays the **overage**. Checkout shows the pass amount, the overage and the total, and the member must confirm the exact overage before the order can be placed. The server and the database both refuse an unconfirmed overage, so nothing is ever charged without confirmation. The confirmed overage is authorized on the member's card on file, captured when the shop scans the QR, and released if the order is cancelled. Overages under $0.50 (Stripe's minimum card charge) are waived.
+- The pass covers the **first $4.00 (Decaf) or $8.00 (Double Shot)** of that day's order.
+- If the order is over that, the member pays the **overage**. Checkout shows the pass amount, the overage and the total, and the member must confirm the exact overage before the order can be placed. The server and the database both refuse an unconfirmed overage, so nothing is ever charged without confirmation. The confirmed overage is authorized on the member's card on file, captured when the shop scans the QR, and released if the order is cancelled. Overages under $0.50 (Stripe's minimum card charge) are waived.
 - **Overage goes 100% to the shop**, with no platform commission. The shop pays the card processing on it: the actual Stripe fee when Stripe reports it, otherwise the 2.9% + 30¢ estimate in `rules.json`.
 - **Commission is 12% of the pass-covered value only.** The shop gets 88% of it. The platform keeps the rest of the subscription, including the value of unused passes.
 - Passes reset on the subscription renewal date. Unused passes expire. Nothing rolls over.
 - Pickup QR codes expire after 30 seconds and can be redeemed once. The member's screen fetches a fresh code just before expiry.
 - A pass is only used when a drink is redeemed. A daily job cancels orders from earlier days that were never picked up and returns their passes.
 
-Per member-month, when every pass is used on an order of $8.00 or more: Affogato pays shops $35.20 and the platform keeps $4.80; Macchiato $84.48 / $11.52; Double Espresso $140.80 / $19.20. Overages are added on top for the shop and never change the platform's share.
+Per member-month, when every pass is used up to its daily max (shop / platform): Affogato Decaf $17.60 / $2.40, Double Shot $35.20 / $4.80; Macchiato Decaf $42.24 / $5.76, Double Shot $84.48 / $11.52; Double Espresso Decaf $70.40 / $9.60, Double Shot $140.80 / $19.20. Overages are added on top for the shop and never change the platform's share.
 
 ### Where each rule is enforced
 
@@ -52,7 +54,7 @@ The rules are written once in `packages/core` and used by the web app, both mobi
 | --- | --- | --- |
 | One pass per day, any shop | `checkPassAvailable` | `place_order` + unique index `orders_one_pass_per_day_idx` |
 | Monthly pass allowance | `passBalance`, `checkPassAvailable` | `place_order` (per-member advisory lock) |
-| Pass covers first $8.00, rest is overage | `splitPassValue` | `place_order` checks `pass_covered_amount = least(total, max)` |
+| Pass covers the first $4/$8, rest is overage | `splitPassValue` | `place_order` checks `pass_covered_amount = least(total, max)` |
 | Overage only after confirmation | `checkOverageConfirmed` | `place_order` + check constraint on `overage_confirmed_at` |
 | No rollover | `planRenewal`, `passBalance` (period-scoped) | `pass_ledger.period_start`, one grant/expire per period |
 | QR 30 s + single use | `issueQr`, `checkRedeemable` | `redeem_qr` (row lock) + unique index on redeemed orders |
@@ -78,7 +80,7 @@ pnpm dev:web                            # http://localhost:3000
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser + server. The anon key is public by design; RLS protects data. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only. Bypasses RLS; never ship it to a client. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Server only. |
-| `STRIPE_PRICE_AFFOGATO`, `STRIPE_PRICE_MACCHIATO`, `STRIPE_PRICE_DOUBLE_ESPRESSO` | Stripe Price IDs for each tier (names come from `tiers.json` → `stripePriceEnv`). |
+| `STRIPE_PRICE_AFFOGATO_DECAF`, `STRIPE_PRICE_AFFOGATO_DOUBLE_SHOT`, `STRIPE_PRICE_MACCHIATO_DECAF`, `STRIPE_PRICE_MACCHIATO_DOUBLE_SHOT`, `STRIPE_PRICE_DOUBLE_ESPRESSO_DECAF`, `STRIPE_PRICE_DOUBLE_ESPRESSO_DOUBLE_SHOT` | Stripe Price IDs for each plan (names come from `tiers.json` → `stripePriceEnv`). |
 | `NEXT_PUBLIC_SITE_URL` | Used for email links and Stripe return URLs. |
 | `CRON_SECRET` | Bearer token for `/api/cron/*`. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Optional. Without a key, emails are printed to the server log. |
@@ -89,9 +91,10 @@ Password for all: `sippy-demo-123` (override with `DEMO_PASSWORD`).
 
 | Role | Email |
 | --- | --- |
-| Member, Affogato | `affogato@demo.sippybrew.test` |
-| Member, Macchiato | `macchiato@demo.sippybrew.test` |
-| Member, Double Espresso (has an open order today) | `double@demo.sippybrew.test` |
+| Member, Affogato · Decaf | `affogato@demo.sippybrew.test` |
+| Member, Macchiato · Double Shot | `macchiato@demo.sippybrew.test` |
+| Member, Double Espresso · Double Shot (has an open order today) | `double@demo.sippybrew.test` |
+| Member, Double Espresso · Decaf | `commuter@demo.sippybrew.test` |
 | Shop: Mile Square Roasters | `owner.mile@demo.sippybrew.test` |
 | Shop: Grove Street Grind | `owner.grove@demo.sippybrew.test` |
 | Shop: Heights Coffee Co. | `owner.heights@demo.sippybrew.test` |
@@ -101,7 +104,7 @@ Some seeded orders include a confirmed overage. Seeded subscriptions use fake St
 
 ### Stripe
 
-1. Create one product with three monthly prices ($40, $96, $160) and put the IDs in the `STRIPE_PRICE_*` variables.
+1. Create one product with six monthly prices ($20, $40, $48, $96, $80, $160) and put the IDs in the `STRIPE_PRICE_*` variables.
 2. Enable the **Customer portal** (plan switching between the three prices, and cancellation). Members change or cancel plans there; a change takes effect at the next renewal.
 3. Enable **Connect** with Express accounts. Shops onboard from `/shop/onboarding`.
 4. Add a webhook endpoint at `https://<site>/api/stripe/webhook` for: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, `account.updated`. Locally: `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
@@ -117,7 +120,7 @@ Card numbers never touch Sippy Brew. Subscriptions use Stripe Checkout (a browse
 
 ## Changing tier prices, passes or limits
 
-Edit [`packages/core/config/tiers.json`](packages/core/config/tiers.json): `priceCents`, `passesPerMonth`, `maxPassValueCents`, `name`, `blurb`. Amounts are in cents. The landing page's "New in [City]" sticker reads `launchCity` from [`packages/core/config/site.json`](packages/core/config/site.json). Then:
+Edit [`packages/core/config/tiers.json`](packages/core/config/tiers.json): each tier's `name`, `passesPerMonth` and per-sub-tier `priceCents`, and each sub-tier's `name` and `maxPassValueCents` under `subTiers`. Amounts are in cents. The landing page's "New in [City]" sticker reads `launchCity` from [`packages/core/config/site.json`](packages/core/config/site.json). Then:
 
 - **Price changes** also need a new Stripe Price (Stripe prices can't be edited). Point `STRIPE_PRICE_*` at the new ID. Existing subscribers stay on their old price until you migrate them in Stripe.
 - **Pass count / max value** changes apply to each member from their next renewal. The current period's allowance is snapshotted on the subscription when it's granted.

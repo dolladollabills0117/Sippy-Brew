@@ -1,6 +1,6 @@
-import { DEFAULT_TIER, formatCents, SITE, TIERS } from "@sippy/core";
+import { SITE } from "@sippy/core";
 import Link from "next/link";
-import { cx } from "@/components/ui";
+import { PlanCards } from "@/components/PlanCards";
 
 const STEPS = ["Pick a pass", "Order ahead from a shop near you", "Scan at the counter. Sip."];
 
@@ -55,31 +55,7 @@ export default function Landing() {
         <h2 id="passes-title" className="mb-4 px-1 text-[1.75rem] text-espresso sm:text-3xl">
           Pick your pass
         </h2>
-        <ul className="grid grid-cols-3 gap-2.5 sm:gap-4">
-          {TIERS.map((t) => {
-            const popular = t.id === DEFAULT_TIER;
-            return (
-              <li key={t.id}>
-                <Link
-                  href={`/signup?plan=${t.id}`}
-                  aria-label={`${t.name}: ${formatCents(t.priceCents)} a month, ${t.passesPerMonth} passes, up to ${formatCents(t.maxPassValueCents)} a day${popular ? ", most popular" : ""}`}
-                  className={cx(
-                    "flex h-full flex-col rounded-[22px] border-2 bg-cream-swirl px-3 py-4 transition-shadow hover:shadow-lift sm:px-5 sm:py-5",
-                    popular ? "border-honey" : "border-transparent",
-                  )}
-                >
-                  {popular && (
-                    <span className="mb-2 self-start whitespace-nowrap rounded-full bg-honey px-2 py-0.5 text-[0.6875rem] font-extrabold text-espresso sm:px-2.5 sm:text-xs">Most popular</span>
-                  )}
-                  <span className="text-sm leading-tight text-pecan sm:text-base">{t.name}</span>
-                  <span className="mt-1.5 font-heading text-[1.75rem] leading-none text-espresso sm:text-4xl">{formatCents(t.priceCents)}</span>
-                  <span className="mt-3 text-sm text-pecan">{t.passesPerMonth} passes</span>
-                  <span className="text-sm text-pecan">up to {formatCents(t.maxPassValueCents)}/day</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <PlanCards mode="link" />
       </section>
 
       <section aria-labelledby="how-title">
