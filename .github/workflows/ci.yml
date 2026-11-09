@@ -21,5 +21,7 @@ jobs:
         run: pnpm typecheck
       - name: Web build
         run: pnpm build:web
+      - name: Demo build
+        run: pnpm demo:build
       - name: Schema and database rules
         run: bash scripts/check-schema.sh

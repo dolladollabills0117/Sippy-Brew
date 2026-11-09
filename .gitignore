@@ -13,3 +13,6 @@ android/
 apps/*/.env
 .DS_Store
 supabase/.temp/
+
+# The built demo page is committed so it can be opened or hosted directly.
+!demo/dist/

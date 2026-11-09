@@ -19,6 +19,7 @@ apps/shop            Expo shop app
 supabase/migrations  Postgres schema, atomic write functions, RLS
 scripts/seed.ts      Demo data
 scripts/check-schema.sh  Applies the migrations to a throwaway Postgres and tests the DB-level rules
+demo/                A tappable single-page demo (members, shops, hidden admin) running the real rules; see demo/README.md
 docs/OPEN_DECISIONS.md   Decisions the owner still needs to make
 ```
 
