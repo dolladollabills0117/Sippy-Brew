@@ -101,11 +101,15 @@ ${page.slice(page.indexOf("</style>") + "</style>".length).trim()}
   copyFileSync(join(root, "docs/marketing/sippy-brew-card.png"), join(here, "dist/sippy-brew-card.png"));
   writeFileSync(join(here, "dist/.nojekyll"), "");
 
-  // GitHub Pages serves the docs/ folder on main (Settings → Pages → Deploy from a branch →
-  // main → /docs). Keep the published copy there in step with the build.
+  // GitHub Pages: .github/workflows/pages.yml deploys docs/ (Source "GitHub Actions"), and
+  // branch mode can serve docs/ or the root directly. Keep all three in step with the build.
   writeFileSync(join(root, "docs/index.html"), doc);
   copyFileSync(join(root, "docs/marketing/sippy-brew-card.png"), join(root, "docs/sippy-brew-card.png"));
   writeFileSync(join(root, "docs/.nojekyll"), "");
+  // Same files at the repo root, for Pages set to "Deploy from a branch → main → / (root)".
+  writeFileSync(join(root, "index.html"), doc);
+  copyFileSync(join(root, "docs/marketing/sippy-brew-card.png"), join(root, "sippy-brew-card.png"));
+  writeFileSync(join(root, ".nojekyll"), "");
   console.log(`Built ${join(here, "dist/index.html")} and docs/index.html for GitHub Pages`);
 }
 

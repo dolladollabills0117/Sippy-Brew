@@ -24,6 +24,6 @@ jobs:
       - name: Demo build (and check the published copy in docs/ is up to date)
         run: |
           pnpm demo:build
-          git diff --exit-code -- docs demo/dist || (echo "Run pnpm demo:build and commit docs/ and demo/dist/" && exit 1)
+          git diff --exit-code -- docs demo/dist index.html sippy-brew-card.png .nojekyll || (echo "Run pnpm demo:build and commit docs/ and demo/dist/" && exit 1)
       - name: Schema and database rules
         run: bash scripts/check-schema.sh
