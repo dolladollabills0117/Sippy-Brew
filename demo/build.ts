@@ -9,10 +9,10 @@
  * everything else is inlined, so the file can be hosted anywhere or opened directly.
  */
 import { build } from "esbuild";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BEAN_TILE_SVG } from "../packages/core/src/logo";
+import { BEAN_TILE_SVG, LOGO_SVG } from "../packages/core/src/logo";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -61,6 +61,46 @@ ${css}
   const out = join(here, "dist/sippy-brew-demo.html");
   writeFileSync(out, page);
   console.log(`Built ${out} (${Math.round(page.length / 1024)} KB)`);
+
+  // GitHub Pages: a complete HTML document with share-preview tags, so a link pasted into
+  // LinkedIn, Slack or iMessage shows the Sippy Brew card. Deployed by .github/workflows/pages.yml.
+  const site = process.env.PAGES_URL ?? "https://dolladollabills0117.github.io/Sippy-Brew/";
+  const title = "Sippy Brew: live app demo";
+  const description = "One monthly pass. Any local coffee shop. Tap through the live demo: pick a pass, order ahead, customize your drink and show your pickup QR, or run a shop from the merchant portal.";
+  const card = `${site}sippy-brew-card.png`;
+  const meta = `<meta name="description" content="${description}">
+<meta name="theme-color" content="#F3E5C7">
+<link rel="canonical" href="${site}">
+<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(LOGO_SVG)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sippy Brew">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:url" content="${site}">
+<meta property="og:image" content="${card}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="Sippy Brew: Your neighborhood, brewed daily. Two phones show the member home screen and a pickup QR code.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${description}">
+<meta name="twitter:image" content="${card}">`;
+  const doc = `<!doctype html>
+<html lang="en">
+<head>
+${page.slice(0, page.indexOf("<style>")).replace("<title>Sippy Brew Demo</title>", `<title>${title}</title>`)}${meta}
+${page.slice(page.indexOf("<style>"), page.indexOf("</style>") + "</style>".length)}
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+</head>
+<body>
+${page.slice(page.indexOf("</style>") + "</style>".length).trim()}
+</body>
+</html>
+`;
+  writeFileSync(join(here, "dist/index.html"), doc);
+  copyFileSync(join(root, "docs/marketing/sippy-brew-card.png"), join(here, "dist/sippy-brew-card.png"));
+  writeFileSync(join(here, "dist/.nojekyll"), "");
+  console.log(`Built ${join(here, "dist/index.html")} for GitHub Pages`);
 }
 
 main().catch((e) => {
