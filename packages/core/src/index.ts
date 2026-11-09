@@ -6,6 +6,7 @@ export * from "./contrast";
 export * from "./analytics";
 export * from "./types";
 export * from "./rules/passes";
+export * from "./rules/upgrade";
 export * from "./rules/qr";
 export * from "./rules/commission";
 export * from "./rules/menu";

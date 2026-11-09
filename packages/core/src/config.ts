@@ -49,6 +49,8 @@ export interface TierGroup {
 
 export interface Rules {
   passesPerDay: number;
+  /** Suggest the higher sub-tier after this many orders with an overage in one period. */
+  upgradeNudgeAfterOverages: number;
   /** Overages below this can't be charged (Stripe's minimum card charge) and are waived. */
   minOverageChargeCents: number;
   /** Card processing on overage charges, paid by the shop: bps of the amount plus a fixed fee. */

@@ -4,3 +4,4 @@ export * from "./session";
 export * from "./hooks";
 export { SignInScreen } from "./SignInScreen";
 export { Logo } from "./Logo";
+export { UpgradeCard } from "./UpgradeCard";

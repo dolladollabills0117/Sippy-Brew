@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PassSummary } from "@/components/PassSummary";
+import { UpgradeCard } from "@/components/UpgradeCard";
 import { ShopCard } from "@/components/ShopCard";
 import { Badge, ButtonLink, Card, EmptyState, PageTitle, SectionTitle } from "@/components/ui";
 import { requirePageSession } from "@/lib/auth";
@@ -28,6 +29,11 @@ export default async function MemberHome() {
         </Card>
       ) : (
         <PassSummary summary={summary} />
+      )}
+      {summary.upgrade?.suggested && (
+        <div className="mt-4">
+          <UpgradeCard upgrade={summary.upgrade} passesLeft={summary.passesLeft} nudge />
+        </div>
       )}
 
       {active && (

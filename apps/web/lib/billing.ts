@@ -1,5 +1,5 @@
 import "server-only";
-import { getTier, isTierId, planRenewal, TIERS, type PassLedgerEntry, type Subscription, type TierId } from "@sippy/core";
+import { getTier, isTierId, planRenewal, RULES, TIERS, upgradeNowCost, upgradeTarget, type PassLedgerEntry, type Subscription, type TierId } from "@sippy/core";
 import Stripe from "stripe";
 import type { Session } from "./auth";
 import { env } from "./env";
@@ -197,4 +197,65 @@ export async function captureOverage(paymentIntentId: string): Promise<{ ok: boo
 
 export async function voidOverage(paymentIntentId: string): Promise<void> {
   await stripe().paymentIntents.cancel(paymentIntentId);
+}
+
+// ---------------------------------------------------------------------------
+// Sub-tier upgrades (e.g. Affogato · Decaf → Affogato · Double Shot). The member confirms the
+// exact amount first. They pay the per-pass difference for the passes left this period (card on
+// file), those passes cover the higher max right away, and Stripe bills the higher plan from the
+// next renewal (no proration).
+// ---------------------------------------------------------------------------
+
+export async function upgradeSubTier(memberId: string, sub: Subscription, toPlan: unknown, confirmedCents: unknown, passesLeft: number) {
+  const from = getTier(sub.tier);
+  const to = upgradeTarget(from);
+  if (!to || toPlan !== to.id) throw badRequest("BAD_UPGRADE", "That plan isn't an upgrade from your current one.");
+  const cost = upgradeNowCost(from, to, passesLeft);
+  if (confirmedCents !== cost) {
+    throw new AppError(409, "UPGRADE_CONFIRMATION_REQUIRED", `Upgrading now costs ${(cost / 100).toFixed(2)}. Please confirm that amount to continue.`);
+  }
+  if (!process.env.STRIPE_SECRET_KEY) throw new AppError(503, "UPGRADE_UNAVAILABLE", "Upgrades need payments set up.");
+  const db = supabaseAdmin();
+  const { data: row } = await db.from("subscriptions").select("stripe_subscription_id").eq("id", sub.id).single();
+  if (!row?.stripe_subscription_id) throw new AppError(409, "NO_STRIPE_SUBSCRIPTION", "We couldn't find your billing details. Contact support.");
+
+  let paymentIntent: string | null = null;
+  if (cost >= RULES.minOverageChargeCents) {
+    const pm = await defaultPaymentMethod(memberId, sub);
+    if (!pm) throw new AppError(402, "NO_PAYMENT_METHOD", "Add a card in your account to upgrade.");
+    try {
+      const pi = await stripe().paymentIntents.create({
+        amount: cost,
+        currency: "usd",
+        customer: pm.customer,
+        payment_method: pm.paymentMethod,
+        off_session: true,
+        confirm: true,
+        description: `Sippy Brew upgrade to ${to.name} for ${passesLeft} remaining passes`,
+        metadata: { member_id: memberId, kind: "sub_tier_upgrade", from: from.id, to: to.id },
+      });
+      paymentIntent = pi.id;
+    } catch {
+      throw new AppError(402, "UPGRADE_DECLINED", "Your card was declined. Update it in your account and try again.");
+    }
+  }
+
+  // Bill the higher plan from the next renewal.
+  const stripeSub = await stripe().subscriptions.retrieve(row.stripe_subscription_id);
+  const itemId = stripeSub.items.data[0]?.id;
+  if (itemId) {
+    await stripe().subscriptions.update(row.stripe_subscription_id, {
+      items: [{ id: itemId, price: priceIdFor(to.id) }],
+      proration_behavior: "none",
+      metadata: { ...stripeSub.metadata, tier: to.id },
+    });
+  }
+
+  // The passes left this period now cover the higher max.
+  await db.from("subscriptions").update({ tier: to.id, period_max_pass_value: to.maxPassValueCents }).eq("id", sub.id);
+  await db.from("sub_tier_upgrades").insert({
+    member_id: memberId, subscription_id: sub.id, period_start: sub.currentPeriodStart, from_plan: from.id, to_plan: to.id,
+    passes_left: passesLeft, amount: cost, stripe_payment_intent: paymentIntent,
+  });
+  return { plan: to.id, chargedCents: paymentIntent ? cost : 0 };
 }

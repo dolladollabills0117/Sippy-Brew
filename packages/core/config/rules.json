@@ -1,6 +1,7 @@
 {
   "$comment": "Platform-wide business rules shared by web, consumer app and shop app. Amounts in cents.",
   "passesPerDay": 1,
+  "upgradeNudgeAfterOverages": 2,
   "minOverageChargeCents": 50,
   "overageProcessingFeeBps": 290,
   "overageProcessingFeeFixedCents": 30,

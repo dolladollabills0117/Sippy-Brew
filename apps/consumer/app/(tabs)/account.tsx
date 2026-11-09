@@ -1,5 +1,5 @@
 import { formatCents, getTier, RULES } from "@sippy/core";
-import { api, API_URL, Badge, Button, Card, colors, ErrorNote, errorMessage, Loading, Meter, Row, Screen, spacing, supabase, Text, useLoad } from "@sippy/mobile-ui";
+import { api, API_URL, Badge, Button, Card, colors, ErrorNote, errorMessage, Loading, Meter, Row, Screen, spacing, supabase, Text, UpgradeCard, useLoad } from "@sippy/mobile-ui";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -81,6 +81,8 @@ export default function AccountTab() {
           </>
         )}
       </Card>
+
+      {s.upgrade && <UpgradeCard upgrade={s.upgrade} passesLeft={s.passesLeft} nudge={s.upgrade.suggested} onDone={me.reload} />}
 
       {sub && (
         <Card style={{ gap: spacing.sm }}>

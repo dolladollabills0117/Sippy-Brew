@@ -245,6 +245,22 @@ create table public.push_tokens (
 );
 create index push_tokens_user_idx on public.push_tokens (user_id);
 
+-- Mid-period sub-tier upgrades (e.g. Decaf → Double Shot): what the member paid for the passes
+-- they had left. Their subscription row switches to the new plan and max right away.
+create table public.sub_tier_upgrades (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references public.profiles (id) on delete cascade,
+  subscription_id uuid not null references public.subscriptions (id) on delete cascade,
+  period_start timestamptz not null,
+  from_plan public.tier_id not null,
+  to_plan public.tier_id not null,
+  passes_left integer not null check (passes_left >= 0),
+  amount integer not null check (amount >= 0),
+  stripe_payment_intent text,
+  created_at timestamptz not null default now()
+);
+create index sub_tier_upgrades_member_idx on public.sub_tier_upgrades (member_id, created_at desc);
+
 -- Stripe webhook idempotency and failed-payment log for the admin view.
 create table public.stripe_events (
   id text primary key,
@@ -458,6 +474,7 @@ alter table public.member_areas enable row level security;
 alter table public.push_tokens enable row level security;
 alter table public.stripe_events enable row level security;
 alter table public.payment_failures enable row level security;
+alter table public.sub_tier_upgrades enable row level security;
 
 create policy profiles_self on public.profiles for select using (id = auth.uid() or public.is_admin());
 create policy profiles_self_update on public.profiles for update using (id = auth.uid()) with check (id = auth.uid());
@@ -489,4 +506,5 @@ create policy saved_own on public.saved_shops for all using (member_id = auth.ui
 create policy areas_own on public.member_areas for all using (member_id = auth.uid()) with check (member_id = auth.uid());
 create policy push_own on public.push_tokens for select using (user_id = auth.uid());
 create policy failures_admin on public.payment_failures for select using (public.is_admin());
+create policy upgrades_own on public.sub_tier_upgrades for select using (member_id = auth.uid() or public.is_admin());
 -- redemptions and stripe_events: no policies, service role only.

@@ -1,5 +1,5 @@
 import { formatHours, formatMiles, RULES, zonedParts, type ShopListItem } from "@sippy/core";
-import { api, Badge, Card, Chip, colors, EmptyState, ErrorNote, Loading, radii, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
+import { api, Badge, Card, Chip, colors, EmptyState, ErrorNote, Loading, radii, Row, Screen, spacing, Text, UpgradeCard, useLoad } from "@sippy/mobile-ui";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
@@ -53,6 +53,7 @@ export default function ShopsTab() {
       <Text variant="display" accessibilityRole="header">
         Shops
       </Text>
+      {me.data?.upgrade?.suggested && <UpgradeCard upgrade={me.data.upgrade} passesLeft={me.data.passesLeft} nudge onDone={me.reload} />}
       <Row style={{ flexWrap: "wrap" }}>
         <Chip label="All" selected={filter === "all"} onPress={() => setFilter("all")} />
         <Chip label="Near home" selected={filter === "home"} disabled={!areas.some((a) => a.kind === "home")} onPress={() => setFilter("home")} />

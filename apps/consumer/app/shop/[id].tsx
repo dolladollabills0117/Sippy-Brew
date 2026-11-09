@@ -8,6 +8,8 @@ import {
   RULES,
   splitPassValue,
   overageIsCharged,
+  overageCoveredByUpgrade,
+  getTier,
 } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
@@ -198,6 +200,16 @@ export default function ShopScreen() {
                     ios_backgroundColor={colors.latte}
                   />
                 </Row>
+                {summary?.upgrade && summary.subscription && overageCoveredByUpgrade(getTier(summary.subscription.tier), total) > 0 && (
+                  <Pressable accessibilityRole="link" onPress={() => router.push("/account")}>
+                    <Text variant="small">
+                      Tip: on {summary.upgrade.toName}, {money(overageCoveredByUpgrade(getTier(summary.subscription.tier), total))} of this overage would be covered by your pass.{" "}
+                      <Text variant="small" color={colors.burntSugarInk} style={{ textDecorationLine: "underline", fontFamily: "Nunito_800ExtraBold" }}>
+                        See upgrade
+                      </Text>
+                    </Text>
+                  </Pressable>
+                )}
               </Card>
             )}
             <Text variant="small">

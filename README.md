@@ -26,7 +26,7 @@ docs/OPEN_DECISIONS.md   Decisions the owner still needs to make
 
 Tiers live in [`packages/core/config/tiers.json`](packages/core/config/tiers.json):
 
-Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **Decaf** covers up to $4.00 a day, for drip coffee black or with cream and sugar; **Double Shot** covers up to $8.00, for lattes and specialty drinks. The sub-tier is a price cap, not a drink restriction: a Decaf member can order a latte and confirm the overage.
+Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **Decaf** covers up to $4.00 a day ("For the no-fuss crew: a great cup of drip, black or your way."); **Double Shot** covers up to $8.00 ("For the menu explorers who chase every new seasonal pour."). The sub-tier is a price cap, not a drink restriction: a Decaf member can order a latte and confirm the overage.
 
 | Tier | Passes / month | Decaf ($4/day) | Double Shot ($8/day) |
 | --- | --- | --- | --- |

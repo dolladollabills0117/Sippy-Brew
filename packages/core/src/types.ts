@@ -110,6 +110,20 @@ export interface MemberSummary {
   passUsedToday: boolean;
   /** Calendar days with a live pass order this period. */
   passDaysUsed: string[];
+  /**
+   * Moving up to the higher sub-tier of the same tier (null when already at the top).
+   * `suggested` is true when the member keeps paying overages, so the app nudges them.
+   */
+  upgrade: {
+    suggested: boolean;
+    toPlan: TierId;
+    toName: string;
+    toMaxPassValueCents: number;
+    overageOrders: number;
+    overagePaidCents: number;
+    upgradeNowCents: number;
+    newMonthlyPriceCents: number;
+  } | null;
   areas: SavedArea[];
 }
 

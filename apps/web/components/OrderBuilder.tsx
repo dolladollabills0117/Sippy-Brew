@@ -7,6 +7,8 @@ import {
   RULES,
   splitPassValue,
   overageIsCharged,
+  overageCoveredByUpgrade,
+  getTier,
   type MemberSummary,
   type MenuItem,
   type Shop,
@@ -157,6 +159,15 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
                   I confirm the {money(split.overageCents)} overage. My pass covers {money(split.passCoveredCents)} of the {money(total)} total.
                 </span>
               </label>
+              {summary.upgrade && summary.subscription && overageCoveredByUpgrade(getTier(summary.subscription.tier), total) > 0 && (
+                <p className="rounded-xl bg-cream-swirl px-3 py-2 text-sm text-espresso">
+                  Tip: on <strong>{summary.upgrade.toName}</strong>, {money(overageCoveredByUpgrade(getTier(summary.subscription.tier), total))} of this overage
+                  would be covered by your pass.{" "}
+                  <a href="/account#upgrade" className="font-bold text-burnt-sugar-ink underline underline-offset-4">
+                    See upgrade
+                  </a>
+                </p>
+              )}
             </div>
           )}
           <p className="mt-3 text-sm text-pecan">

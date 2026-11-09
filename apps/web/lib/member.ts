@@ -7,6 +7,9 @@ import {
   issueQr,
   passBalance,
   overageIsCharged,
+  suggestUpgrade,
+  upgradeNowCost,
+  upgradeTarget,
   RULES,
   validateOrder,
   type PassLedgerEntry,
@@ -61,11 +64,41 @@ export async function getAreas(memberId: string): Promise<SavedArea[]> {
   return (data ?? []).map((a) => ({ kind: a.kind, label: a.label, lat: a.lat, lng: a.lng, radiusMiles: a.radius_miles }));
 }
 
+/**
+ * The higher sub-tier for this member, with what moving up costs now. `suggested` is set when
+ * they keep paying overages on the lower sub-tier this period, so the app nudges them.
+ */
+export async function getUpgradeOption(sub: Subscription | null, passesLeft: number): Promise<MemberSummary["upgrade"]> {
+  if (!sub || !["active", "trialing"].includes(sub.status)) return null;
+  const plan = getTier(sub.tier);
+  const to = upgradeTarget(plan);
+  if (!to) return null;
+  const { data } = await supabaseAdmin()
+    .from("orders")
+    .select("overage_amount, status")
+    .eq("subscription_id", sub.id)
+    .eq("period_start", sub.currentPeriodStart);
+  const periodOrders = (data ?? []).map((o) => ({ overageCents: o.overage_amount ?? 0, status: o.status }));
+  const nudge = suggestUpgrade({ plan, periodOrders, passesLeft });
+  const over = periodOrders.filter((o) => o.status !== "cancelled" && o.overageCents > 0);
+  return {
+    suggested: Boolean(nudge),
+    toPlan: to.id,
+    toName: to.name,
+    toMaxPassValueCents: to.maxPassValueCents,
+    overageOrders: over.length,
+    overagePaidCents: over.reduce((t, o) => t + o.overageCents, 0),
+    upgradeNowCents: upgradeNowCost(plan, to, passesLeft),
+    newMonthlyPriceCents: to.priceCents,
+  };
+}
+
 export async function getMemberSummary(s: Session): Promise<MemberSummary> {
   const sub = await getLiveSubscription(s.userId);
   const [passes, areas] = await Promise.all([getPassState(s.userId, sub), getAreas(s.userId)]);
   const allowance = sub ? periodAllowance(sub) : null;
   const today = dayKey(new Date(), RULES.timeZone);
+  const upgrade = await getUpgradeOption(sub, passes.passesLeft);
   return {
     profile: s.profile,
     subscription: sub,
@@ -75,6 +108,7 @@ export async function getMemberSummary(s: Session): Promise<MemberSummary> {
     maxPassValueCents: allowance?.maxPassValueCents ?? 0,
     passUsedToday: passes.passDaysUsed.includes(today),
     passDaysUsed: passes.passDaysUsed,
+    upgrade,
     areas,
   };
 }

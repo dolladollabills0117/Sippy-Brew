@@ -73,6 +73,8 @@ export function createApiClient(opts: ApiClientOptions) {
     // ---- Members ----
     me: () => request<MemberSummary>("GET", "/api/me"),
     checkout: (tier: TierId, returnUrl?: string) => request<{ url: string }>("POST", "/api/checkout", { tier, returnUrl }),
+    upgradePlan: (toPlan: TierId, confirmedCents: number) =>
+      request<{ plan: TierId; chargedCents: number }>("POST", "/api/subscription/upgrade", { toPlan, confirmedCents }),
     billingPortal: (returnUrl?: string) => request<{ url: string }>("POST", "/api/billing/portal", { returnUrl }),
     setAreas: (areas: SavedArea[]) => request<{ areas: SavedArea[] }>("PUT", "/api/me/areas", { areas }),
     setSaved: (shopId: string, saved: boolean) => request<{ saved: boolean }>("POST", "/api/me/saved-shops", { shopId, saved }),

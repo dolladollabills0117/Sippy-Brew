@@ -4,8 +4,8 @@
   "defaultTier": "macchiato",
   "defaultSubTier": "double_shot",
   "subTiers": [
-    { "id": "decaf", "name": "Decaf", "maxPassValueCents": 400, "blurb": "Drip coffee, black or with cream and sugar." },
-    { "id": "double_shot", "name": "Double Shot", "maxPassValueCents": 800, "blurb": "Lattes, cappuccinos and specialty drinks." }
+    { "id": "decaf", "name": "Decaf", "maxPassValueCents": 400, "blurb": "For the no-fuss crew: a great cup of drip, black or your way." },
+    { "id": "double_shot", "name": "Double Shot", "maxPassValueCents": 800, "blurb": "For the menu explorers who chase every new seasonal pour." }
   ],
   "tiers": [
     {
