@@ -8,8 +8,8 @@ sample data stored in the viewer's browser, with no database and no real payment
 - **Shops** ("Shop log in" or "List your shop" on the home screen): list a shop, accept or pause
   orders, run the live queue, scan or type codes to redeem, manage the menu and drink
   customizations, and see the dashboard and weekly payout breakdown.
-- **Admin** (hidden): open the page with `#admin` at the end of the address. The demo password is
-  `sippy-admin`. Approve, pause and spotlight shops, and see members and totals.
+- **Admin** (hidden): tap "Log in" and sign in with `admin@sippybrew.com` / `sippy-admin`, or open
+  the page with `#admin` at the end of the address. Approve, pause and spotlight shops, and see members and totals.
 
 The business rules are not re-implemented here. `pnpm demo:build` bundles `packages/core`
 (passes, overage, commission, QR expiry, customizations, upgrades) straight into the page, so

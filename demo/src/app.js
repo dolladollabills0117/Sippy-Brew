@@ -49,6 +49,8 @@
       .sort(function (a, b) { return (isSpotlight(b.id) ? 1 : 0) - (isSpotlight(a.id) ? 1 : 0); });
   }
   var ADMIN_PASSWORD = "sippy-admin";
+  // Admins can also sign in from the regular "Log in" form with this email and the password above.
+  var ADMIN_EMAIL = "admin@sippybrew.com";
 
   function fresh() {
     return { screen: "landing", selectedTier: S.DEFAULT_TIER, user: null, tierId: null, passesLeft: 0, passDaysUsed: [], dayOffset: 0,
@@ -854,6 +856,10 @@
       ev.preventDefault();
       var f = ev.target, kind = f.getAttribute("data-form");
       if (kind === "signup") {
+        if (f.elements.email.value.trim().toLowerCase() === ADMIN_EMAIL && f.elements.password.value === ADMIN_PASSWORD) {
+          state.session = "admin"; state.screen = "app"; state.adminTab = "overview"; state.adminError = null; state.detail = null;
+          render(); window.scrollTo(0, 0); return toast("Signed in as admin.");
+        }
         var name = (f.elements.name && f.elements.name.value.trim()) || (state.user && state.user.name) || "Dana Kowalski";
         state.user = { name: name, email: f.elements.email.value.trim() || "dana@example.com" };
         if (state.tierId) { state.session = "member"; state.screen = "app"; state.tab = "shops"; state.detail = null; } else state.screen = "plans";
