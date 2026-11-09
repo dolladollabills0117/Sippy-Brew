@@ -38,6 +38,9 @@ export async function saveShop(
   s: Session,
   input: { name: string; address: string; lat: number; lng: number; hours: ShopHours; story: string; photoUrl?: string | null },
 ) {
+  // Shop tools are only for shop accounts. Subscribers (members) can never set up or run a shop;
+  // a coffee shop signs up with its own shop account.
+  if (s.profile.role !== "shop_owner" && s.profile.role !== "admin") throw forbidden("Shop tools are only for coffee shop accounts.");
   const name = String(input?.name ?? "").trim();
   if (name.length < 2) throw badRequest("BAD_NAME", "Add your business name.");
   if (!String(input.address ?? "").trim()) throw badRequest("BAD_ADDRESS", "Add your address.");
@@ -62,7 +65,6 @@ export async function saveShop(
   const q = existing ? db.from("shops").update(row).eq("id", existing.id) : db.from("shops").insert({ ...row, status: "pending" });
   const { data, error } = await q.select("*").single();
   if (error) throw fromDbError(error);
-  if (s.profile.role === "member") await db.from("profiles").update({ role: "shop_owner" }).eq("id", s.userId);
   return mapShop(data);
 }
 

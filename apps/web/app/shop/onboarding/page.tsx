@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Shop setup" };
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ stripe?: string }> }) {
-  const s = await requirePageSession(undefined, "/shop/onboarding");
+  const s = await requirePageSession("shop_owner", "/shop/onboarding");
   const row = await getOwnerShopRow(s, { allowMissing: true });
   const { stripe } = await searchParams;
   return (
