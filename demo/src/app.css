@@ -69,6 +69,7 @@ button.logo:active { transform: scale(.94); }
 
 .hero { padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; }
 .hero h1 { font-size: 2.25rem; }
+.hero h1 em { font-style: normal; color: var(--burnt); }
 .hero .cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 6px; }
 .hero-beans { width: 84px; flex-shrink: 0; }
 .hero-beans .drop { animation: drop .8s ease-out both; animation-delay: var(--d); }

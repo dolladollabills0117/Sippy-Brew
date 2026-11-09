@@ -98,6 +98,7 @@ button.logo:active { transform: scale(.94); }
 
 .hero { padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; }
 .hero h1 { font-size: 2.25rem; }
+.hero h1 em { font-style: normal; color: var(--burnt); }
 .hero .cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 6px; }
 .hero-beans { width: 84px; flex-shrink: 0; }
 .hero-beans .drop { animation: drop .8s ease-out both; animation-delay: var(--d); }
@@ -365,7 +366,7 @@ Minimum version required to store current data is: `+s+`.
     var tiers = planCards("pick-tier", null);
     return '<div class="topbar">' + logoHome() + '<button class="pill dark" data-a="login">Log in</button></div>' +
       '<section class="card hero"><span class="sticker" style="align-self:flex-start">New in ' + esc(S.SITE.launchCity) + '</span>' +
-      '<h1>Your neighborhood, brewed daily.</h1><p class="muted" style="font-size:1.0625rem">One monthly pass. Any local coffee shop.</p>' +
+      '<h1>Your neighborhood, <em>brewed daily.</em></h1><p class="muted" style="font-size:1.0625rem">One monthly pass. Any local coffee shop.</p>' +
       '<div class="cta"><button class="pill honey" data-a="get-pass">Get my pass</button>' + BEANS + "</div></section>" +
       '<h2 class="section-title">Pick your pass</h2>' + tiers +
       '<h2 class="section-title">How it works</h2><ol class="steps"><li><span class="dot">1</span>Pick a pass</li><li><span class="dot">2</span>Order ahead from a shop near you</li><li><span class="dot">3</span>Scan at the counter. Sip.</li></ol>' +
