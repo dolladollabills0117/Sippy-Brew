@@ -132,9 +132,14 @@
     return sw + '<div class="tiers">' + cards + "</div>";
   }
 
+  // The logo in every top bar is a home button: people expect tapping it to go home.
+  function logoHome() {
+    return '<button class="logo" data-a="logo-home" aria-label="Sippy Brew home">' + LOGO + "</button>";
+  }
+
   function landing() {
     var tiers = planCards("pick-tier", null);
-    return '<div class="topbar"><span class="logo">' + LOGO + '</span><button class="pill dark" data-a="login">Log in</button></div>' +
+    return '<div class="topbar">' + logoHome() + '<button class="pill dark" data-a="login">Log in</button></div>' +
       '<section class="card hero"><span class="sticker" style="align-self:flex-start">New in ' + esc(S.SITE.launchCity) + '</span>' +
       '<h1>Your neighborhood, brewed daily.</h1><p class="muted" style="font-size:1.0625rem">One monthly pass. Any local coffee shop.</p>' +
       '<div class="cta"><button class="pill honey" data-a="get-pass">Get my pass</button>' + BEANS + "</div></section>" +
@@ -145,7 +150,7 @@
   }
 
   function shopLogin() {
-    return '<div class="topbar"><button class="back" data-a="home">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+    return '<div class="topbar"><button class="back" data-a="home">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">Shop log in</h1>' +
       '<p class="muted" style="padding:0 4px">For coffee shops only. Member accounts can\'t open the shop side.</p>' +
       '<form class="card stack" data-form="shop-login">' +
@@ -168,7 +173,7 @@
         '<label class="field" for="m' + i + '-cat">Category<select class="input" id="m' + i + '-cat" name="m' + i + '-cat">' +
         S.COFFEE_CATEGORIES.map(function (c) { return '<option value="' + c + '"' + (c === cat ? " selected" : "") + ">" + S.CATEGORY_LABELS[c] + "</option>"; }).join("") + "</select></label></div>";
     };
-    return '<div class="topbar"><button class="back" data-a="shop-login">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+    return '<div class="topbar"><button class="back" data-a="shop-login">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">List your coffee shop</h1>' +
       '<p class="muted" style="padding:0 4px">Get pickup orders from members nearby and weekly payouts to your bank.</p>' +
       (state.shopError ? '<div class="alert" role="alert">' + esc(state.shopError) + "</div>" : "") +
@@ -191,7 +196,7 @@
 
   function signup() {
     var login = state.authMode === "login";
-    return '<div class="topbar"><button class="back" data-a="home">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+    return '<div class="topbar"><button class="back" data-a="home">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">' + (login ? "Welcome back" : "Get your pass") + "</h1>" +
       '<form class="card stack" data-form="signup">' +
       (login ? "" : '<label class="field" for="f-name">Name<input class="input" id="f-name" name="name" autocomplete="name" value="Dana Kowalski" required></label>') +
@@ -205,7 +210,7 @@
   function plans() {
     var cards = planCards("select-tier", state.selectedTier);
     var t = S.getTier(state.selectedTier);
-    return '<div class="topbar"><button class="back" data-a="' + (state.tierId ? "close-plans" : "home") + '">‹ Back</button><span class="logo">' + LOGO + "</span></div>" +
+    return '<div class="topbar"><button class="back" data-a="' + (state.tierId ? "close-plans" : "home") + '">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">Choose your pass</h1>' + cards +
       '<div class="card stack"><p><b>' + t.name + "</b>: " + t.passesPerMonth + " Daily Passes a month. Each pass covers the first " + money2(t.maxPassValueCents) +
       " of that day's order. Unused passes expire at renewal.</p>" +
@@ -223,14 +228,14 @@
 
   function appTop() {
     if (state.session === "admin") {
-      return '<div class="topbar"><span class="row" style="gap:10px"><span class="logo">' + LOGO + '</span><span class="badge">Admin</span></span>' +
+      return '<div class="topbar"><span class="row" style="gap:10px">' + logoHome() + '<span class="badge">Admin</span></span>' +
         '<button class="pill dark" data-a="sign-out">Sign out</button></div>';
     }
     if (state.session === "shop") {
-      return '<div class="topbar"><span class="row" style="gap:10px"><span class="logo">' + LOGO + '</span><span class="badge sky">Shop</span></span>' +
+      return '<div class="topbar"><span class="row" style="gap:10px">' + logoHome() + '<span class="badge sky">Shop</span></span>' +
         '<button class="pill dark" data-a="sign-out">Sign out</button></div>';
     }
-    return '<div class="topbar"><span class="logo">' + LOGO + "</span></div>";
+    return '<div class="topbar">' + logoHome() + "</div>";
   }
 
   // ---- Member app
@@ -548,7 +553,7 @@
 
   // ---- Admin (hidden: no link anywhere; open the demo link with #admin)
   function adminLogin() {
-    return '<div class="topbar"><span class="logo">' + LOGO + '</span><span class="badge">Admin</span></div>' +
+    return '<div class="topbar">' + logoHome() + '<span class="badge">Admin</span></div>' +
       '<h1 style="font-size:2rem;padding:0 4px">Admin sign in</h1>' +
       '<p class="muted" style="padding:0 4px">Only platform admins can sign in here.</p>' +
       (state.adminError ? '<div class="alert" role="alert">' + esc(state.adminError) + "</div>" : "") +
@@ -749,6 +754,16 @@
       case "sign-out": state.session = null; state.screen = "landing"; state.detail = null; state.scan = null; state.sheet = null; render(); return window.scrollTo(0, 0);
       case "toggle-auth": state.authMode = state.authMode === "login" ? "signup" : "login"; break;
       case "home": state.screen = "landing"; break;
+      case "logo-home": {
+        // Home is wherever this person starts: the Shops tab for members, the order queue for
+        // shops, the overview for admins, and the landing page when nobody is signed in.
+        state.sheet = null; state.customize = null; state.detail = null; state.scan = null; state.error = null; state.shopError = null; state.upgradeConfirm = false;
+        if (state.session === "member") { state.screen = "app"; state.tab = "shops"; }
+        else if (state.session === "shop") { state.screen = "app"; state.shopTab = "orders"; }
+        else if (state.session === "admin") { state.screen = "app"; state.adminTab = "overview"; }
+        else state.screen = "landing";
+        render(); return window.scrollTo(0, 0);
+      }
       case "select-tier": state.selectedTier = id; break;
       case "checkout": state.sheet = "checkout"; break;
       case "close-sheet": if (ev.target !== el && el.classList.contains("sheet-back")) return; state.sheet = null; break;

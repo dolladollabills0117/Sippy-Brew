@@ -1,5 +1,5 @@
-import { colors, SessionProvider, SignInScreen, useBrandFonts, usePushRegistration, useSession } from "@sippy/mobile-ui";
-import { Stack } from "expo-router";
+import { colors, HomeLogo, SessionProvider, SignInScreen, useBrandFonts, usePushRegistration, useSession } from "@sippy/mobile-ui";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -24,14 +24,17 @@ function Root() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.vanillaBean },
         headerTintColor: colors.espresso,
-        headerTitleStyle: { fontFamily: "CherryBombOne_400Regular" },
+        headerTitleStyle: { fontFamily: "Caprasimo_400Regular" },
+        // The logo sits in every header and always goes home (the Shops tab).
+        headerTitle: () => <HomeLogo onPress={() => router.navigate("/")} />,
+        headerTitleAlign: "center",
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.vanillaBean },
         headerBackButtonDisplayMode: "minimal",
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="shop/[id]" options={{ title: "" }} />
+      <Stack.Screen name="shop/[id]" options={{ title: "Shop" }} />
       <Stack.Screen name="order/[id]" options={{ title: "Pickup", presentation: "fullScreenModal" }} />
       <Stack.Screen name="plans" options={{ title: "Choose a plan", presentation: "modal" }} />
     </Stack>

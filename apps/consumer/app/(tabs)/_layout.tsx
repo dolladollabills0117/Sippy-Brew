@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { colors, fonts } from "@sippy/mobile-ui";
-import { Tabs } from "expo-router";
+import { colors, fonts, HomeLogo } from "@sippy/mobile-ui";
+import { router, Tabs } from "expo-router";
 import { View } from "react-native";
 
 /** Bottom tabs: Shops, Order, Account. Active tab = Sky Blue pill behind an Espresso icon. */
@@ -16,7 +16,11 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        // Logo header on every tab; tapping it goes home (the Shops tab).
+        headerTitle: () => <HomeLogo onPress={() => router.navigate("/")} />,
+        headerTitleAlign: "center",
+        headerStyle: { backgroundColor: colors.vanillaBean },
+        headerShadowVisible: false,
         tabBarActiveTintColor: colors.espresso,
         tabBarInactiveTintColor: colors.pecan,
         tabBarStyle: { backgroundColor: colors.creamSwirl, borderTopColor: colors.latte, minHeight: 64 },
