@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getTier, overageCoveredByUpgrade, RULES, suggestUpgrade, upgradeNowCost, upgradeTarget } from "../src";
 
 describe("sub-tier upgrades", () => {
-  it("moves Decaf up to Double Shot in the same tier, and Double Shot has nowhere higher", () => {
+  it("moves House up to Specialty in the same tier, and Double Shot has nowhere higher", () => {
     expect(upgradeTarget(getTier("affogato_decaf"))?.id).toBe("affogato_double_shot");
     expect(upgradeTarget(getTier("double_espresso_decaf"))?.id).toBe("double_espresso_double_shot");
     expect(upgradeTarget(getTier("macchiato_double_shot"))).toBeNull();
@@ -31,14 +31,14 @@ describe("sub-tier upgrades", () => {
     });
   });
 
-  it("ignores cancelled orders and never nudges Double Shot members", () => {
+  it("ignores cancelled orders and never nudges Specialty members", () => {
     const orders = [{ overageCents: 200, status: "cancelled" }, { overageCents: 200, status: "picked_up" }];
     expect(suggestUpgrade({ plan: getTier("affogato_decaf"), periodOrders: orders, passesLeft: 3 })).toBeNull();
     const many = Array(5).fill({ overageCents: 300, status: "picked_up" });
     expect(suggestUpgrade({ plan: getTier("affogato_double_shot"), periodOrders: many, passesLeft: 3 })).toBeNull();
   });
 
-  it("at checkout, tells how much of this order's overage Double Shot would cover", () => {
+  it("at checkout, tells how much of this order's overage Specialty would cover", () => {
     expect(overageCoveredByUpgrade(getTier("macchiato_decaf"), 525)).toBe(125); // $5.25 latte: all of the $1.25 overage
     expect(overageCoveredByUpgrade(getTier("macchiato_decaf"), 950)).toBe(400); // $9.50: covers $4 of the $5.50 overage
     expect(overageCoveredByUpgrade(getTier("macchiato_decaf"), 300)).toBe(0);

@@ -13,5 +13,7 @@
   "postMaxChars": 280,
   "postsPerShopPerDay": 1,
   "minPickupLeadMinutes": 5,
-  "maxPickupLeadMinutes": 120
+  "maxPickupLeadMinutes": 120,
+  "defaultRadiusMiles": 5,
+  "maxRadiusMiles": 15
 }

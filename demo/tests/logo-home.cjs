@@ -19,7 +19,7 @@ const path = require("path");
   // Signed out: shop log in → logo → landing; plans → logo → landing.
   await tap('[data-a="shop-login"]'); await logo();
   if (!(await isLanding())) fail("shop login logo did not go to landing");
-  await tap('[data-a="get-pass"]').catch(() => {}); await logo();
+  await tap('[data-a="start-quiz"]'); await logo();
   if (!(await isLanding())) fail("signup logo did not go to landing");
   if ((await p.locator('button[data-a="logo-home"]').count()) !== 1) fail("landing logo is not a button");
 

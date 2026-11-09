@@ -2,20 +2,20 @@
 (function () {
   "use strict";
   var S = window.SippyCore;
-  var KEY = "sippy-demo-v3";
+  var KEY = "sippy-demo-v4";
   var TZ = S.RULES.timeZone;
   var ALL_DAY = { sun: { open: "00:00", close: "23:59" }, mon: { open: "00:00", close: "23:59" }, tue: { open: "00:00", close: "23:59" }, wed: { open: "00:00", close: "23:59" }, thu: { open: "00:00", close: "23:59" }, fri: { open: "00:00", close: "23:59" }, sat: { open: "00:00", close: "23:59" } };
 
   var BASE_SHOPS = [
-    { id: "main", name: "Main Street Roasters", address: "25 Main St, West Orange", miles: 0.3, hours: "6:30am–6pm",
+    { id: "main", name: "Main Street Roasters", address: "25 Main St, West Orange", lat: 40.7962, lng: -74.2360, hours: "6:30am–6pm",
       story: "Small-batch roasting in the back room every Tuesday. Every shot pulled like it's the first.",
       menu: [["espresso", "Espresso", "double", 325, "espresso"], ["cortado", "Cortado", "4.5 oz", 425, "espresso"], ["latte", "Latte", "12 oz", 525, "espresso"],
              ["maple", "Maple Cinnamon Latte", "16 oz", 650, "specialty"], ["drip", "House Drip", "12 oz", 275, "brewed"], ["cold", "Cold Brew", "16 oz", 500, "cold"], ["mocha", "Big Mocha", "20 oz", 875, "specialty"]] },
-    { id: "eagle", name: "Eagle Rock Espresso", address: "450 Eagle Rock Ave, West Orange", miles: 1.1, hours: "7am–5pm",
+    { id: "eagle", name: "Eagle Rock Espresso", address: "450 Eagle Rock Ave, West Orange", lat: 40.8125, lng: -74.2520, hours: "7am–5pm",
       story: "A bright corner café with a single-origin pour-over of the week. Neighbors, laptops and dogs welcome.",
       menu: [["americano", "Americano", "12 oz", 350, "espresso"], ["capp", "Cappuccino", "8 oz", 450, "espresso"], ["flat", "Flat White", "8 oz", 475, "espresso"],
              ["pour", "Pour-Over", "10 oz", 450, "brewed"], ["iced", "Iced Latte", "16 oz", 575, "cold"], ["nitro", "Nitro Cold Brew", "12 oz", 550, "cold"]] },
-    { id: "valley", name: "Pleasant Valley Coffee Co.", address: "500 Pleasant Valley Way, West Orange", miles: 1.8, hours: "7am–3pm",
+    { id: "valley", name: "Pleasant Valley Coffee Co.", address: "500 Pleasant Valley Way, West Orange", lat: 40.7790, lng: -74.2610, hours: "7am–3pm",
       story: "Family-run since 2009. Cardamom lattes from our grandmother's recipe.",
       menu: [["vespresso", "Espresso", "single", 275, "espresso"], ["cardamom", "Cardamom Latte", "12 oz", 600, "specialty"], ["vmocha", "Mocha", "12 oz", 575, "specialty"],
              ["vdrip", "Drip Coffee", "16 oz", 300, "brewed"], ["viced", "Iced Coffee", "16 oz", 375, "cold"]] },
@@ -26,6 +26,25 @@
     });
     return s;
   });
+  // Participating shops in other towns. Members can see who takes part elsewhere, but Sippy Brew
+  // keeps ordering local: search stops at a 15-mile radius from where you are.
+  var OTHER_SHOPS = [
+    { id: "x-hoboken", name: "Hudson Pier Coffee", address: "120 Washington St, Hoboken", lat: 40.7377, lng: -74.0302 },
+    { id: "x-princeton", name: "Nassau Street Grind", address: "60 Nassau St, Princeton", lat: 40.3500, lng: -74.6590 },
+    { id: "x-asbury", name: "Boardwalk Bean", address: "700 Ocean Ave, Asbury Park", lat: 40.2210, lng: -73.9990 },
+    { id: "x-philly", name: "Rittenhouse Roast", address: "1800 Walnut St, Philadelphia", lat: 39.9500, lng: -75.1710 },
+  ].map(function (x) { x.far = true; return x; });
+  var WEST_ORANGE = { lat: 40.7987, lng: -74.2391, label: "West Orange, NJ", source: "sample" };
+  function here() { return state.loc || WEST_ORANGE; }
+  /** Approved shops plus other towns' shops, split by the member's radius (rules from core). */
+  function localSplit() {
+    var list = memberShops().map(function (x) { return x.lat ? x : Object.assign({}, x, { lat: WEST_ORANGE.lat + 0.004, lng: WEST_ORANGE.lng - 0.006 }); }).concat(OTHER_SHOPS);
+    var split = S.splitByRadius(list, here(), state.radius || S.RULES.defaultRadiusMiles);
+    // Spotlighted shops first, then nearest.
+    split.nearby.sort(function (a, b) { return (isSpotlight(b.id) ? 1 : 0) - (isSpotlight(a.id) ? 1 : 0) || a.distanceMiles - b.distanceMiles; });
+    return split;
+  }
+
   function allShops() { return BASE_SHOPS.concat(state.customShops || []).map(function (x) { return withExtras(x); }); }
   function withExtras(x) {
     var menu = x.menu.concat((state.extraMenu || {})[x.id] || []).map(function (m) {
@@ -56,7 +75,8 @@
     return { screen: "landing", selectedTier: S.DEFAULT_TIER, user: null, tierId: null, passesLeft: 0, passDaysUsed: [], dayOffset: 0,
       session: null, tab: "shops", shopTab: "orders", counterShop: "main", detail: null, cart: [], customize: null, picked: [], cqty: 1, mods: {}, editMods: null, confirmedOverage: null, pickupIdx: 0,
       orders: [], tickets: [], soldOut: {}, customShops: [], extraMenu: {}, paused: {}, shopError: null, shopStatus: {}, spotlight: {}, adminTab: "overview", adminError: null, pickSub: S.DEFAULT_SUB_TIER, upgradeConfirm: false,
-      error: null, scan: null, sheet: null, authMode: "signup" };
+      error: null, scan: null, sheet: null, authMode: "signup",
+      quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null };
   }
   var state = fresh();
   try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved && saved.screen) state = Object.assign(fresh(), saved, { sheet: null, scan: null, error: null }); } catch (e) {}
@@ -78,6 +98,9 @@
   function money2(c) { return S.formatCents(c, { showZeroCents: true }); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
   function tier() { return state.tierId ? S.getTier(state.tierId) : null; }
+  // Demo billing month: 30 demo days from the day you joined (or last renewed).
+  function periodStartDate() { return new Date(Date.now() + state.periodStart * 864e5); }
+  function periodEndDate() { return new Date(Date.now() + (state.periodStart + 30) * 864e5); }
   function firstName() { return state.user ? esc((state.user.name || "Member").split(" ")[0]) : "Member"; }
   var timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: TZ });
   var dateFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: TZ });
@@ -121,20 +144,23 @@
   function planCards(action, selectedId) {
     var sub = state.pickSub || S.DEFAULT_SUB_TIER;
     var current = S.SUB_TIERS.filter(function (x) { return x.id === sub; })[0];
-    var sw = '<div class="subswitch" role="radiogroup" aria-label="How much each pass covers">' + S.SUB_TIERS.map(function (x) {
-      return '<button role="radio" aria-checked="' + (x.id === sub) + '" data-a="pick-sub" data-id="' + x.id + '"><b>' + x.name + '</b><span>up to ' + money(x.maxPassValueCents) + "/day</span></button>";
-    }).join("") + '</div><p class="muted small" style="padding:0 4px">' + esc(current.blurb) + "</p>";
+    var sw = '<p class="step-label" id="lbl-drink"><span class="dot">1</span>What do you usually order?</p>' +
+      '<div class="subswitch" role="radiogroup" aria-labelledby="lbl-drink">' + S.SUB_TIERS.map(function (x) {
+      return '<button role="radio" aria-checked="' + (x.id === sub) + '" data-a="pick-sub" data-id="' + x.id + '"><b>' + x.name + " · up to " + money(x.maxPassValueCents) + '</b><span>' + esc(x.examples) + "</span></button>";
+    }).join("") + '</div><p class="muted small" style="padding:0 4px">' + esc(current.blurb) + "</p>" +
+      '<p class="step-label"><span class="dot">2</span>How often do you go?</p>';
     var cards = S.TIER_GROUPS.map(function (g) {
       var t = g.plans[sub], pop = g.id === S.DEFAULT_TIER_GROUP, sel = selectedId === t.id;
       return '<button class="tier' + (pop ? " popular" : "") + (sel ? " selected" : "") + '" data-a="' + action + '" data-id="' + t.id + '" aria-pressed="' + sel + '" aria-label="' + t.name + ", " + money(t.priceCents) + " a month, " + t.passesPerMonth + ' passes">' +
         (pop ? '<span class="badge honey">Most popular</span>' : "") +
         '<span class="name">' + g.name + '</span><span class="price">' + money(t.priceCents) + '</span>' +
-        '<span class="meta" style="margin-top:10px">' + t.passesPerMonth + ' passes</span><span class="meta">up to ' + money(t.maxPassValueCents) + "/day</span></button>";
+        '<span class="meta" style="margin-top:10px"><b>' + t.passesPerMonth + ' coffees</b>/mo</span><span class="meta">' + esc(g.frequency) + "</span></button>";
     }).join("");
     return sw + '<div class="tiers">' + cards + "</div>";
   }
 
   // The logo in every top bar is a home button: people expect tapping it to go home.
+  function reduceMotion() { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
   function logoHome() {
     return '<button class="logo" data-a="logo-home" aria-label="Sippy Brew home">' + LOGO + "</button>";
   }
@@ -144,11 +170,122 @@
     return '<div class="topbar">' + logoHome() + '<button class="pill dark" data-a="login">Log in</button></div>' +
       '<section class="card hero"><span class="sticker" style="align-self:flex-start">New in ' + esc(S.SITE.launchCity) + '</span>' +
       '<h1>Your neighborhood, <em>brewed daily.</em></h1><p class="muted" style="font-size:1.0625rem">One monthly pass. Any local coffee shop.</p>' +
-      '<div class="cta"><button class="pill honey" data-a="get-pass">Get my pass</button>' + BEANS + "</div></section>" +
-      '<h2 class="section-title">Pick your pass</h2>' + tiers +
+      '<div class="cta"><button class="pill honey" data-a="start-quiz">Get my pass</button>' + BEANS + "</div></section>" +
+      '<h2 class="section-title">Pick your pass</h2>' +
+      '<button class="card quiz-cta" data-a="start-quiz"><span class="quiz-cta-emoji" aria-hidden="true">☕️</span><span class="grow stack" style="gap:2px;text-align:left"><b>Not sure which pass?</b><span class="muted small">Get matched in two taps.</span></span><span class="pill dark" aria-hidden="true">Take the quiz</span></button>' +
+      tiers +
       '<h2 class="section-title">How it works</h2><ol class="steps"><li><span class="dot">1</span>Pick a pass</li><li><span class="dot">2</span>Order ahead from a shop near you</li><li><span class="dot">3</span>Scan at the counter. Sip.</li></ol>' +
       '<p class="demo-note">Own a coffee shop? <button class="linkbtn" data-a="shop-signup">List your shop</button> · <button class="linkbtn" data-a="shop-login">Shop log in</button></p>' +
-      '<p class="demo-note">This is a working demo with sample shops. No real payments are made.</p>';
+      '<p class="demo-note">This is a working demo with sample shops. No real payments are made. <button class="linkbtn" data-a="terms">Terms</button></p>';
+  }
+
+  // ---- "Get matched" quiz: one question per card; the card swipes away when you answer.
+  function quiz() {
+    var q = state.quizStep === 0 ? S.QUIZ.drink : S.QUIZ.often;
+    var key = state.quizStep === 0 ? "drink" : "often";
+    var total = 2;
+    return '<div class="topbar"><button class="back" data-a="quiz-back">‹ Back</button>' + logoHome() + "</div>" +
+      '<div class="quiz-stage"><section class="card quiz-card" id="quiz-card" aria-labelledby="quiz-q">' +
+      '<div class="row between"><span class="badge sky">Question ' + (state.quizStep + 1) + " of " + total + '</span><span class="quiz-dots" aria-hidden="true">' +
+      [0, 1].map(function (i) { return '<i class="' + (i <= state.quizStep ? "on" : "") + '"></i>'; }).join("") + "</span></div>" +
+      '<h1 id="quiz-q" class="quiz-q">' + esc(q.question) + "</h1>" +
+      '<div class="stack" style="gap:10px">' + q.answers.map(function (a) {
+        return '<button class="quiz-answer' + (state.quiz[key] === a.id ? " on" : "") + '" data-a="quiz-answer" data-k="' + key + '" data-id="' + a.id + '"><b>' + esc(a.label) + '</b><span class="muted small">' + esc(a.hint) + "</span></button>";
+      }).join("") + "</div></section></div>" +
+      '<button class="btn ghost" data-a="see-passes">Skip, show me all the passes</button>';
+  }
+
+  function quizResultScreen() {
+    var r = S.quizResult(S.recommendPlan(state.quiz));
+    var t = r.plan;
+    return '<div class="topbar"><button class="back" data-a="quiz-back">‹ Back</button>' + logoHome() + "</div>" +
+      '<section class="card result-card quiz-in" aria-labelledby="result-h">' +
+      '<span class="result-emoji" aria-hidden="true">' + r.emoji + "</span>" +
+      '<h1 id="result-h" class="result-h">' + esc(r.headline) + "</h1>" +
+      '<p class="result-line">' + esc(r.line) + "</p>" +
+      '<div class="result-plan"><span class="badge honey">Your match</span><b class="result-name">' + esc(t.name) + '</b><span class="muted">' + esc(r.summary) + '</span><b class="num result-price">' + money(t.priceCents) + '<span class="muted" style="font-size:1rem;font-family:var(--body)">/month</span></b></div>' +
+      '<button class="pill honey" style="width:100%" data-a="find-shops">Find my local shops</button>' +
+      '<p class="muted small" style="text-align:center">Change your pass any time. Changes kick in at the start of your next month.</p>' +
+      '<div class="row" style="justify-content:center;gap:4px;flex-wrap:wrap"><button class="linkbtn" data-a="retake-quiz">Retake the quiz</button><span class="muted" aria-hidden="true">·</span><button class="linkbtn" data-a="see-passes">See all passes</button></div>' +
+      "</section>";
+  }
+
+  // ---- Map of local shops (location + radius, capped at 15 miles)
+  function project(p, c, radius) {
+    var k = 92 / radius; // px per mile; the radius circle is 92px
+    var dx = (p.lng - c.lng) * 69.17 * Math.cos((c.lat * Math.PI) / 180);
+    var dy = (p.lat - c.lat) * 69;
+    return { x: 160 + dx * k, y: 112 - dy * k };
+  }
+  function mapSvg(split) {
+    var c = here(), r = state.radius || S.RULES.defaultRadiusMiles;
+    var pins = split.nearby.map(function (x, i) {
+      var pt = project(x, c, r);
+      return '<g class="pin"><title>' + esc(x.name) + " · " + S.formatMiles(x.distanceMiles) + "</title>" +
+        '<path d="M' + pt.x + " " + (pt.y + 2) + ' l-7 -12 a8 8 0 1 1 14 0 z" fill="#A8642F" stroke="#FBF6EC" stroke-width="1.5"/>' +
+        '<text x="' + pt.x + '" y="' + (pt.y - 10.5) + '" text-anchor="middle" font-size="8" font-weight="800" fill="#FBF6EC" font-family="Nunito, sans-serif">' + (i + 1) + "</text></g>";
+    }).join("");
+    return '<svg class="map" viewBox="0 0 320 224" role="img" aria-label="Map: ' + split.nearby.length + " coffee shops within " + r + " miles of " + esc(c.label) + '">' +
+      '<rect width="320" height="224" rx="18" fill="#EFE1C4"/>' +
+      '<g stroke="#FBF6EC" stroke-width="7" fill="none" stroke-linecap="round" opacity=".9"><path d="M-10 60 C 80 40, 140 95, 330 70"/><path d="M40 -10 C 70 80, 60 150, 110 240"/><path d="M-10 180 C 90 160, 210 200, 330 150"/><path d="M230 -10 C 215 70, 260 140, 240 240"/></g>' +
+      '<g stroke="#FBF6EC" stroke-width="2.5" fill="none" opacity=".8"><path d="M0 110 H320"/><path d="M160 0 V224"/><path d="M0 30 L320 200"/></g>' +
+      '<circle cx="160" cy="112" r="92" fill="rgba(135,206,235,.22)" stroke="#3B2A1E" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+      pins +
+      '<circle cx="160" cy="112" r="9" fill="rgba(135,206,235,.45)"/><circle cx="160" cy="112" r="5.5" fill="#87CEEB" stroke="#3B2A1E" stroke-width="2"/>' +
+      '<text x="160" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="#6B4F3A" font-family="Nunito, sans-serif">' + r + " mi radius</text></svg>";
+  }
+  function radiusControl() {
+    var r = state.radius || S.RULES.defaultRadiusMiles;
+    return '<label class="field" for="radius" style="gap:4px"><span class="row between"><span>Search radius</span><output id="radius-out" class="num">' + r + " mi</output></span>" +
+      '<input type="range" id="radius" class="range" min="1" max="' + S.RULES.maxRadiusMiles + '" step="1" value="' + r + '" aria-describedby="radius-help"></label>' +
+      '<span id="radius-help" class="muted small">Up to ' + S.RULES.maxRadiusMiles + " miles. We keep it local, so your coffee supports the shops around you.</span>";
+  }
+  function shopRow(x, i, tappable) {
+    var inner = '<span class="map-num' + (i === null ? " far" : "") + '" aria-hidden="true">' + (i === null ? "" : i + 1) + '</span><span class="grow stack" style="gap:2px;text-align:left"><b>' + esc(x.name) + '</b><span class="muted small">' + esc(x.address) + " · " + S.formatMiles(x.distanceMiles) + "</span></span>";
+    return tappable ? '<button class="shop-row" data-a="open-shop" data-id="' + x.id + '">' + inner + '<span aria-hidden="true">›</span></button>' : '<div class="shop-row">' + inner + "</div>";
+  }
+  function localShops(member) {
+    var split = localSplit();
+    var c = here();
+    var noneNear = !split.nearby.length;
+    var html = '<div class="card stack" style="gap:12px">' +
+      '<div class="row between"><span class="small"><b>Near ' + esc(c.label) + "</b></span>" +
+      (c.source === "device" ? '<span class="badge sky">Your location</span>' : '<button class="linkbtn" data-a="ask-location" style="min-height:32px;padding:0">Use my location</button>') + "</div>" +
+      mapSvg(split) + radiusControl() + "</div>";
+    if (noneNear) {
+      html += '<div class="card stack"><b>No shops within ' + state.radius + " miles yet</b>" +
+        '<span class="muted small">' + (c.source === "device" ? "Sippy Brew is live in West Orange, NJ for now, and we're signing up shops near you." : "Try a bigger radius.") + "</span>" +
+        (c.source === "device" ? '<button class="btn line" data-a="use-sample-loc">Preview West Orange</button>' : "") + "</div>";
+    } else {
+      html += '<h2 class="section-title" style="font-size:1.4rem">' + split.nearby.length + " local shop" + (split.nearby.length === 1 ? "" : "s") + "</h2>" +
+        '<div class="card" style="padding:6px 14px">' + split.nearby.map(function (x, i) { return shopRow(x, i, member && !x.far); }).join("") + "</div>";
+    }
+    if (split.beyond.length) {
+      html += '<button class="btn ghost" data-a="toggle-beyond" aria-expanded="' + !!state.showBeyond + '">' + (state.showBeyond ? "Hide" : "See") + " other participating shops (" + split.beyond.length + ")</button>" +
+        (state.showBeyond ? '<div class="card stack" style="gap:4px;padding:12px 14px"><span class="muted small">Outside your ' + state.radius + "-mile area. Visiting? These shops take Sippy Brew passes too.</span>" +
+          split.beyond.map(function (x) { return shopRow(x, null, false); }).join("") + "</div>" : "");
+    }
+    return html;
+  }
+  function locationPrompt() {
+    return '<div class="card stack loc-card"><span class="loc-emoji" aria-hidden="true">📍</span><h2 style="font-size:1.5rem">See the coffee shops around you</h2>' +
+      '<p class="muted">Turn on location and we\'ll show every participating shop within ' + S.RULES.defaultRadiusMiles + " miles. We only use it to find shops near you.</p>" +
+      '<button class="pill honey" style="width:100%" data-a="ask-location">Use my location</button>' +
+      '<button class="btn ghost" data-a="use-sample-loc">Not now, show me West Orange</button></div>';
+  }
+  function nearScreen() {
+    var t = S.getTier(state.selectedTier);
+    var body = !state.locAsked ? locationPrompt() : localShops(false);
+    return '<div class="topbar"><button class="back" data-a="near-back">‹ Back</button>' + logoHome() + "</div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">Your local coffee shops</h1>' + body +
+      '<div class="sticky-cta"><button class="btn" data-a="get-pass-selected" aria-label="Get my pass: ' + esc(t.name) + ", " + money(t.priceCents) + ' a month">Get my pass · ' + money(t.priceCents) + "/mo</button></div>";
+  }
+
+  function termsScreen() {
+    return '<div class="topbar"><button class="back" data-a="terms-back">‹ Back</button>' + logoHome() + "</div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">Terms, in plain words</h1>' +
+      '<div class="card stack terms">' + S.PLATFORM_ROLE_TERMS.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("") +
+      '<p class="muted small">This is the demo summary. The full Terms of Service apply in the real app.</p></div>';
   }
 
   function shopLogin() {
@@ -214,17 +351,20 @@
     var t = S.getTier(state.selectedTier);
     return '<div class="topbar"><button class="back" data-a="' + (state.tierId ? "close-plans" : "home") + '">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">Choose your pass</h1>' + cards +
-      '<div class="card stack"><p><b>' + t.name + "</b>: " + t.passesPerMonth + " Daily Passes a month. Each pass covers the first " + money2(t.maxPassValueCents) +
+      '<div class="card stack"><p><b>' + t.name + "</b>: " + t.passesPerMonth + " coffees a month, up to " + money2(t.maxPassValueCents) + " each, " + money(t.priceCents) + "/mo. Each pass covers the first " + money2(t.maxPassValueCents) +
       " of that day's order. Unused passes expire at renewal.</p>" +
-      '<button class="btn" data-a="checkout">Continue · ' + money(t.priceCents) + "/month</button></div>";
+      (state.tierId ? '<p class="muted small">Plan changes start with your next month, on ' + dateFmt.format(periodEndDate()) + ". This month stays as it is.</p>" : '<p class="muted small">Change your pass any time. Changes kick in at the start of your next month.</p>') +
+      '<button class="btn" data-a="checkout"' + (state.tierId === t.id ? " disabled" : "") + ">" + (state.tierId === t.id ? "This is your current plan" : state.tierId ? "Switch from " + dateFmt.format(periodEndDate()) : "Continue · " + money(t.priceCents) + "/month") + "</button></div>";
   }
 
   function checkoutSheet() {
     var t = S.getTier(state.selectedTier);
     return '<div class="sheet-back" data-a="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="Checkout" data-stop>' +
       '<p class="badge">Demo checkout</p><h2 style="font-size:1.6rem">' + t.name + " · " + money(t.priceCents) + "/month</h2>" +
+      (state.tierId ? '<p class="muted">No charge today. Your new pass starts ' + dateFmt.format(periodEndDate()) + ", when your next month begins.</p>" : "") +
+      '<p class="muted small">By continuing you agree to the <button class="linkbtn" style="min-height:0;padding:0" data-a="terms">Terms</button>. Shops make and serve your coffee; Sippy Brew runs the pass.</p>' +
       '<p class="muted">In the real app this opens Stripe Checkout, so card numbers never touch Sippy Brew. Nothing is charged here.</p>' +
-      '<button class="btn" data-a="pay">Pay ' + money(t.priceCents) + " (demo)</button>" +
+      '<button class="btn" data-a="pay">' + (state.tierId ? "Confirm the switch (demo)" : "Pay " + money(t.priceCents) + " (demo)") + "</button>" +
       '<button class="btn ghost" data-a="close-sheet">Cancel</button></div></div>';
   }
 
@@ -251,7 +391,8 @@
   function upgradeInfo() {
     var t = tier(); if (!t) return null;
     var to = S.upgradeOffer(t, state.passesLeft); if (!to) return null;
-    var periodOrders = state.orders.map(function (o) { return { overageCents: o.overageCents, status: o.status }; });
+    var since = periodStartDate().getTime() - 864e5;
+    var periodOrders = state.orders.filter(function (o) { return new Date(o.createdAt).getTime() >= since; }).map(function (o) { return { overageCents: o.overageCents, status: o.status }; });
     var nudge = S.suggestUpgrade({ plan: t, periodOrders: periodOrders, passesLeft: state.passesLeft });
     var over = periodOrders.filter(function (o) { return o.status !== "cancelled" && o.overageCents > 0; });
     return { to: to, suggested: !!nudge, overageOrders: over.length, overagePaid: over.reduce(function (a, o) { return a + o.overageCents; }, 0), nowCents: S.upgradeNowCost(t, to) };
@@ -270,10 +411,10 @@
   function shopsTab() {
     var t = tier();
     var up = upgradeInfo();
-    var list = memberShops().map(function (s) {
+    var list = localSplit().nearby.filter(function (s) { return !s.far; }).map(function (s) {
       return '<button class="card shop-card" data-a="open-shop" data-id="' + s.id + '"><span class="thumb"><span class="logo" style="width:40px;height:40px">' + LOGO + '</span></span>' +
         '<span class="grow stack" style="gap:2px"><b style="font-family:var(--head);font-weight:400;font-size:1.2rem">' + esc(s.name) + '</b>' +
-        '<span class="muted small">' + esc(s.address) + '</span><span class="small"><b>' + (isPaused(s.id) ? "Not taking orders" : "Open now") + "</b> · " + s.hours + " · " + s.miles + ' mi' + (isSpotlight(s.id) ? ' · <span class="badge honey">Spotlight</span>' : s.custom ? ' · <span class="badge sky">New</span>' : "") + '</span>' +
+        '<span class="muted small">' + esc(s.address) + '</span><span class="small"><b>' + (isPaused(s.id) ? "Not taking orders" : "Open now") + "</b> · " + s.hours + " · " + S.formatMiles(s.distanceMiles) + (isSpotlight(s.id) ? ' · <span class="badge honey">Spotlight</span>' : s.custom ? ' · <span class="badge sky">New</span>' : "") + '</span>' +
         '<span class="muted small">' + esc(s.story) + "</span></span></button>";
     }).join("");
     return '<div class="row between" style="padding:0 4px"><h1 style="font-size:2rem">Hi, ' + firstName() + "</h1>" + passStatus() + "</div>" +
@@ -281,7 +422,8 @@
       '<div class="card stack" style="gap:8px"><div class="row between"><span class="muted small">Daily Passes left this month</span><b class="num">' + state.passesLeft + " of " + t.passesPerMonth + "</b></div>" +
       '<div class="meter" role="meter" aria-label="Passes left" aria-valuemin="0" aria-valuemax="' + t.passesPerMonth + '" aria-valuenow="' + state.passesLeft + '"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
       '<span class="muted small">Each pass covers the first ' + money2(t.maxPassValueCents) + " of one day's order.</span></div>" +
-      '<h2 class="section-title">Shops near you</h2><div class="stack">' + list + "</div>";
+      '<h2 class="section-title">Shops near you</h2>' + localShops(true) +
+      (list ? '<div class="stack">' + list + "</div>" : "");
   }
 
   function menuForOrder(s) {
@@ -399,6 +541,8 @@
       '<div class="card stack" style="gap:6px"><span class="muted small">Signed in as</span><b>' + esc(state.user.name) + '</b><span class="muted small">' + esc(state.user.email) + "</span></div>" +
       '<div class="card stack"><span class="muted small">Plan</span><h2 style="font-size:1.6rem">' + t.name + "</h2>" +
       '<span class="muted">' + money(t.priceCents) + "/month · " + t.passesPerMonth + " passes · " + money2(t.maxPassValueCents) + " max per pass</span>" +
+      (state.pendingTier ? '<div class="alert ok" role="status" style="color:var(--espresso);border-color:var(--honey)">Switching to <b>' + S.getTier(state.pendingTier).name + "</b> on " + dateFmt.format(periodEndDate()) + '. <button class="linkbtn" style="min-height:0;padding:0" data-a="keep-plan">Keep my current plan</button></div>' : "") +
+      '<span class="muted small">Change your pass any time. Changes start with your next month, on ' + dateFmt.format(periodEndDate()) + ".</span>" +
       '<button class="btn line" data-a="change-plan">Change plan</button></div>' +
       (upgradeInfo() ? upgradeCard(upgradeInfo(), upgradeInfo().suggested) : "") +
       '<div class="card stack"><div class="row between"><span class="muted small">Daily Passes this month</span>' + passStatus() + "</div>" +
@@ -406,8 +550,9 @@
       '<div class="meter"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
       '<span class="muted small">Unused passes expire at renewal. Nothing rolls over.</span></div>' +
       '<div class="card stack"><b>Demo controls</b><span class="muted small">Today in the demo: ' + dateFmt.format(now()) + ". You get one pass a day, so move to the next day to order again.</span>" +
-      '<button class="btn line" data-a="new-day">Start the next day</button><button class="btn danger" data-a="reset">Reset the demo</button></div>' +
-      '<button class="btn line" data-a="sign-out">Sign out</button>';
+      '<button class="btn line" data-a="new-day">Start the next day</button><button class="btn line" data-a="new-month">Skip to next month</button><button class="btn danger" data-a="reset">Reset the demo</button></div>' +
+      '<button class="btn line" data-a="sign-out">Sign out</button>' +
+      '<p class="demo-note"><button class="linkbtn" data-a="terms">Terms</button> · Questions about an order go to the shop that made it.</p>';
   }
 
   // ---- Shop app
@@ -626,6 +771,10 @@
     else if (state.screen === "shop-login") html = shopLogin();
     else if (state.screen === "shop-signup") html = shopSignup();
     else if (state.screen === "admin-login") html = adminLogin();
+    else if (state.screen === "quiz") html = quiz();
+    else if (state.screen === "result") html = quizResultScreen();
+    else if (state.screen === "near") html = nearScreen();
+    else if (state.screen === "terms") html = termsScreen();
     else {
       html = appTop();
       if (state.session === "admin") {
@@ -726,6 +875,53 @@
   function act(a, el, ev) {
     var id = el.getAttribute("data-id");
     switch (a) {
+      case "start-quiz": state.quiz = {}; state.quizStep = 0; state.screen = "quiz"; render(); return window.scrollTo(0, 0);
+      case "retake-quiz": state.quiz = {}; state.quizStep = 0; state.screen = "quiz"; render(); return window.scrollTo(0, 0);
+      case "quiz-answer": {
+        var key = el.getAttribute("data-k"), card = document.getElementById("quiz-card");
+        state.quiz[key] = id;
+        var go = function () {
+          if (state.quizStep === 0) state.quizStep = 1;
+          else { var rec = S.recommendPlan(state.quiz); state.selectedTier = rec.id; state.pickSub = rec.subTier; state.screen = "result"; }
+          render(); window.scrollTo(0, 0);
+          var next = document.getElementById("quiz-card"); if (next) next.classList.add("quiz-in");
+        };
+        if (card && !reduceMotion()) { el.classList.add("on"); card.classList.add("quiz-out"); setTimeout(go, 280); } else go();
+        return;
+      }
+      case "quiz-back":
+        if (state.screen === "result") { state.screen = "quiz"; state.quizStep = 1; }
+        else if (state.quizStep > 0) state.quizStep -= 1;
+        else state.screen = "landing";
+        render(); return window.scrollTo(0, 0);
+      case "see-passes": state.screen = "landing"; render(); var pp = document.querySelector(".tiers"); if (pp) pp.scrollIntoView({ block: "center" }); return;
+      case "find-shops": state.screen = "near"; render(); return window.scrollTo(0, 0);
+      case "near-back": state.screen = state.quiz && state.quiz.often ? "result" : "landing"; render(); return window.scrollTo(0, 0);
+      case "get-pass-selected": state.authMode = "signup"; state.screen = state.user ? (state.tierId ? "app" : "plans") : "signup"; render(); return window.scrollTo(0, 0);
+      case "ask-location": {
+        state.locAsked = true;
+        if (!navigator.geolocation) { state.loc = null; render(); return toast("Location isn't available here, so we're showing West Orange."); }
+        toast("Finding coffee near you…");
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          state.loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, label: "you", source: "device" };
+          render(); toast("Showing shops around you.");
+        }, function () {
+          state.loc = null; render(); toast("No location access, so we're showing West Orange. You can change this later.");
+        }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 });
+        return render();
+      }
+      case "use-sample-loc": state.locAsked = true; state.loc = null; break;
+      case "toggle-beyond": state.showBeyond = !state.showBeyond; break;
+      case "terms": state.termsFrom = state.screen; state.sheet = null; state.screen = "terms"; render(); return window.scrollTo(0, 0);
+      case "terms-back": state.screen = state.termsFrom && state.termsFrom !== "terms" ? state.termsFrom : (state.session ? "app" : "landing"); break;
+      case "keep-plan": state.pendingTier = null; render(); return toast("You're staying on " + tier().name + ".");
+      case "new-month": {
+        state.dayOffset = state.periodStart + 30; state.periodStart = state.dayOffset;
+        if (state.pendingTier) state.tierId = state.pendingTier;
+        state.pendingTier = null;
+        var tm = tier(); state.passesLeft = tm.passesPerMonth; state.passDaysUsed = []; state.upgradeConfirm = false;
+        render(); return toast("New month! " + tm.name + ": " + tm.passesPerMonth + " passes loaded. Last month's unused passes expired.");
+      }
       case "get-pass": state.authMode = "signup"; state.selectedTier = S.planFor(S.DEFAULT_TIER_GROUP, state.pickSub || S.DEFAULT_SUB_TIER).id; state.screen = state.user ? (state.tierId ? "app" : "plans") : "signup"; break;
       case "pick-sub": {
         state.pickSub = id;
@@ -773,13 +969,13 @@
       case "pay": {
         var changing = !!state.tierId;
         var t = S.getTier(state.selectedTier);
-        state.tierId = t.id; state.sheet = null; state.screen = "app"; state.session = "member"; state.tab = changing ? "account" : "shops"; state.detail = null;
-        if (!changing) { state.passesLeft = t.passesPerMonth; state.passDaysUsed = []; }
-        else { state.passesLeft = Math.min(state.passesLeft, t.passesPerMonth); }
+        state.sheet = null; state.screen = "app"; state.session = "member"; state.tab = changing ? "account" : "shops"; state.detail = null;
+        if (!changing) { state.tierId = t.id; state.passesLeft = t.passesPerMonth; state.passDaysUsed = []; state.periodStart = state.dayOffset; state.pendingTier = null; }
+        else state.pendingTier = t.id === state.tierId ? null : t.id; // takes effect next month
         render(); window.scrollTo(0, 0);
-        return toast(changing ? "Plan changed to " + t.name + " (demo)." : "You're in! " + t.passesPerMonth + " Daily Passes loaded.");
+        return toast(changing ? "Done! " + t.name + " starts " + dateFmt.format(periodEndDate()) + ". This month stays as it is." : "You're in! " + t.passesPerMonth + " Daily Passes loaded.");
       }
-      case "change-plan": state.selectedTier = state.tierId; state.pickSub = S.getTier(state.tierId).subTier; state.screen = "plans"; break;
+      case "change-plan": state.selectedTier = state.pendingTier || state.tierId; state.pickSub = S.getTier(state.tierId).subTier; state.screen = "plans"; break;
       case "tab": state.tab = id; state.detail = null; break;
       case "shop-tab": state.shopTab = id; state.scan = null; state.shopError = null; break;
       case "open-shop": state.detail = { type: "shop", id: id }; state.cart = []; state.customize = null; state.confirmedOverage = null; state.pickupIdx = 0; state.error = null; render(); return window.scrollTo(0, 0);
@@ -884,7 +1080,7 @@
         if (!err && !menu.length) err = "Add at least one coffee to your menu.";
         if (err) { state.shopError = err; render(); return window.scrollTo(0, 0); }
         state.shopStatus[id] = "pending";
-        state.customShops.push({ id: id, name: v("name"), address: v("address"), miles: 0.6, custom: true,
+        state.customShops.push({ id: id, name: v("name"), address: v("address"), lat: 40.7930, lng: -74.2440, custom: true,
           hours: S.formatHours({ open: v("open"), close: v("close") }), story: v("story"), menu: menu });
         state.session = "shop"; state.counterShop = id; state.shopTab = "dashboard"; state.screen = "app"; state.shopError = null; state.detail = null;
         render(); window.scrollTo(0, 0);
@@ -924,6 +1120,13 @@
       if (location.hash === "#admin" && state.session !== "admin") { state.screen = "admin-login"; state.session = null; state.adminError = null; render(); window.scrollTo(0, 0); }
     };
     window.addEventListener("hashchange", openAdmin);
+    // Radius slider: update the label while dragging, re-draw the map when released.
+    document.addEventListener("input", function (ev) {
+      if (ev.target && ev.target.id === "radius") { var o = document.getElementById("radius-out"); if (o) o.textContent = ev.target.value + " mi"; }
+    });
+    document.addEventListener("change", function (ev) {
+      if (ev.target && ev.target.id === "radius") { state.radius = S.clampRadius(ev.target.value); render(); var r = document.getElementById("radius"); if (r) r.focus(); }
+    });
     render();
     openAdmin();
   }

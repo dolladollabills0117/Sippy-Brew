@@ -55,7 +55,7 @@ describe("customizations in an order", () => {
     if (r.ok) expect(r.lines.map((l) => [l.unitPriceCents, describeOptions(l.options)])).toEqual([[750, "Oat milk, Extra shot, Vanilla"], [600, "Oat milk"]]);
   });
 
-  it("on Decaf, an oat-milk latte is mostly covered and the rest is overage", () => {
+  it("on House, an oat-milk latte is mostly covered and the rest is overage", () => {
     expect(splitPassValue(600, getTier("affogato_decaf").maxPassValueCents)).toEqual({ totalCents: 600, passCoveredCents: 400, overageCents: 200 });
   });
 

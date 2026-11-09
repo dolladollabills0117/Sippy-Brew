@@ -25,17 +25,17 @@ const periodStart = "2026-11-01T14:00:00.000Z";
 const prevStart = "2026-10-01T14:00:00.000Z";
 
 describe("tier config", () => {
-  it("has three tiers, each in a Decaf ($4/day) and Double Shot ($8/day) sub-tier", () => {
+  it("has three tiers, each in a House ($4/day) and Specialty ($8/day) sub-tier", () => {
     expect(TIERS.map((t) => [t.id, t.name, t.priceCents, t.passesPerMonth, t.maxPassValueCents])).toEqual([
-      ["affogato_decaf", "Affogato · Decaf", 2000, 5, 400],
-      ["affogato_double_shot", "Affogato · Double Shot", 4000, 5, 800],
-      ["macchiato_decaf", "Macchiato · Decaf", 4800, 12, 400],
-      ["macchiato_double_shot", "Macchiato · Double Shot", 9600, 12, 800],
-      ["double_espresso_decaf", "Double Espresso · Decaf", 8000, 20, 400],
-      ["double_espresso_double_shot", "Double Espresso · Double Shot", 16000, 20, 800],
+      ["affogato_decaf", "Visitor · House", 2000, 5, 400],
+      ["affogato_double_shot", "Visitor · Specialty", 4000, 5, 800],
+      ["macchiato_decaf", "Regular · House", 4800, 12, 400],
+      ["macchiato_double_shot", "Regular · Specialty", 9600, 12, 800],
+      ["double_espresso_decaf", "Local · House", 8000, 20, 400],
+      ["double_espresso_double_shot", "Local · Specialty", 16000, 20, 800],
     ]);
     expect(DEFAULT_TIER).toBe("macchiato_double_shot");
-    expect(TIER_GROUPS.map((g) => g.name)).toEqual(["Affogato", "Macchiato", "Double Espresso"]);
+    expect(TIER_GROUPS.map((g) => g.name)).toEqual(["Visitor", "Regular", "Local"]);
     expect(planFor("double_espresso", "decaf").blurb).toBe("Perfect for the daily black coffee commuter!");
   });
 
@@ -71,7 +71,7 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
     expect(checkPassAvailable({ passesLeft: 0, passDaysUsed: [], now, timeZone: TZ })).toMatchObject({ ok: false, code: "NO_PASSES_LEFT" });
   });
 
-  it("an Affogato member gets exactly 5 passes, then is blocked", () => {
+  it("a Visitor member gets exactly 5 passes, then is blocked", () => {
     const tier = getTier("affogato_double_shot");
     const entries: PassLedgerEntry[] = [{ type: "grant", passes: tier.passesPerMonth, periodStart }];
     const days: string[] = [];
@@ -111,11 +111,11 @@ describe("pass count can't exceed the tier's monthly allowance", () => {
   });
 });
 
-describe("a Decaf pass covers the first $4.00", () => {
+describe("a House pass covers the first $4.00", () => {
   it("covers a $3.00 drip in full", () => {
     expect(splitPassValue(300, getTier("macchiato_decaf").maxPassValueCents)).toEqual({ totalCents: 300, passCoveredCents: 300, overageCents: 0 });
   });
-  it("a Decaf member can still order a latte and confirm the overage", () => {
+  it("a House member can still order a latte and confirm the overage", () => {
     expect(splitPassValue(525, getTier("macchiato_decaf").maxPassValueCents)).toEqual({ totalCents: 525, passCoveredCents: 400, overageCents: 125 });
   });
 });
