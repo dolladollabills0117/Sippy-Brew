@@ -35,7 +35,7 @@ export default function Landing() {
     <div className="mx-auto flex max-w-3xl flex-col gap-8 pt-2 sm:pt-6">
       <section className="rounded-[28px] bg-cream-swirl px-6 pb-7 pt-7 shadow-card sm:px-10 sm:pb-10 sm:pt-10">
         <p className="inline-block rounded-full bg-sky-blue px-4 py-1.5 font-bold text-espresso">New in {SITE.launchCity}</p>
-        <h1 className="mt-5 text-[2.25rem] leading-[1.1] text-espresso [text-wrap:balance] sm:text-6xl">Your neighborhood, brewed daily.</h1>
+        <h1 className="mt-5 text-[2.25rem] leading-[1.1] text-espresso [text-wrap:balance] sm:text-6xl">Your neighborhood, <span className="text-burnt-sugar">brewed daily.</span></h1>
         <p className="mt-4 text-[1.0625rem] text-pecan sm:text-xl">One monthly pass. Any local coffee shop.</p>
         {/* Beans sit beside the button, clear of the headline and the button itself. */}
         <div className="mt-6 flex items-center justify-between gap-4">
