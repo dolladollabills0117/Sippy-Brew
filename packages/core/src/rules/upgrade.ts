@@ -6,7 +6,7 @@ import { RULES, SUB_TIERS, TIER_GROUPS, type Tier } from "../config";
  * encouraged to move up to the higher sub-tier of the same tier.
  *
  * "Pay the difference": upgrading now costs the full monthly price difference (e.g. $20 from
- * Affogato · Decaf at $20 to Affogato · Double Shot at $40). The passes left this period cover
+ * Visitor · House at $20 to Visitor · Specialty at $40). The passes left this period cover
  * the higher max right away, and from the next renewal the member is billed the higher price.
  */
 

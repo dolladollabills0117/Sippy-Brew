@@ -47,7 +47,6 @@ const path = require("path");
   await tap('[data-a="toggle-beyond"]');
   const beyond = await txt();
   if (!beyond.includes("Nassau Street Grind") || !beyond.includes("Outside your 15-mile area")) fail("other participating shops missing");
-  await p.screenshot({ path: path.join(__dirname, "../dist/.quiz-map.png") }).catch(() => {});
 
   // Get the matched pass.
   await tap('[data-a="get-pass-selected"]');

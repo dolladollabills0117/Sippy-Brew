@@ -1,3 +1,5 @@
+import { PLATFORM_ROLE_SHORT } from "@sippy/core";
+import Link from "next/link";
 import type { Metadata, Viewport } from "next";
 import { Caprasimo, Nunito } from "next/font/google";
 import { colors, focusRing, gradient, shadows } from "@sippy/core/brand";
@@ -42,7 +44,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <footer className="mx-auto max-w-6xl px-4 pb-10 text-sm text-pecan sm:px-6">
-          <p>© {new Date().getFullYear()} · Coffee only. Daily Passes reset monthly and do not roll over.</p>
+          <p>
+            © {new Date().getFullYear()} · Coffee only. Daily Passes reset monthly and do not roll over. ·{" "}
+            <Link href="/terms" className="font-bold underline underline-offset-4">Terms</Link>
+          </p>
+          <p className="mt-1">{PLATFORM_ROLE_SHORT}</p>
         </footer>
       </body>
     </html>

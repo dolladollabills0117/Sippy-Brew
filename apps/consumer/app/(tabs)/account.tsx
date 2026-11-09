@@ -35,7 +35,7 @@ export default function AccountTab() {
       if (status !== "granted") throw new Error("Location permission is needed to save an area.");
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const others = (me.data?.areas ?? []).filter((a) => a.kind !== kind);
-      await api.setAreas([...others, { kind, label: kind === "home" ? "Home" : "Work", lat: pos.coords.latitude, lng: pos.coords.longitude, radiusMiles: 2 }]);
+      await api.setAreas([...others, { kind, label: kind === "home" ? "Home" : "Work", lat: pos.coords.latitude, lng: pos.coords.longitude, radiusMiles: RULES.defaultRadiusMiles }]);
       me.reload();
     } catch (e) {
       setError(e instanceof Error && !("status" in e) ? e.message : errorMessage(e));
@@ -72,7 +72,16 @@ export default function AccountTab() {
               {formatCents(tier.priceCents)}/month · {tier.passesPerMonth} passes, {formatCents(tier.maxPassValueCents, { showZeroCents: true })} max per pass · renews{" "}
               {dateFmt.format(new Date(sub.currentPeriodEnd))}
             </Text>
-            <Button label="Change or cancel plan" variant="secondary" onPress={manage} loading={busy === "portal"} />
+            {sub.pendingTier && (
+              <Text variant="bodyBold">
+                Switching to {getTier(sub.pendingTier).name} on {dateFmt.format(new Date(sub.currentPeriodEnd))}.
+              </Text>
+            )}
+            <Text variant="small" color={colors.pecan}>
+              Change your pass any time. Changes start with your next month.
+            </Text>
+            <Button label="Change plan" variant="secondary" onPress={() => router.push("/plans?change=1")} />
+            <Button label="Billing and cancellation" variant="ghost" onPress={manage} loading={busy === "portal"} />
           </>
         ) : (
           <>

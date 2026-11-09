@@ -2,6 +2,7 @@ import { PassSummary } from "@/components/PassSummary";
 import { UpgradeCard } from "@/components/UpgradeCard";
 import { AreasForm } from "@/components/AreasForm";
 import { ManagePlanButton } from "@/components/ManagePlanButton";
+import { ChangePlanCard } from "@/components/ChangePlanCard";
 import { OrderList } from "@/components/OrderList";
 import { Alert, Badge, ButtonLink, Card, PageTitle, SectionTitle } from "@/components/ui";
 import { requirePageSession } from "@/lib/auth";
@@ -44,6 +45,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         )}
         {sub ? <ManagePlanButton /> : <ButtonLink href="/plans">Choose a plan</ButtonLink>}
       </Card>
+      {sub && tier && (
+        <Card className="mt-4">
+          <ChangePlanCard current={sub.tier} pending={sub.pendingTier ?? null} periodEnd={sub.currentPeriodEnd} />
+        </Card>
+      )}
 
       {sub && (
         <>

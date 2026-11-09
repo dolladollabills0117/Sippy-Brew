@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { Button } from "./ui";
 
-/** Change or cancel through Stripe's customer portal. Changes take effect at renewal. */
+/** Card details, invoices and cancellation through Stripe's customer portal. Plan switches use ChangePlanCard. */
 export function ManagePlanButton() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function ManagePlanButton() {
           }
         }}
       >
-        Change or cancel plan
+        Billing and cancellation
       </Button>
       {error && <p role="alert" className="text-sm font-bold text-danger">{error}</p>}
     </div>

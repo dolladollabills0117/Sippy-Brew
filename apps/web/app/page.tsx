@@ -40,7 +40,7 @@ export default function Landing() {
         {/* Beans sit beside the button, clear of the headline and the button itself. */}
         <div className="mt-6 flex items-center justify-between gap-4">
           <Link
-            href="/signup"
+            href="/match"
             className="inline-flex min-h-14 items-center whitespace-nowrap rounded-full bg-honey px-9 text-[1.1875rem] font-extrabold text-espresso shadow-card transition-colors hover:bg-caramel sm:px-12"
           >
             Get my pass
@@ -51,10 +51,18 @@ export default function Landing() {
         </div>
       </section>
 
-      <section aria-labelledby="passes-title">
+      <section aria-labelledby="passes-title" id="passes" className="scroll-mt-20">
         <h2 id="passes-title" className="mb-4 px-1 text-[1.75rem] text-espresso sm:text-3xl">
           Pick your pass
         </h2>
+        <Link href="/match" className="mb-4 flex items-center gap-3 rounded-[22px] border-2 border-honey bg-cream-swirl px-4 py-3.5 shadow-card hover:shadow-lift">
+          <span aria-hidden="true" className="text-3xl">☕️</span>
+          <span className="flex flex-1 flex-col">
+            <b className="text-espresso">Not sure which pass?</b>
+            <span className="text-sm text-pecan">Get matched in two taps.</span>
+          </span>
+          <span className="whitespace-nowrap rounded-full bg-espresso px-4 py-2 text-sm font-bold text-cream-swirl">Take the quiz</span>
+        </Link>
         <PlanCards mode="link" />
       </section>
 

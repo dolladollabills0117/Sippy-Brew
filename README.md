@@ -27,28 +27,34 @@ docs/OPEN_DECISIONS.md   Decisions the owner still needs to make
 
 Tiers live in [`packages/core/config/tiers.json`](packages/core/config/tiers.json):
 
-Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **Decaf** covers up to $4.00 a day ("For the no-fuss crew: a great cup of drip, black or your way."); **Double Shot** covers up to $8.00 ("For the menu explorers who chase every new seasonal pour."). The sub-tier is a price cap, not a drink restriction: a Decaf member can order a latte and confirm the overage.
+A pass has two parts, named so people can tell them apart: **what you drink** (the sub-tier, House or Specialty) and **how often you go** (the tier, Visitor, Regular or Local). New visitors can take the two-question **Get matched** quiz (one card per question; the result says something like "You're a Local! 👑" and recommends a pass), then see participating shops on a map around them (location permission, radius up to 15 miles, plus a list of participating shops elsewhere) before signing up. Quiz copy lives in `packages/core/config/tiers.json`.
 
-| Tier | Passes / month | Decaf ($4/day) | Double Shot ($8/day) |
+**Plan changes:** members can switch to any pass any time; the switch takes effect at their next renewal and this month stays as it is (`pending_tier`, `POST /api/subscription/change`). The in-month House → Specialty upgrade below is the one exception.
+
+**Our role (Terms):** Sippy Brew isn't the coffee shop. Shops are independent and responsible for their drinks and service; order issues go to the shop. The plain-language text is in `packages/core/src/legal.ts` and shows on `/terms`, at sign-up and checkout, and in the demo.
+
+Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **House** covers up to $4.00 a day ("Your go-to cup: drip, cold brew or tea, black or your way."); **Specialty** covers up to $8.00 ("Lattes, cappuccinos and every new seasonal pour."). The sub-tier is a price cap, not a drink restriction: a House member can order a latte and confirm the overage.
+
+| Tier | Passes / month | House ($4/day) | Specialty ($8/day) |
 | --- | --- | --- | --- |
-| Affogato | 5 | $20 / month | $40 / month |
-| Macchiato (most popular) | 12 | $48 / month | $96 / month |
-| Double Espresso | 20 | $80 / month | $160 / month |
+| Visitor | 5 | $20 / month | $40 / month |
+| Regular (most popular) | 12 | $48 / month | $96 / month |
+| Local | 20 | $80 / month | $160 / month |
 
 - Coffee only. Menus can't contain food categories, and food-sounding names are rejected.
 - One pass per member per calendar day (America/New_York), at one shop.
-- The pass covers the **first $4.00 (Decaf) or $8.00 (Double Shot)** of that day's order.
+- The pass covers the **first $4.00 (House) or $8.00 (Specialty)** of that day's order.
 - If the order is over that, the member pays the **overage**. Checkout shows the pass amount, the overage and the total, and the member must confirm the exact overage before the order can be placed. The server and the database both refuse an unconfirmed overage, so nothing is ever charged without confirmation. The confirmed overage is authorized on the member's card on file, captured when the shop scans the QR, and released if the order is cancelled. Overages under $0.50 (Stripe's minimum card charge) are waived.
 - **Overage goes 100% to the shop**, with no platform commission. The shop pays the card processing on it: the actual Stripe fee when Stripe reports it, otherwise the 2.9% + 30¢ estimate in `rules.json`.
 - **Commission is 12% of the pass-covered value only.** The shop gets 88% of it. The platform keeps the rest of the subscription, including the value of unused passes.
-- **Upgrade nudge.** A Decaf member who keeps paying overages (2 overage orders in a period by default, `upgradeNudgeAfterOverages` in `rules.json`) is encouraged to move up to Double Shot on the same tier: a card on their home screen and account page, plus a tip at checkout. Upgrading charges the full monthly price difference now (after the member confirms the exact amount), their remaining passes cover the higher max right away, and the higher price applies from the next renewal.
+- **Upgrade nudge.** A House member who keeps paying overages (2 overage orders in a period by default, `upgradeNudgeAfterOverages` in `rules.json`) is encouraged to move up to Specialty on the same tier: a card on their home screen and account page, plus a tip at checkout. Upgrading charges the full monthly price difference now (after the member confirms the exact amount), their remaining passes cover the higher max right away, and the higher price applies from the next renewal.
 - **Drink customizations.** Shops add customization groups to each drink on the web portal: milk choices, extra shots, syrups and so on, each at the shop's own price, as pick-one or pick-up-to-N groups, optionally required. Members pick them when ordering, and they count toward the drink's price: the pass covers the first $4/$8 and anything above is an overage the member confirms, paid 100% to the shop. So shops don't need to mark up prices. Food add-ons are refused, same as food menu items.
 - The upgrade offer is hidden when fewer than 3 passes are left in the period (`upgradeMinPassesLeft` in `rules.json`).
 - Passes reset on the subscription renewal date. Unused passes expire. Nothing rolls over.
 - Pickup QR codes expire after 30 seconds and can be redeemed once. The member's screen fetches a fresh code just before expiry.
 - A pass is only used when a drink is redeemed. A daily job cancels orders from earlier days that were never picked up and returns their passes.
 
-Per member-month, when every pass is used up to its daily max (shop / platform): Affogato Decaf $17.60 / $2.40, Double Shot $35.20 / $4.80; Macchiato Decaf $42.24 / $5.76, Double Shot $84.48 / $11.52; Double Espresso Decaf $70.40 / $9.60, Double Shot $140.80 / $19.20. Overages are added on top for the shop and never change the platform's share.
+Per member-month, when every pass is used up to its daily max (shop / platform): Visitor House $17.60 / $2.40, Specialty $35.20 / $4.80; Regular House $42.24 / $5.76, Specialty $84.48 / $11.52; Local House $70.40 / $9.60, Specialty $140.80 / $19.20. Overages are added on top for the shop and never change the platform's share.
 
 ### Where each rule is enforced
 
@@ -95,10 +101,10 @@ Password for all: `sippy-demo-123` (override with `DEMO_PASSWORD`).
 
 | Role | Email |
 | --- | --- |
-| Member, Affogato · Decaf | `affogato@demo.sippybrew.test` |
-| Member, Macchiato · Double Shot | `macchiato@demo.sippybrew.test` |
-| Member, Double Espresso · Double Shot (has an open order today) | `double@demo.sippybrew.test` |
-| Member, Double Espresso · Decaf | `commuter@demo.sippybrew.test` |
+| Member, Visitor · House | `affogato@demo.sippybrew.test` |
+| Member, Regular · Specialty | `macchiato@demo.sippybrew.test` |
+| Member, Local · Specialty (has an open order today) | `double@demo.sippybrew.test` |
+| Member, Local · House | `commuter@demo.sippybrew.test` |
 | Shop: Mile Square Roasters | `owner.mile@demo.sippybrew.test` |
 | Shop: Grove Street Grind | `owner.grove@demo.sippybrew.test` |
 | Shop: Heights Coffee Co. | `owner.heights@demo.sippybrew.test` |

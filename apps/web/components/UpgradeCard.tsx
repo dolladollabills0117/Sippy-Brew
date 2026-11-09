@@ -8,7 +8,7 @@ import { Alert, Button, Card } from "./ui";
 type Upgrade = NonNullable<MemberSummary["upgrade"]>;
 
 /**
- * Move up to the higher sub-tier (e.g. Affogato · Decaf → Affogato · Double Shot). Shown as a
+ * Move up to the higher sub-tier (e.g. Visitor · House → Visitor · Specialty). Shown as a
  * nudge when the member keeps paying overages, and as an option on the account page. Two taps:
  * the first shows exactly what they'll pay, the second confirms it.
  */

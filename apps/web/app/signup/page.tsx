@@ -18,6 +18,10 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           <AuthForm mode="signup" />
         </Suspense>
       </Card>
+      <p className="mt-4 text-center text-sm text-pecan">
+        By creating an account you agree to the{" "}
+        <Link href="/terms" className="font-bold text-burnt-sugar-ink underline underline-offset-4">Terms</Link>. Coffee shops make and serve your drinks; Sippy Brew runs the pass.
+      </p>
       <p className="mt-6 text-center text-pecan">
         Already have an account?{" "}
         <Link href="/login" className="font-bold text-burnt-sugar-ink underline underline-offset-4">

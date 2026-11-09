@@ -3,7 +3,7 @@
 A single-page, clickable demo of the whole product that you can open on a phone. It runs on
 sample data stored in the viewer's browser, with no database and no real payments.
 
-- **Members:** pick a pass (tier and Decaf / Double Shot sub-tier), browse shops, customize drinks,
+- **Members:** pick a pass (tier and House / Specialty sub-tier), browse shops, customize drinks,
   confirm overages, show the 30-second pickup QR, and get nudged to upgrade.
 - **Shops** ("Shop log in" or "List your shop" on the home screen): list a shop, accept or pause
   orders, run the live queue, scan or type codes to redeem, manage the menu and drink

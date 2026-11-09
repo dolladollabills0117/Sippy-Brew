@@ -116,3 +116,12 @@
   font-family: var(--font-body);
   border-radius: 16px;
 }
+
+/* Get matched quiz: answering swipes the card away; the next slides in. */
+.quiz-out { animation: quiz-swipe-out 0.28s ease-in forwards; }
+.quiz-in { animation: quiz-swipe-in 0.32s ease-out both; }
+.result-emoji { display: inline-block; animation: quiz-pop 0.6s cubic-bezier(.2, 1.6, .4, 1) 0.15s both; }
+@keyframes quiz-swipe-out { to { transform: translateX(-115%) rotate(-7deg); opacity: 0; } }
+@keyframes quiz-swipe-in { from { transform: translateX(60%) rotate(4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes quiz-pop { from { transform: scale(.3) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .quiz-out, .quiz-in, .result-emoji { animation: none; } }

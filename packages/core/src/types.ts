@@ -29,6 +29,8 @@ export interface Subscription {
   /** Allowance snapshot for the current period (null until the period's passes are granted). */
   periodPasses: number | null;
   periodMaxPassValue: number | null;
+  /** Plan switch waiting for the next renewal (plan changes take effect next month). */
+  pendingTier?: TierId | null;
 }
 
 export interface Shop {

@@ -75,6 +75,8 @@ export function createApiClient(opts: ApiClientOptions) {
     checkout: (tier: TierId, returnUrl?: string) => request<{ url: string }>("POST", "/api/checkout", { tier, returnUrl }),
     upgradePlan: (toPlan: TierId, confirmedCents: number) =>
       request<{ plan: TierId; chargedCents: number }>("POST", "/api/subscription/upgrade", { toPlan, confirmedCents }),
+    /** Switch plans from next month (or pass the current plan to cancel a pending switch). */
+    changePlan: (toPlan: TierId) => request<{ pendingPlan: TierId | null; effectiveAt: string }>("POST", "/api/subscription/change", { toPlan }),
     billingPortal: (returnUrl?: string) => request<{ url: string }>("POST", "/api/billing/portal", { returnUrl }),
     setAreas: (areas: SavedArea[]) => request<{ areas: SavedArea[] }>("PUT", "/api/me/areas", { areas }),
     setSaved: (shopId: string, saved: boolean) => request<{ saved: boolean }>("POST", "/api/me/saved-shops", { shopId, saved }),

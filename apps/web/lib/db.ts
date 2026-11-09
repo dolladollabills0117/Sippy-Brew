@@ -28,6 +28,7 @@ export const mapSubscription = (r: Row): Subscription => ({
   cancelAtPeriodEnd: Boolean(r.cancel_at_period_end),
   periodPasses: r.period_passes ?? null,
   periodMaxPassValue: r.period_max_pass_value ?? null,
+  pendingTier: r.pending_tier ?? null,
 });
 
 export const mapShop = (r: Row): Shop => ({

@@ -126,7 +126,10 @@ export const CURRENCY: string = tiersJson.currency;
 const { $comment: _ignored, ...rules } = rulesJson;
 export const RULES: Readonly<Rules> = Object.freeze(rules as Rules);
 
-export const SITE: Readonly<{ launchCity: string }> = Object.freeze({ launchCity: siteJson.launchCity });
+export const SITE: Readonly<{ launchCity: string; launchCenter: { lat: number; lng: number; label: string } }> = Object.freeze({
+  launchCity: siteJson.launchCity,
+  launchCenter: siteJson.launchCenter,
+});
 
 export function getTier(id: string): Tier {
   const tier = TIERS.find((t) => t.id === id);

@@ -18,8 +18,7 @@ import {
   type QrTicket,
   type SavedArea,
   type ShopListItem,
-  type Subscription,
-} from "@sippy/core";
+  type Subscription, clampRadius } from "@sippy/core";
 import type { Session } from "./auth";
 import { authorizeOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPost, mapShop, mapSubscription, ORDER_SELECT } from "./db";
@@ -132,7 +131,7 @@ export async function setAreas(memberId: string, areas: SavedArea[]): Promise<Sa
         label: String(a.label || (a.kind === "home" ? "Home" : "Work")).slice(0, 40),
         lat: a.lat,
         lng: a.lng,
-        radius_miles: Math.min(25, Math.max(0.5, Number(a.radiusMiles) || 2)),
+        radius_miles: clampRadius(a.radiusMiles),
       })),
     );
     if (error) throw fromDbError(error);

@@ -41,7 +41,7 @@ export default function ForShopsPage() {
       <SectionTitle>An example order</SectionTitle>
       <Card className="max-w-xl">
         <p className="text-espresso">
-          A Double Shot member orders {money(split.totalCents)} of coffee. Their pass covers {money(split.passCoveredCents)} and they confirm a{" "}
+          A Specialty member orders {money(split.totalCents)} of coffee. Their pass covers {money(split.passCoveredCents)} and they confirm a{" "}
           {money(split.overageCents)} overage.
         </p>
         <dl className="mt-4 grid grid-cols-[1fr_auto] gap-y-1">

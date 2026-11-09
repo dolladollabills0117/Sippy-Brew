@@ -94,9 +94,14 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
   const period = periodOf(sub);
 
   const { data: existing } = await db.from("subscriptions").select("*").eq("stripe_subscription_id", sub.id).maybeSingle();
+  // Plan changes take effect next month: while the period is the same, a new price on the
+  // subscription waits in pending_tier and this month keeps its plan.
+  const samePeriod = Boolean(existing && existing.current_period_start === period.start);
+  const keepTier = samePeriod && existing.tier !== tier;
   const row = {
     member_id: memberId,
-    tier,
+    tier: keepTier ? existing.tier : tier,
+    pending_tier: keepTier ? tier : null,
     status: sub.status as string,
     current_period_start: period.start,
     current_period_end: period.end,
@@ -119,7 +124,7 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
     const { data } = await db.from("pass_ledger").select("passes, type, period_start").eq("subscription_id", saved.id).eq("period_start", prevStart);
     previousEntries = (data ?? []).map((e) => ({ passes: e.passes, type: e.type, periodStart: e.period_start }));
   }
-  const tierCfg = getTier(tier);
+  const tierCfg = getTier(saved.tier);
   const entries = planRenewal({ previousEntries, previousPeriodStart: prevStart, newPeriodStart: period.start, tier: tierCfg });
   const { error: ledgerErr } = await db.from("pass_ledger").insert(
     entries.map((e) => ({ member_id: memberId, subscription_id: saved.id, period_start: e.periodStart, passes: e.passes, type: e.type, note: e.note })),
@@ -255,10 +260,37 @@ export async function upgradeSubTier(memberId: string, sub: Subscription, toPlan
   }
 
   // The passes left this period now cover the higher max.
-  await db.from("subscriptions").update({ tier: to.id, period_max_pass_value: to.maxPassValueCents }).eq("id", sub.id);
+  await db.from("subscriptions").update({ tier: to.id, pending_tier: null, period_max_pass_value: to.maxPassValueCents }).eq("id", sub.id);
   await db.from("sub_tier_upgrades").insert({
     member_id: memberId, subscription_id: sub.id, period_start: sub.currentPeriodStart, from_plan: from.id, to_plan: to.id,
     passes_left: passesLeft, amount: cost, stripe_payment_intent: paymentIntent,
   });
   return { plan: to.id, chargedCents: paymentIntent ? cost : 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Plan changes: any plan, any time, effective next month. Stripe bills the new price from the
+// next renewal (no proration); this month's passes and daily max stay as they are, and the
+// switch waits in pending_tier until then. (The in-month sub-tier upgrade above is the exception.)
+// ---------------------------------------------------------------------------
+
+export async function changePlan(memberId: string, sub: Subscription, toPlan: unknown) {
+  if (!isTierId(toPlan)) throw badRequest("BAD_PLAN", "Pick a plan.");
+  const db = supabaseAdmin();
+  const target = toPlan === sub.tier ? null : toPlan;
+  if (process.env.STRIPE_SECRET_KEY) {
+    const { data: row } = await db.from("subscriptions").select("stripe_subscription_id").eq("id", sub.id).single();
+    if (!row?.stripe_subscription_id) throw new AppError(409, "NO_STRIPE_SUBSCRIPTION", "We couldn't find your billing details. Contact support.");
+    const stripeSub = await stripe().subscriptions.retrieve(row.stripe_subscription_id);
+    const itemId = stripeSub.items.data[0]?.id;
+    if (itemId) {
+      await stripe().subscriptions.update(row.stripe_subscription_id, {
+        items: [{ id: itemId, price: priceIdFor(target ?? sub.tier) }],
+        proration_behavior: "none",
+        metadata: { ...stripeSub.metadata, tier: target ?? sub.tier },
+      });
+    }
+  }
+  await db.from("subscriptions").update({ pending_tier: target }).eq("id", sub.id);
+  return { pendingPlan: target, effectiveAt: sub.currentPeriodEnd };
 }
