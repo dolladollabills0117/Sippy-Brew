@@ -201,16 +201,16 @@ export async function voidOverage(paymentIntentId: string): Promise<void> {
 
 // ---------------------------------------------------------------------------
 // Sub-tier upgrades (e.g. Affogato · Decaf → Affogato · Double Shot). The member confirms the
-// exact amount first. They pay the per-pass difference for the passes left this period (card on
-// file), those passes cover the higher max right away, and Stripe bills the higher plan from the
-// next renewal (no proration).
+// exact amount first. They pay the full monthly price difference now (card on file), the passes
+// left this period cover the higher max right away, and Stripe bills the higher plan from the next
+// renewal (no proration).
 // ---------------------------------------------------------------------------
 
 export async function upgradeSubTier(memberId: string, sub: Subscription, toPlan: unknown, confirmedCents: unknown, passesLeft: number) {
   const from = getTier(sub.tier);
   const to = upgradeTarget(from);
   if (!to || toPlan !== to.id) throw badRequest("BAD_UPGRADE", "That plan isn't an upgrade from your current one.");
-  const cost = upgradeNowCost(from, to, passesLeft);
+  const cost = upgradeNowCost(from, to);
   if (confirmedCents !== cost) {
     throw new AppError(409, "UPGRADE_CONFIRMATION_REQUIRED", `Upgrading now costs ${(cost / 100).toFixed(2)}. Please confirm that amount to continue.`);
   }
@@ -231,7 +231,7 @@ export async function upgradeSubTier(memberId: string, sub: Subscription, toPlan
         payment_method: pm.paymentMethod,
         off_session: true,
         confirm: true,
-        description: `Sippy Brew upgrade to ${to.name} for ${passesLeft} remaining passes`,
+        description: `Sippy Brew upgrade to ${to.name} (monthly difference)`,
         metadata: { member_id: memberId, kind: "sub_tier_upgrade", from: from.id, to: to.id },
       });
       paymentIntent = pi.id;

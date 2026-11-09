@@ -5,9 +5,9 @@ import { RULES, SUB_TIERS, TIER_GROUPS, type Tier } from "../config";
  * A member on the lower sub-tier who keeps paying overages (lattes and other pricier drinks) is
  * encouraged to move up to the higher sub-tier of the same tier.
  *
- * "Pay the difference": upgrading now costs the per-pass difference for each pass left this
- * period (e.g. $4 × 3 passes = $12 from Decaf to Double Shot), and those passes immediately
- * cover the higher max. From the next renewal the member is billed the higher plan's price.
+ * "Pay the difference": upgrading now costs the full monthly price difference (e.g. $20 from
+ * Affogato · Decaf at $20 to Affogato · Double Shot at $40). The passes left this period cover
+ * the higher max right away, and from the next renewal the member is billed the higher price.
  */
 
 /** The next sub-tier up in the same tier (higher daily max), or null if already at the top. */
@@ -18,12 +18,11 @@ export function upgradeTarget(plan: Tier): Tier | null {
   return higher ? group.plans[higher.id] : null;
 }
 
-/** What upgrading costs right now: the per-pass difference for each pass left this period. */
-export function upgradeNowCost(from: Tier, to: Tier, passesLeft: number): number {
+/** What upgrading costs right now: the full monthly price difference between the two plans. */
+export function upgradeNowCost(from: Tier, to: Tier): number {
   if (to.group !== from.group) throw new Error("upgrades stay within the same tier");
-  const perPass = to.maxPassValueCents - from.maxPassValueCents;
-  if (perPass <= 0) throw new Error("not an upgrade");
-  return Math.max(0, passesLeft) * perPass;
+  if (to.maxPassValueCents <= from.maxPassValueCents) throw new Error("not an upgrade");
+  return to.priceCents - from.priceCents;
 }
 
 export interface UpgradeSuggestion {
@@ -34,7 +33,7 @@ export interface UpgradeSuggestion {
   /** Total overage those orders cost the member this period. */
   overagePaidCents: number;
   passesLeft: number;
-  /** Charged now if they upgrade: per-pass difference × passes left. */
+  /** Charged now if they upgrade: the full monthly price difference. */
   upgradeNowCents: number;
   /** Price from the next renewal. */
   newMonthlyPriceCents: number;
@@ -66,7 +65,7 @@ export function suggestUpgrade(params: {
     overageOrders: over.length,
     overagePaidCents: over.reduce((s, o) => s + o.overageCents, 0),
     passesLeft: params.passesLeft,
-    upgradeNowCents: upgradeNowCost(params.plan, to, params.passesLeft),
+    upgradeNowCents: upgradeNowCost(params.plan, to),
     newMonthlyPriceCents: to.priceCents,
     monthlyDifferenceCents: to.priceCents - params.plan.priceCents,
   };

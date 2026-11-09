@@ -41,8 +41,8 @@ export function UpgradeCard({ upgrade, passesLeft, nudge, onDone }: { upgrade: U
           : `Each pass covers up to ${money(upgrade.toMaxPassValueCents)}, so lattes and specialty drinks are covered.`}
       </Text>
       <Text variant="small">
-        Pay the difference for your {passesLeft} remaining {passesLeft === 1 ? "pass" : "passes"}: {money(upgrade.upgradeNowCents)} now. From your next renewal it’s{" "}
-        {formatCents(upgrade.newMonthlyPriceCents)}/month.
+        Pay the monthly difference, {money(upgrade.upgradeNowCents)}, now. Your {passesLeft} remaining {passesLeft === 1 ? "pass covers" : "passes cover"} up to{" "}
+        {money(upgrade.toMaxPassValueCents)} right away, and from your next renewal it’s {formatCents(upgrade.newMonthlyPriceCents)}/month.
       </Text>
       {error && <ErrorNote message={error} />}
       {confirming ? (

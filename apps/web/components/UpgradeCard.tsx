@@ -55,8 +55,8 @@ export function UpgradeCard({ upgrade, passesLeft, nudge }: { upgrade: Upgrade; 
         )}
       </div>
       <p className="text-sm text-espresso">
-        Pay the difference for your {passesLeft} remaining {passesLeft === 1 ? "pass" : "passes"}: <strong>{money(upgrade.upgradeNowCents)}</strong> now. From your next renewal
-        it&apos;s {formatCents(upgrade.newMonthlyPriceCents)}/month.
+        Pay the monthly difference, <strong>{money(upgrade.upgradeNowCents)}</strong>, now. Your {passesLeft} remaining {passesLeft === 1 ? "pass covers" : "passes cover"} up to{" "}
+        {money(upgrade.toMaxPassValueCents)} right away, and from your next renewal it&apos;s {formatCents(upgrade.newMonthlyPriceCents)}/month.
       </p>
       {error && <Alert tone="error">{error}</Alert>}
       {confirming ? (

@@ -88,7 +88,7 @@ export async function getUpgradeOption(sub: Subscription | null, passesLeft: num
     toMaxPassValueCents: to.maxPassValueCents,
     overageOrders: over.length,
     overagePaidCents: over.reduce((t, o) => t + o.overageCents, 0),
-    upgradeNowCents: upgradeNowCost(plan, to, passesLeft),
+    upgradeNowCents: upgradeNowCost(plan, to),
     newMonthlyPriceCents: to.priceCents,
   };
 }

@@ -8,11 +8,12 @@ describe("sub-tier upgrades", () => {
     expect(upgradeTarget(getTier("macchiato_double_shot"))).toBeNull();
   });
 
-  it("charges the per-pass difference for each pass left: $4 × 3 = $12", () => {
-    expect(upgradeNowCost(getTier("affogato_decaf"), getTier("affogato_double_shot"), 3)).toBe(1200);
-    expect(upgradeNowCost(getTier("macchiato_decaf"), getTier("macchiato_double_shot"), 12)).toBe(4800); // a full period = the monthly difference
-    expect(upgradeNowCost(getTier("affogato_decaf"), getTier("affogato_double_shot"), 0)).toBe(0);
-    expect(() => upgradeNowCost(getTier("affogato_decaf"), getTier("macchiato_double_shot"), 3)).toThrow();
+  it("charges the full monthly difference: $20, $48 and $80", () => {
+    expect(upgradeNowCost(getTier("affogato_decaf"), getTier("affogato_double_shot"))).toBe(2000);
+    expect(upgradeNowCost(getTier("macchiato_decaf"), getTier("macchiato_double_shot"))).toBe(4800);
+    expect(upgradeNowCost(getTier("double_espresso_decaf"), getTier("double_espresso_double_shot"))).toBe(8000);
+    expect(() => upgradeNowCost(getTier("affogato_decaf"), getTier("macchiato_double_shot"))).toThrow();
+    expect(() => upgradeNowCost(getTier("affogato_double_shot"), getTier("affogato_decaf"))).toThrow();
   });
 
   it(`nudges after ${RULES.upgradeNudgeAfterOverages} orders with an overage, not before`, () => {
@@ -24,7 +25,7 @@ describe("sub-tier upgrades", () => {
       to: { id: "affogato_double_shot" },
       overageOrders: 2,
       overagePaidCents: 300,
-      upgradeNowCents: 800,
+      upgradeNowCents: 2000,
       newMonthlyPriceCents: 4000,
       monthlyDifferenceCents: 2000,
     });
