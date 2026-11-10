@@ -3,7 +3,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "./ui";
 
-export function AdminShopActions({ id, status, spotlight, removedForFood }: { id: string; status: string; spotlight: boolean; removedForFood?: boolean }) {
+export function AdminShopActions({
+  id,
+  status,
+  spotlight,
+  removedForFood,
+  founding,
+}: {
+  id: string;
+  status: string;
+  spotlight: boolean;
+  removedForFood?: boolean;
+  founding?: boolean;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   async function patch(body: Record<string, unknown>) {
@@ -33,6 +45,9 @@ export function AdminShopActions({ id, status, spotlight, removedForFood }: { id
           Remove: selling food
         </Button>
       )}
+      <Button size="sm" variant="secondary" disabled={busy} aria-pressed={founding} onClick={() => patch({ founding: !founding })}>
+        {founding ? "Founding (12%)" : "Standard (15%)"}
+      </Button>
       <Button size="sm" variant="secondary" disabled={busy} aria-pressed={spotlight} onClick={() => patch({ spotlight: !spotlight })}>
         {spotlight ? "★ Spotlighted" : "Spotlight"}
       </Button>

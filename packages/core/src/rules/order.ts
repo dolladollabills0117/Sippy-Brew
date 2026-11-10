@@ -87,7 +87,7 @@ export type OrderValidation =
       passCoveredCents: number;
       /** Part of passCoveredCents paid with a bonus pass the member put toward the overage. */
       bonusCoveredCents: number;
-      /** Confirmed by and charged to the member. Goes 100% to the shop. */
+      /** Confirmed by and charged to the member. Goes to the shop, less card processing and 5%. */
       overageCents: number;
       passDay: string;
       passesLeftAfter: number;

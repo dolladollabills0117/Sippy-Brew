@@ -60,8 +60,8 @@ Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass cove
 - One pass per member per calendar day (America/New_York), at one shop.
 - The pass covers the **first $4.00 (House) or $8.00 (Specialty)** of that day's order.
 - If the order is over that, the member pays the **overage**. Checkout shows the pass amount, the overage and the total, and the member must confirm the exact overage before the order can be placed. The server and the database both refuse an unconfirmed overage, so nothing is ever charged without confirmation. The confirmed overage is authorized on the member's card on file, captured when the shop scans the QR, and released if the order is cancelled. Overages under $0.50 (Stripe's minimum card charge) are waived.
-- **Overage goes 100% to the shop**, with no platform commission. The shop pays the card processing on it: the actual Stripe fee when Stripe reports it, otherwise the 2.9% + 30¢ estimate in `rules.json`.
-- **Commission is 12% of the pass-covered value only.** The shop gets 88% of it. The platform keeps the rest of the subscription, including the value of unused passes.
+- **Overage goes to the shop, less a 5% platform fee** (every shop, founding included) and the card processing on it: the actual Stripe fee when Stripe reports it, otherwise the 2.9% + 30¢ estimate in `rules.json`.
+- **Commission on pass value: 12% for founding shops, 15% for everyone else.** Shops that join while `foundingProgramOpen` is on (rules.json) are founding shops and keep 12% for good (`shops.founding`; admins can change it). The platform keeps the rest of the subscription, including the value of unused passes.
 - **Upgrade nudge.** A House member who keeps paying overages (2 overage orders in a period by default, `upgradeNudgeAfterOverages` in `rules.json`) is encouraged to move up to Specialty on the same tier: a card on their home screen and account page, plus a tip at checkout. Upgrading charges the full monthly price difference now (after the member confirms the exact amount), their remaining passes cover the higher max right away, and the higher price applies from the next renewal.
 - **Drink customizations.** Shops add customization groups to each drink on the web portal: milk choices, extra shots, syrups and so on, each at the shop's own price, as pick-one or pick-up-to-N groups, optionally required. Members pick them when ordering, and they count toward the drink's price: the pass covers the first $4/$8 and anything above is an overage the member confirms, paid 100% to the shop. So shops don't need to mark up prices. Food add-ons are refused, same as food menu items.
 - The upgrade offer is hidden when fewer than 3 passes are left in the period (`upgradeMinPassesLeft` in `rules.json`).
@@ -83,7 +83,7 @@ The rules are written once in `packages/core` and used by the web app, both mobi
 | Overage only after confirmation | `checkOverageConfirmed` | `place_order` + check constraint on `overage_confirmed_at` |
 | No rollover | `planRenewal`, `passBalance` (period-scoped) | `pass_ledger.period_start`, one grant/expire per period |
 | QR 30 s + single use | `issueQr`, `checkRedeemable` | `redeem_qr` (row lock) + unique index on redeemed orders |
-| Commission 12% / 88% of pass value; overage to shop less processing | `splitOrder`, `orderPayout`, `summarizePayout` | `orders.commission + net = pass_covered_amount`; `payouts.overage_total`, `processing_fees`; `create_payout` sum checks |
+| Commission 12% founding / 15% standard on pass value; 5% of overages; overage to shop less processing | `splitOrder`, `orderPayout`, `summarizePayout` | `orders.commission + net = pass_covered_amount`; `payouts.overage_total`, `processing_fees`; `create_payout` sum checks |
 
 ## Setup
 

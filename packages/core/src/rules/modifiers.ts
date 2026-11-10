@@ -5,7 +5,7 @@ import { foodProblemInCustomization } from "./food";
  * Drink customizations ("modifiers"), set by each shop: milk choices, extra shots, syrups,
  * temperature. Each option carries the shop's own price. The options a member picks are added
  * to the drink's price, so they count toward the pass (first $4 or $8 of the day) and anything
- * above becomes an overage the member confirms, paid 100% to the shop. No markup needed.
+ * above becomes an overage the member confirms, paid to the shop (less card processing and 5%). No markup needed.
  */
 export interface ModifierOption {
   id: string;

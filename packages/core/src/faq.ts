@@ -191,7 +191,7 @@ export const MERCHANT_FAQ: readonly FaqSection[] = [
       },
       {
         q: "Can I offer customizations like oat milk or an extra shot?",
-        a: "Yes. Add them to any drink in your menu with your prices. If they push an order over the member's pass, the member confirms and pays the difference, and it goes to you.",
+        a: "Yes. Add them to any drink in your menu with your prices. If they push an order over the member's pass, the member confirms and pays the difference, and it goes to you (less card processing and 5%).",
       },
     ],
   },
@@ -200,7 +200,11 @@ export const MERCHANT_FAQ: readonly FaqSection[] = [
     items: [
       {
         q: "How much do I get paid?",
-        a: `You keep ${100 - RULES.commissionBps / 100}% of what each pass covers, including no-shows and bonus passes, plus 100% of overages less card processing. Payouts go to your bank every Monday through Stripe.`,
+        a: `You keep ${100 - RULES.standardCommissionBps / 100}% of what each pass covers (${100 - RULES.foundingCommissionBps / 100}% if you're a founding shop, locked in), including no-shows and bonus passes. On overages you keep 95%: Sippy Brew takes ${RULES.overageCommissionBps / 100}%, and the card processing comes out too. Payouts go to your bank every Monday through Stripe.`,
+      },
+      {
+        q: "What's a founding shop?",
+        a: `Shops that join early are founding shops: they pay ${RULES.foundingCommissionBps / 100}% on pass value instead of ${RULES.standardCommissionBps / 100}%, for as long as they're on Sippy Brew. Your dashboard shows whether you're one.`,
       },
       {
         q: "Do I pay for card processing?",

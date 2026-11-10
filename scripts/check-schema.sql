@@ -200,7 +200,7 @@ do $$ begin
 end $$;
 
 -- Payout ties orders to the payout and checks the sum.
-select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '7 days', now(), array[:'first_order']::uuid[], 500, 60, 440, 0, 0);
+select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '7 days', now(), array[:'first_order']::uuid[], 500, 60, 440, 0, 0, 0);
 do $$ begin
   assert (select payout_id is not null from orders where pass_day = '2026-11-04');
 end $$;
@@ -316,7 +316,7 @@ do $$ begin
     if sqlerrm <> 'INVALID_TRANSITION' then raise; end if;
   end;
 end $$;
-select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '14 days', now() - interval '7 days', array[:'ns_order']::uuid[], 500, 60, 440, 0, 0);
+select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '14 days', now() - interval '7 days', array[:'ns_order']::uuid[], 500, 60, 440, 0, 0, 0);
 
 -- Menu price changes are dated.
 update menu_items set price = 550 where id = '00000000-0000-0000-0000-0000000000e1';
@@ -335,6 +335,21 @@ do $$ begin
     raise exception 'preparing order cancelled';
   exception when raise_exception then
     if sqlerrm <> 'INVALID_TRANSITION' then raise; end if;
+  end;
+end $$;
+
+-- New shops aren't founding by default; a payout must include the overage commission.
+do $$ begin
+  begin
+    perform create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '28 days', now() - interval '21 days', array[]::uuid[], 0, 0, 0, 0, 0, 5);
+    raise exception 'payout with a wrong overage commission accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'PAYOUT_MISMATCH' then raise; end if;
+  end;
+  begin
+    update orders set overage_commission = overage_amount + 1 where pass_day = '2026-11-04';
+    raise exception 'overage split over the overage accepted';
+  exception when check_violation then null;
   end;
 end $$;
 

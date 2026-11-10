@@ -134,7 +134,7 @@ export default function OrdersScreen() {
                 ))}
                 <Text variant="small" color={colors.pecan}>
                   {formatCents(o.totalCents, { showZeroCents: true })} · Daily Pass
-                  {o.overageCents > 0 ? ` + ${formatCents(o.overageCents, { showZeroCents: true })} overage (paid in app, 100% yours)` : ""}
+                  {o.overageCents > 0 ? ` + ${formatCents(o.overageCents, { showZeroCents: true })} overage (paid in app, 95% yours)` : ""}
                 </Text>
                 {next && next !== "picked_up" && (
                   <Button

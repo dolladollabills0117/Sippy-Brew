@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  RULES,
   checkCanPost,
   colors,
   contrastRatio,
@@ -68,6 +69,8 @@ describe("dashboard stats", () => {
         o("5", "m3", "2026-11-04T15:00:00Z", 500, "ready"), // not redeemed yet
       ],
       now,
+      undefined,
+      RULES.foundingCommissionBps,
     );
     expect(stats.redemptions).toEqual({ today: 2, week: 3, month: 3 });
     expect(stats.members).toEqual({ new: 2, returning: 1 });

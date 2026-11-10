@@ -8,7 +8,7 @@ const newId = () => Math.random().toString(36).slice(2, 9);
 /**
  * Edit a drink's customizations: groups like Milk or Syrups, each with options and the shop's
  * own prices. Members pick these when ordering; the price adds to the drink, the pass covers
- * the first $4/$8 of the day and the rest is an overage paid 100% to the shop.
+ * the first $4/$8 of the day and the rest is an overage paid to the shop (less card processing and 5%).
  */
 export function ModifierEditor({
   initial,

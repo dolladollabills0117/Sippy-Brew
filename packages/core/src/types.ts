@@ -45,6 +45,8 @@ export interface Shop {
   status: ShopStatus;
   spotlight: boolean;
   payoutsEnabled: boolean;
+  /** Founding shops pay 12% on pass value (instead of 15%), locked in. */
+  founding?: boolean;
   /** Set when Sippy Brew removed the shop, e.g. "food" for selling food. */
   removalReason?: "food" | null;
   removedAt?: string | null;
@@ -177,11 +179,13 @@ export interface Payout {
   grossCents: number;
   commissionCents: number;
   netCents: number;
-  /** Overages, 100% to the shop. */
+  /** Overages (to the shop, less card processing and 5%). */
   overageTotalCents: number;
   /** Card processing on overages, paid by the shop. */
   processingFeesCents: number;
-  /** net + overage total - processing fees. */
+  /** Sippy Brew's 5% of overages. */
+  overageCommissionCents: number;
+  /** net + overage total − processing fees − overage commission. */
   transferCents: number;
   orderCount: number;
   status: PayoutStatus;

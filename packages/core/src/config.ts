@@ -66,7 +66,13 @@ export interface Rules {
   /** Card processing on overage charges, paid by the shop: bps of the amount plus a fixed fee. */
   overageProcessingFeeBps: number;
   overageProcessingFeeFixedCents: number;
-  commissionBps: number;
+  /** Commission on pass value: founding shops (locked in) and everyone else. */
+  foundingCommissionBps: number;
+  standardCommissionBps: number;
+  /** Commission on overages, for every shop (founding included). */
+  overageCommissionBps: number;
+  /** New shops join as founding shops while this is on. */
+  foundingProgramOpen: boolean;
   qrTtlSeconds: number;
   timeZone: string;
   shopStoryMaxChars: number;

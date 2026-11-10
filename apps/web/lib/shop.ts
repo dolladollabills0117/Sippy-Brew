@@ -19,7 +19,7 @@ import {
   type MenuItemInput,
   type ModifierGroup,
   type OrderStatus,
-  type ShopHours, canFlagNoShow } from "@sippy/core";
+  type ShopHours, canFlagNoShow, commissionBpsFor, overageCommission } from "@sippy/core";
 import type { Session } from "./auth";
 import { captureOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPayout, mapPost, mapShop, ORDER_SELECT } from "./db";
@@ -66,7 +66,13 @@ export async function saveShop(
   };
   const q = existing
     ? db.from("shops").update(row).eq("id", existing.id)
-    : db.from("shops").insert({ ...row, status: "pending", food_policy_accepted_at: new Date().toISOString() });
+    : db.from("shops").insert({
+        ...row,
+        status: "pending",
+        food_policy_accepted_at: new Date().toISOString(),
+        // Shops that join while the founding program is open keep 12% for good.
+        founding: RULES.foundingProgramOpen,
+      });
   const { data, error } = await q.select("*").single();
   if (error) throw fromDbError(error);
   return mapShop(data);
@@ -149,8 +155,8 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
   );
   if (!check.ok) throw new AppError(check.code === "EXPIRED" ? 410 : 409, check.code, check.message);
 
-  // Commission is on the pass-covered value only.
-  const split = splitOrder(r.orders.pass_covered_amount);
+  // Commission on the pass-covered value: 12% for founding shops, 15% for everyone else.
+  const split = splitOrder(r.orders.pass_covered_amount, commissionBpsFor(shop));
   const { error } = await db.rpc("redeem_qr", {
     p_redemption: r.id,
     p_shop: shop.id,
@@ -164,9 +170,7 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
   // shop pays its card processing: the actual Stripe fee, or the configured estimate.
   const { data: paid } = await db.from("orders").select("overage_amount, overage_payment_intent, overage_status").eq("id", r.order_id).single();
   if (paid?.overage_payment_intent && paid.overage_status === "authorized") {
-    const res = await captureOverage(paid.overage_payment_intent);
-    const fee = res.ok ? Math.min(paid.overage_amount, res.feeCents ?? overageProcessingFee(paid.overage_amount)) : 0;
-    await db.from("orders").update({ overage_status: res.ok ? "captured" : "failed", overage_fee: fee }).eq("id", r.order_id);
+    await captureAndSplitOverage(r.order_id, paid.overage_payment_intent, paid.overage_amount);
   }
 
   const order = await getOrder(r.order_id);
@@ -260,7 +264,7 @@ export async function getShopStats(s: Session) {
       items: (o.order_items ?? []).map((i: { name: string; quantity: number }) => ({ name: i.name, quantity: i.quantity })),
     })),
   ];
-  return { stats: shopStats(orders, now), shop: mapShop(shopRow) };
+  return { stats: shopStats(orders, now, RULES.timeZone, commissionBpsFor(shopRow)), shop: mapShop(shopRow) };
 }
 
 export async function shopPayouts(s: Session) {
@@ -315,7 +319,8 @@ export async function flagNoShowRow(
   staffId: string | null,
 ) {
   const db = supabaseAdmin();
-  const split = splitOrder(row.pass_covered_amount);
+  const { data: shopRow } = await db.from("shops").select("founding").eq("id", row.shop_id).single();
+  const split = splitOrder(row.pass_covered_amount, commissionBpsFor(shopRow));
   const { error } = await db.rpc("flag_no_show", {
     p_order: row.id,
     p_shop: row.shop_id,
@@ -328,9 +333,7 @@ export async function flagNoShowRow(
 
   // The drink was made: collect the overage the member confirmed, as at a pickup.
   if (row.overage_payment_intent && row.overage_status === "authorized") {
-    const res = await captureOverage(row.overage_payment_intent);
-    const fee = res.ok ? Math.min(row.overage_amount, res.feeCents ?? overageProcessingFee(row.overage_amount)) : 0;
-    await db.from("orders").update({ overage_status: res.ok ? "captured" : "failed", overage_fee: fee }).eq("id", row.id);
+    await captureAndSplitOverage(row.id, row.overage_payment_intent, row.overage_amount);
   }
 
   const order = await getOrder(row.id);
@@ -352,4 +355,18 @@ export async function appealRemoval(s: Session, note: string) {
   if (error) throw fromDbError(error);
   await db.from("platform_alerts").insert({ kind: "appeal", shop_id: shop.id, message: `Appeal: ${text}` });
   return { appealed: true };
+}
+
+/**
+ * Capture a confirmed overage and record its split: the shop pays the card processing (the
+ * actual Stripe fee, or the estimate) and Sippy Brew takes 5% (every shop, founding included).
+ */
+async function captureAndSplitOverage(orderId: string, paymentIntent: string, overageCents: number) {
+  const res = await captureOverage(paymentIntent);
+  const fee = res.ok ? Math.min(overageCents, res.feeCents ?? overageProcessingFee(overageCents)) : 0;
+  const cut = res.ok ? Math.min(overageCents - fee, overageCommission(overageCents)) : 0;
+  await supabaseAdmin()
+    .from("orders")
+    .update({ overage_status: res.ok ? "captured" : "failed", overage_fee: fee, overage_commission: cut })
+    .eq("id", orderId);
 }

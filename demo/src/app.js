@@ -7,15 +7,15 @@
   var ALL_DAY = { sun: { open: "00:00", close: "23:59" }, mon: { open: "00:00", close: "23:59" }, tue: { open: "00:00", close: "23:59" }, wed: { open: "00:00", close: "23:59" }, thu: { open: "00:00", close: "23:59" }, fri: { open: "00:00", close: "23:59" }, sat: { open: "00:00", close: "23:59" } };
 
   var BASE_SHOPS = [
-    { id: "main", name: "Main Street Roasters", address: "25 Main St, West Orange", lat: 40.7962, lng: -74.2360, hours: "6:30am–6pm",
+    { id: "main", name: "Main Street Roasters", address: "25 Main St, West Orange", lat: 40.7962, lng: -74.2360, founding: true, hours: "6:30am–6pm",
       story: "Small-batch roasting in the back room every Tuesday. Every shot pulled like it's the first.",
       menu: [["espresso", "Espresso", "double", 325, "espresso"], ["cortado", "Cortado", "4.5 oz", 425, "espresso"], ["latte", "Latte", "12 oz", 525, "espresso"],
              ["maple", "Maple Cinnamon Latte", "16 oz", 650, "specialty"], ["drip", "House Drip", "12 oz", 275, "brewed"], ["cold", "Cold Brew", "16 oz", 500, "cold"], ["mocha", "Big Mocha", "20 oz", 875, "specialty"]] },
-    { id: "eagle", name: "Eagle Rock Espresso", address: "450 Eagle Rock Ave, West Orange", lat: 40.8125, lng: -74.2520, hours: "7am–5pm",
+    { id: "eagle", name: "Eagle Rock Espresso", address: "450 Eagle Rock Ave, West Orange", lat: 40.8125, lng: -74.2520, founding: true, hours: "7am–5pm",
       story: "A bright corner café with a single-origin pour-over of the week. Neighbors, laptops and dogs welcome.",
       menu: [["americano", "Americano", "12 oz", 350, "espresso"], ["capp", "Cappuccino", "8 oz", 450, "espresso"], ["flat", "Flat White", "8 oz", 475, "espresso"],
              ["pour", "Pour-Over", "10 oz", 450, "brewed"], ["iced", "Iced Latte", "16 oz", 575, "cold"], ["nitro", "Nitro Cold Brew", "12 oz", 550, "cold"]] },
-    { id: "valley", name: "Pleasant Valley Coffee Co.", address: "500 Pleasant Valley Way, West Orange", lat: 40.7790, lng: -74.2610, hours: "7am–3pm",
+    { id: "valley", name: "Pleasant Valley Coffee Co.", address: "500 Pleasant Valley Way, West Orange", lat: 40.7790, lng: -74.2610, founding: true, hours: "7am–3pm",
       story: "Family-run since 2009. Cardamom lattes from our grandmother's recipe.",
       menu: [["vespresso", "Espresso", "single", 275, "espresso"], ["cardamom", "Cardamom Latte", "12 oz", 600, "specialty"], ["vmocha", "Mocha", "12 oz", 575, "specialty"],
              ["vdrip", "Drip Coffee", "16 oz", 300, "brewed"], ["viced", "Iced Coffee", "16 oz", 375, "cold"]] },
@@ -65,6 +65,20 @@
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return withExtras(list[i]);
     return withExtras(BASE_SHOPS[0]);
   }
+  /** Founding shops pay 12% on pass value; everyone else 15%. Every shop pays 5% on overages. */
+  function isFounding(id) { var o = (state.foundingOverride || {})[id]; return o === undefined ? !!shopById(id).founding : o; }
+  function rateFor(id) { return S.commissionBpsFor({ founding: isFounding(id) }); }
+  function payoutFor(o) { return S.orderPayout({ passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }, rateFor(o.shopId)); }
+  /** Adds up per-order payouts (each at its shop's rate). */
+  function sumPayouts(list) {
+    var t = { grossCents: 0, commissionCents: 0, netCents: 0, overageTotalCents: 0, processingFeesCents: 0, overageCommissionCents: 0, transferCents: 0, orderCount: list.length };
+    list.forEach(function (o) {
+      var p = payoutFor(o);
+      t.grossCents += p.passCoveredCents; t.commissionCents += p.commissionCents; t.netCents += p.passNetCents;
+      t.overageTotalCents += p.overageCents; t.processingFeesCents += p.processingFeeCents; t.overageCommissionCents += p.overageCommissionCents; t.transferCents += p.shopCents;
+    });
+    return t;
+  }
   function isPaused(id) { return !!(state.paused || {})[id]; }
   /** Admin-controlled listing status. Sample shops start active; newly listed shops start pending. */
   function shopStatus(id) { return (state.shopStatus || {})[id] || "active"; }
@@ -85,7 +99,7 @@
       error: null, scan: null, sheet: null, authMode: "signup",
       quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
       bonus: [], refCode: null, friends: 0, grandTour: false,
-      removed: {}, appeals: {}, agreed: false, lastEmail: null, contactSent: false, cartShop: null, editLine: null, customizeShop: null,
+      removed: {}, appeals: {}, foundingOverride: {}, agreed: false, lastEmail: null, contactSent: false, cartShop: null, editLine: null, customizeShop: null,
       minuteOffset: 0, prices: {}, priceChangedAt: {}, notices: [], teamAlerts: [], scanRows: null, scanSkipped: [], scanning: false, orderNote: "", orderAllergy: "" };
   }
   var state = fresh();
@@ -448,7 +462,7 @@
       '<label class="field" for="b-story">Your story <span class="muted small" style="font-weight:400">(up to ' + S.RULES.shopStoryMaxChars + ' characters)</span><textarea class="input" id="b-story" name="story" rows="3" maxlength="' + S.RULES.shopStoryMaxChars + '">Neighborhood espresso bar with a bright window seat and the friendliest baristas on Northfield.</textarea></label></div>' +
       '<div class="card stack"><b>Starter menu</b><span class="muted small">Coffee only. Food can\'t be sold through the app. Leave a row blank to skip it.</span>' +
       row(0, "Latte", "12 oz", "5.00", "espresso") + row(1, "House Drip", "12 oz", "3.00", "brewed") + row(2, "Cold Brew", "16 oz", "4.75", "cold") + "</div>" +
-      '<div class="card stack"><b>Payouts</b><span class="muted">In the real app you connect your bank through Stripe here. You keep 88% of what a member\'s pass covers, plus 100% of any overage less card processing, paid every Monday.</span></div>' +
+      '<div class="card stack"><b>Payouts</b><span class="muted">In the real app you connect your bank through Stripe here. Founding shops keep 88% of what a member\'s pass covers (85% after the founding program), plus 95% of any overage less card processing, paid every Monday.</span></div>' +
       '<div class="card stack" style="border:2px solid var(--danger)"><b>No food, whatsoever</b><span class="small">' + esc(S.FOOD_POLICY) + '</span>' +
       '<label class="row" for="food-ok" style="gap:10px;align-items:flex-start;font-weight:700;cursor:pointer"><input id="food-ok" name="foodpolicy" type="checkbox" style="width:22px;height:22px;accent-color:var(--burnt);flex-shrink:0;margin-top:2px"><span>I understand: my shop will sell only drinks through Sippy Brew, and selling food means removal.</span></label></div>' +
       '<button class="btn" type="submit">List my shop</button></form>';
@@ -656,7 +670,7 @@
       '<div class="row total"><span>Order total</span><span class="num">' + money2(total) + "</span></div></div>" +
       (base.overageCents > 0 && spareBonus > 0 ? '<label class="bonus-opt" for="ub"><input id="ub" type="checkbox" data-a="use-bonus" ' + (state.useBonus ? "checked" : "") + '><span><b>Use a bonus pass toward the overage</b><span class="muted small" style="display:block">It covers up to ' + money2(Math.min(base.overageCents, t.maxPassValueCents)) + " of the " + money2(base.overageCents) + " overage. You have " + spareBonus + " bonus pass" + (spareBonus === 1 ? "" : "es") + " to use.</span></span></label>" : "") +
       (hasOver ? '<div class="confirm"><b>This order is ' + money2(split.overageCents) + " over your pass.</b>" +
-        '<span class="muted small">' + (S.overageIsCharged(split.overageCents) ? "It's charged to your card on file when the shop hands over your order, at the shop's menu prices. It goes 100% to the shop." : "Overages under " + money2(S.RULES.minOverageChargeCents) + " are waived, so you won't be charged for this one.") + "</span>" +
+        '<span class="muted small">' + (S.overageIsCharged(split.overageCents) ? "It's charged to your card on file when the shop hands over your order, at the shop's menu prices. It goes to the shop." : "Overages under " + money2(S.RULES.minOverageChargeCents) + " are waived, so you won't be charged for this one.") + "</span>" +
         '<label for="ov"><input id="ov" type="checkbox" data-a="confirm-overage" data-amount="' + split.overageCents + '" ' + (confirmed ? "checked" : "") + "><span>I confirm the " + money2(split.overageCents) + " overage. My pass covers " + money2(split.passCoveredCents) + " of the " + money2(total) + " total.</span></label>" +
         (upgradeInfo() && S.overageCoveredByUpgrade(t, total) > 0 ? '<span class="small" style="background:var(--cream);border-radius:12px;padding:8px 10px">Tip: on <b>' + S.upgradeTarget(t).name + "</b>, " + money2(S.overageCoveredByUpgrade(t, total)) + ' of this overage would be covered by your pass. <button class="linkbtn" style="min-height:0;padding:0" data-a="goto-upgrade">See upgrade</button></span>' : "") +
         "</div>" : "") +
@@ -767,7 +781,7 @@
         '<span class="muted"><b>Pickup ' + timeFmt.format(new Date(o.pickupAt)) + "</b></span>" + startAt(o) +
         (o.note ? '<div class="order-note"><b>Note:</b> ' + esc(o.note) + "</div>" : "") +
         o.items.map(function (i) { return '<div style="font-size:1.2rem">' + i.quantity + "× " + esc(i.name) + ' <span class="muted">(' + i.size + ")</span>" + (i.options && i.options.length ? '<div style="font-size:1rem;font-weight:800;color:var(--burnt-ink)">' + esc(S.describeOptions(i.options)) + "</div>" : "") + "</div>"; }).join("") +
-        '<span class="muted small">' + money2(o.totalCents) + " · Daily Pass" + (o.overageCents ? " + " + money2(o.overageCents) + " overage (paid in app, 100% yours)" : "") + "</span>" +
+        '<span class="muted small">' + money2(o.totalCents) + " · Daily Pass" + (o.overageCents ? " + " + money2(o.overageCents) + " overage (paid in app, 95% yours)" : "") + "</span>" +
         (next && next !== "picked_up" ? '<button class="btn" data-a="advance" data-id="' + o.id + '">Mark ' + LABEL[next].toLowerCase() + "</button>" : "") +
         (o.status === "ready" ? '<button class="btn" data-a="shop-tab" data-id="scan">Scan to hand off</button>' : "") +
         (canNoShow ? (state.confirmNoShow === o.id
@@ -798,8 +812,8 @@
         r.order.items.map(function (i) { return '<div style="font-weight:400;color:var(--espresso)">' + i.quantity + "× " + esc(i.name) + (i.options && i.options.length ? " · " + esc(S.describeOptions(i.options)) : "") + "</div>"; }).join("") +
         '<div class="lines small" style="margin-top:8px;color:var(--espresso);font-weight:400">' +
         '<div class="row"><span>Pass-covered value</span><span class="num">' + money2(r.pay.passCoveredCents) + "</span></div>" +
-        '<div class="row"><span>12% commission</span><span class="num">−' + money2(r.pay.commissionCents) + "</span></div>" +
-        (r.pay.overageCents ? '<div class="row"><span>Overage (100% yours)</span><span class="num">+' + money2(r.pay.overageCents) + '</span></div><div class="row"><span>Card processing on overage</span><span class="num">−' + money2(r.pay.processingFeeCents) + "</span></div>" : "") +
+        '<div class="row"><span>' + S.pct(rateFor(state.counterShop)) + ' commission</span><span class="num">−' + money2(r.pay.commissionCents) + "</span></div>" +
+        (r.pay.overageCents ? '<div class="row"><span>Overage</span><span class="num">+' + money2(r.pay.overageCents) + '</span></div><div class="row"><span>' + S.pct(S.RULES.overageCommissionBps) + ' fee on overage</span><span class="num">−' + money2(r.pay.overageCommissionCents) + '</span></div><div class="row"><span>Card processing on overage</span><span class="num">−' + money2(r.pay.processingFeeCents) + "</span></div>" : "") +
         '<div class="row total"><span>Your payout for this order</span><span class="num" style="font-size:1rem">' + money2(r.pay.shopCents) + "</span></div></div></div>"
       : '<div class="alert" role="alert">' + esc(r.message) + "</div>") : "";
     return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Scan</h1>' +
@@ -898,12 +912,13 @@
     var week = S.weekBounds(now(), TZ);
     // No-shows are paid like pickups.
     var done = state.orders.filter(function (o) { return o.shopId === state.counterShop && (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), week); });
-    var p = S.summarizePayout(done.map(function (o) { return { passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }; }));
+    var p = sumPayouts(done);
     var line = function (l, v, cls) { return '<div class="row between"><span class="muted">' + l + '</span><span class="num' + (cls || "") + '">' + v + "</span></div>"; };
     return '<div class="card stack"><div class="row between"><b>This week\'s payout</b><span class="badge">Pays Monday</span></div><div class="lines">' +
       line("Pass sales (" + p.orderCount + (p.orderCount === 1 ? " order)" : " orders)"), money2(p.grossCents)) +
-      line("12% commission", "−" + money2(p.commissionCents)) +
-      line("Overages (100% yours)", "+" + money2(p.overageTotalCents)) +
+      line(S.pct(rateFor(state.counterShop)) + " commission" + (isFounding(state.counterShop) ? " (founding rate)" : ""), "−" + money2(p.commissionCents)) +
+      line("Overages", "+" + money2(p.overageTotalCents)) +
+      line(S.pct(S.RULES.overageCommissionBps) + " fee on overages", "−" + money2(p.overageCommissionCents)) +
       line("Card processing on overages", "−" + money2(p.processingFeesCents)) +
       '<div class="row total"><span>Net payout</span><span class="num" style="font-size:1.25rem">' + money2(p.transferCents) + "</span></div></div>" +
       '<span class="muted small">Sent to your bank through Stripe every Monday.</span></div>';
@@ -911,12 +926,13 @@
 
   function listingCard() {
     var sh = shopById(state.counterShop);
+    var rateLine = '<span class="small"><b>Your rate</b> ' + (isFounding(sh.id) ? '<span class="badge honey">Founding shop</span> ' : "") + "You keep " + (100 - rateFor(sh.id) / 100) + "% of pass value and " + (100 - S.RULES.overageCommissionBps / 100) + "% of overages (less card processing).</span>";
     var st = shopStatus(sh.id);
     var badge = st === "pending" ? '<span class="badge honey">Waiting for approval</span>' : st === "paused" ? '<span class="badge bad">Paused by admin</span>' : isPaused(sh.id) ? '<span class="badge">Not accepting orders</span>' : '<span class="badge ok">Live</span>';
     return '<div class="card stack"><div class="row between"><b>Your listing</b>' + badge + "</div>" +
       '<b style="font-family:var(--head);font-weight:400;font-size:1.3rem">' + esc(sh.name) + '</b><span class="muted">' + esc(sh.address) + "</span>" +
       '<span class="small"><b>Hours</b> ' + esc(sh.hours) + '</span><span class="muted small">' + esc(sh.story) + "</span>" +
-      '<span class="small"><b>' + sh.menu.length + "</b> coffees on your menu</span></div>";
+      '<span class="small"><b>' + sh.menu.length + "</b> coffees on your menu</span>" + rateLine + "</div>";
   }
 
   function tabs() {
@@ -955,7 +971,7 @@
     var members = state.tierId ? 1 : 0;
     var month = S.monthBounds(now(), TZ);
     var redeemed = state.orders.filter(function (o) { return (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), month); });
-    var sum = S.summarizePayout(redeemed.map(function (o) { return { passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }; }));
+    var sum = sumPayouts(redeemed);
     var pending = allShops().filter(function (x) { return shopStatus(x.id) === "pending"; });
     return '<h1 style="font-size:2rem;padding:0 4px">Overview</h1><div class="stats">' +
       '<div class="stat"><span class="muted small">Active subscriptions</span><b>' + members + '</b><span class="muted small">' + (t ? t.name : "None yet") + "</span></div>" +
@@ -963,8 +979,8 @@
       '<div class="stat"><span class="muted small">Commission this month</span><b>' + money2(sum.commissionCents) + '</b><span class="muted small">' + sum.orderCount + " redemptions</span></div>" +
       (function () {
         // What Sippy Brew keeps: revenue − shop payouts − card fees (commission + unused passes).
-        var tk = S.platformTake({ planPricesCents: t ? [t.priceCents] : [], shopNetCents: sum.netCents });
-        return '<div class="stat"><span class="muted small">You keep (so far)</span><b>' + money2(tk.keepCents) + '</b><span class="muted small">Revenue − ' + money2(tk.shopPayoutCents) + " to shops − " + money2(tk.cardFeesCents) + " card fees</span></div>";
+        var tk = S.platformTake({ planPricesCents: t ? [t.priceCents] : [], shopNetCents: sum.netCents, overageCommissionCents: sum.overageCommissionCents });
+        return '<div class="stat"><span class="muted small">You keep (so far)</span><b>' + money2(tk.keepCents) + '</b><span class="muted small">Revenue − ' + money2(tk.shopPayoutCents) + " to shops − " + money2(tk.cardFeesCents) + " card fees + " + money2(tk.overageCommissionCents) + " overage fees</span></div>";
       })() +
       '<div class="stat"><span class="muted small">Failed payments</span><b>0</b></div></div>' +
       ((state.teamAlerts || []).length ? '<div class="card stack" style="border:2px solid var(--honey)"><div class="row between"><b>No-shows</b><span class="badge honey">' + state.teamAlerts.length + "</span></div>" +
@@ -989,6 +1005,7 @@
         (st === "active" ? '<button class="btn danger" style="width:auto;padding:0 18px" data-a="admin-pause" data-id="' + x.id + '">Pause</button>' : "") +
         (st === "paused" ? '<button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">' + (removed ? "Reinstate" : "Resume") + "</button>" : "") +
         (!removed && st !== "pending" ? '<button class="btn danger" style="width:auto;padding:0 18px" data-a="admin-remove-food" data-id="' + x.id + '">Remove: selling food</button>' : "") +
+        '<button class="btn line" style="width:auto;padding:0 18px;font-size:.95rem;min-height:44px" data-a="admin-founding" data-id="' + x.id + '" aria-pressed="' + isFounding(x.id) + '">' + (isFounding(x.id) ? "Founding (" + S.pct(S.RULES.foundingCommissionBps) + ")" : "Standard (" + S.pct(S.RULES.standardCommissionBps) + ")") + "</button>" +
         (st === "active" ? '<button class="btn line" style="width:auto;padding:0 18px;font-size:.95rem;min-height:44px" data-a="admin-spotlight" data-id="' + x.id + '" aria-pressed="' + spot + '">' + (spot ? "★ Spotlighted" : "Spotlight") + "</button>" : "") +
         "</div></div>";
     }).join("") + "</div>";
@@ -1127,7 +1144,7 @@
     }
     t.redeemedAt = nowMs; o.status = "picked_up"; o.redeemedAt = now().toISOString();
     awardVisit();
-    state.scan = { ok: true, order: o, pay: S.orderPayout({ passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }) };
+    state.scan = { ok: true, order: o, pay: payoutFor(o) };
     render();
   }
 
@@ -1205,6 +1222,7 @@
       case "shop-login": state.screen = "shop-login"; state.shopError = null; break;
       case "shop-signup": state.screen = "shop-signup"; state.shopError = null; break;
       case "admin-tab": state.adminTab = id; break;
+      case "admin-founding": state.foundingOverride[id] = !isFounding(id); render(); return toast(shopById(id).name + (isFounding(id) ? " is a founding shop: 12% on pass value." : " is on the standard rate: 15% on pass value."));
       case "admin-remove-food": {
         // Zero tolerance: removed and hidden right away; the shop can appeal if it was a genuine error.
         state.shopStatus[id] = "paused"; state.removed[id] = true; delete state.appeals[id]; delete state.spotlight[id];
@@ -1421,7 +1439,7 @@
         if (!err && !menu.length) err = "Add at least one coffee to your menu.";
         if (err) { state.shopError = err; render(); return window.scrollTo(0, 0); }
         state.shopStatus[id] = "pending";
-        state.customShops.push({ id: id, name: v("name"), address: v("address"), lat: 40.7930, lng: -74.2440, custom: true,
+        state.customShops.push({ id: id, name: v("name"), address: v("address"), lat: 40.7930, lng: -74.2440, custom: true, founding: S.RULES.foundingProgramOpen,
           hours: S.formatHours({ open: v("open"), close: v("close") }), story: v("story"), menu: menu });
         state.session = "shop"; state.counterShop = id; state.shopTab = "dashboard"; state.screen = "app"; state.shopError = null; state.detail = null;
         render(); window.scrollTo(0, 0);

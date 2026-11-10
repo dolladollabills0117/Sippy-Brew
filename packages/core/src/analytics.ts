@@ -31,7 +31,7 @@ export interface ShopStats {
  * what the shop is paid for. `allTimeOrders` should include earlier months so "new vs.
  * returning" can tell first visits apart.
  */
-export function shopStats(allTimeOrders: readonly StatsOrder[], now: Date, timeZone: string = RULES.timeZone): ShopStats {
+export function shopStats(allTimeOrders: readonly StatsOrder[], now: Date, timeZone: string = RULES.timeZone, commissionBps: number = RULES.standardCommissionBps): ShopStats {
   const day = dayBounds(now, timeZone);
   const week = weekBounds(now, timeZone);
   const month = monthBounds(now, timeZone);
@@ -61,7 +61,7 @@ export function shopStats(allTimeOrders: readonly StatsOrder[], now: Date, timeZ
         passCoveredCents: o.passCoveredCents ?? o.totalCents - (o.overageCents ?? 0),
         overageCents: o.overageCents ?? 0,
         overageFeeCents: o.overageFeeCents ?? undefined,
-      }).shopCents;
+      }, commissionBps).shopCents;
     }
     if (isWithin(o.at, month)) {
       redemptions.month++;

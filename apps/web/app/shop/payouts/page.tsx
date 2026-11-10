@@ -1,4 +1,4 @@
-import { RULES } from "@sippy/core";
+import { commissionBpsFor, RULES } from "@sippy/core";
 import { Badge, EmptyState, Money, PageTitle } from "@/components/ui";
 import { requireOwnerShop } from "@/lib/shopPage";
 import { shopPayouts } from "@/lib/shop";
@@ -9,11 +9,16 @@ export const metadata = { title: "Payouts" };
 const d = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: RULES.timeZone });
 
 export default async function PayoutsPage() {
-  const { session } = await requireOwnerShop("/shop/payouts");
+  const { session, shop } = await requireOwnerShop("/shop/payouts");
   const payouts = await shopPayouts(session);
+  const rate = commissionBpsFor(shop) / 100;
   return (
     <>
-      <PageTitle sub={`Paid weekly to your bank through Stripe: ${100 - RULES.commissionBps / 100}% of pass-covered sales, plus overages less card processing.`}>Payouts</PageTitle>
+      <PageTitle
+        sub={`Paid weekly to your bank through Stripe: ${100 - rate}% of pass-covered sales${shop.founding ? " (founding rate)" : ""}, plus overages less a ${RULES.overageCommissionBps / 100}% fee and card processing.`}
+      >
+        Payouts
+      </PageTitle>
       {payouts.length === 0 ? (
         <EmptyState title="No payouts yet">Your first payout is sent the Monday after your first redemption.</EmptyState>
       ) : (
@@ -25,8 +30,9 @@ export default async function PayoutsPage() {
                 <th scope="col" className="px-5 py-3">Week</th>
                 <th scope="col" className="px-5 py-3 text-right">Orders</th>
                 <th scope="col" className="px-5 py-3 text-right">Pass sales</th>
-                <th scope="col" className="px-5 py-3 text-right">{RULES.commissionBps / 100}% commission</th>
+                <th scope="col" className="px-5 py-3 text-right">{rate}% commission</th>
                 <th scope="col" className="px-5 py-3 text-right">Overages</th>
+                <th scope="col" className="px-5 py-3 text-right">{RULES.overageCommissionBps / 100}% on overages</th>
                 <th scope="col" className="px-5 py-3 text-right">Card processing</th>
                 <th scope="col" className="px-5 py-3 text-right">Net payout</th>
                 <th scope="col" className="px-5 py-3">Status</th>
@@ -42,6 +48,7 @@ export default async function PayoutsPage() {
                   <td className="px-5 py-3 text-right"><Money cents={p.grossCents} /></td>
                   <td className="px-5 py-3 text-right text-pecan">−<Money cents={p.commissionCents} /></td>
                   <td className="px-5 py-3 text-right">+<Money cents={p.overageTotalCents} /></td>
+                  <td className="px-5 py-3 text-right text-pecan">−<Money cents={p.overageCommissionCents} /></td>
                   <td className="px-5 py-3 text-right text-pecan">−<Money cents={p.processingFeesCents} /></td>
                   <td className="px-5 py-3 text-right font-extrabold"><Money cents={p.transferCents} /></td>
                   <td className="px-5 py-3">

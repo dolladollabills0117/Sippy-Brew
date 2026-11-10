@@ -148,7 +148,7 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
 // Overages: the part of a day's order above the $8.00 the pass covers.
 // Only after the member confirms the exact amount at checkout, it's authorized on their card
 // on file; it's captured when the shop scans the QR and voided if the order is cancelled.
-// Overage goes 100% to the shop, which pays the card processing on it. Card details stay
+// Overage goes to the shop less a 5% platform fee and its card processing. Card details stay
 // with Stripe.
 // ---------------------------------------------------------------------------
 

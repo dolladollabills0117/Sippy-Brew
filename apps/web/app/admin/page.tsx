@@ -16,10 +16,10 @@ export default async function AdminPage() {
   const db = supabaseAdmin();
   const month = monthBounds(new Date(), RULES.timeZone);
   const [{ data: shops }, { data: subs }, { data: members }, { data: monthOrders }, { data: failures }, { data: alerts }] = await Promise.all([
-    db.from("shops").select("id, name, address, status, spotlight, payouts_enabled, created_at, removal_reason, appeal_note, appealed_at, profiles:owner_id(email)").order("created_at", { ascending: false }),
+    db.from("shops").select("id, name, address, status, spotlight, payouts_enabled, created_at, removal_reason, appeal_note, appealed_at, founding, profiles:owner_id(email)").order("created_at", { ascending: false }),
     db.from("subscriptions").select("tier, status, member_id"),
     db.from("profiles").select("id, name, email, created_at").eq("role", "member").order("created_at", { ascending: false }).limit(200),
-    db.from("orders").select("commission, net, total").in("status", ["picked_up", "no_show"]).gte("redeemed_at", month.start.toISOString()),
+    db.from("orders").select("commission, net, total, overage_commission").in("status", ["picked_up", "no_show"]).gte("redeemed_at", month.start.toISOString()),
     db.from("payment_failures").select("id, amount, reason, created_at, profiles:member_id(email)").order("created_at", { ascending: false }).limit(25),
     db.from("platform_alerts").select("id, kind, message, created_at, order_id, shops:shop_id(name), profiles:member_id(name, email)").is("resolved_at", null).order("created_at", { ascending: false }).limit(25),
   ]);
@@ -30,7 +30,9 @@ export default async function AdminPage() {
   const mrr = live.reduce((sum, x) => sum + getTier(x.tier).priceCents, 0);
   const commission = (monthOrders ?? []).reduce((sum, o) => sum + (o.commission ?? 0), 0);
   // What Sippy Brew actually keeps: revenue − shop payouts − card fees (commission + unused passes).
-  const take = platformTake({ planPricesCents: live.map((x) => getTier(x.tier).priceCents), shopNetCents: (monthOrders ?? []).reduce((sum, o) => sum + (o.net ?? 0), 0) });
+  const take = platformTake({ planPricesCents: live.map((x) => getTier(x.tier).priceCents), shopNetCents: (monthOrders ?? []).reduce((sum, o) => sum + (o.net ?? 0), 0),
+    overageCommissionCents: (monthOrders ?? []).reduce((sum, o) => sum + (o.overage_commission ?? 0), 0),
+  });
   const subByMember = new Map((subs ?? []).map((x) => [x.member_id, x]));
 
   return (
@@ -43,7 +45,7 @@ export default async function AdminPage() {
         <Stat
           label="You keep (so far)"
           value={formatCents(take.keepCents, { showZeroCents: true })}
-          sub={`Revenue − ${formatCents(take.shopPayoutCents, { showZeroCents: true })} to shops − ${formatCents(take.cardFeesCents, { showZeroCents: true })} card fees`}
+          sub={`Revenue − ${formatCents(take.shopPayoutCents, { showZeroCents: true })} to shops − ${formatCents(take.cardFeesCents, { showZeroCents: true })} card fees + ${formatCents(take.overageCommissionCents, { showZeroCents: true })} overage fees`}
         />
         <Stat label="Failed payments" value={failures?.length ?? 0} sub="Most recent 25" />
       </div>
@@ -96,7 +98,7 @@ export default async function AdminPage() {
                   {shop.address} · {(shop.profiles as unknown as { email: string } | null)?.email}
                 </p>
               </div>
-              <AdminShopActions id={shop.id} status={shop.status} spotlight={shop.spotlight} removedForFood={shop.removal_reason === "food"} />
+              <AdminShopActions id={shop.id} status={shop.status} spotlight={shop.spotlight} removedForFood={shop.removal_reason === "food"} founding={shop.founding} />
             </li>
           ))}
         </ul>

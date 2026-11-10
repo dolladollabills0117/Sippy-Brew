@@ -9,7 +9,7 @@ import { orderPayout } from "./commission";
  * - Each tier includes `passesPerMonth` passes per subscription period.
  * - One pass covers one calendar day (platform time zone) at one shop: the first
  *   `maxPassValueCents` ($8.00) of that day's order. Anything above is an overage the member
- *   confirms and pays in the app; it goes 100% to the shop.
+ *   confirms and pays in the app; it goes to the shop, less card processing and a 5% fee.
  * - At most one pass per member per calendar day, across all shops.
  * - Passes reset on the renewal date. Unused passes expire; nothing rolls over.
  */
@@ -142,9 +142,9 @@ export interface MonthEconomics {
   passesUnused: number;
   coveredCents: number;
   overageCents: number;
-  /** Paid to shops: 88% of covered value, plus overages less processing fees. */
+  /** Paid to shops: their share of covered value, plus overages less processing fees and 5%. */
   shopCents: number;
-  /** Platform keeps: subscription price minus the shops' share of covered value. Includes unused passes. Overages never count. */
+  /** Platform keeps: subscription price minus the shops' share of covered value, plus 5% of overages. Includes unused passes. */
   platformCents: number;
 }
 
@@ -152,12 +152,13 @@ export interface MonthEconomics {
  * Where one member's money goes in a period. `orderTotalsCents` is the full value of each
  * redeemed pass order. Overages pass straight through to the shop (less card processing).
  */
-export function monthEconomics(tier: Pick<Tier, "priceCents" | "passesPerMonth" | "maxPassValueCents">, orderTotalsCents: readonly number[], commissionBps = RULES.commissionBps): MonthEconomics {
+export function monthEconomics(tier: Pick<Tier, "priceCents" | "passesPerMonth" | "maxPassValueCents">, orderTotalsCents: readonly number[], commissionBps = RULES.standardCommissionBps): MonthEconomics {
   if (orderTotalsCents.length > tier.passesPerMonth) throw new Error("more passes used than the tier includes");
   let covered = 0;
   let overage = 0;
   let shop = 0;
   let passNet = 0;
+  let overageCut = 0;
   for (const total of orderTotalsCents) {
     const s = splitPassValue(total, tier.maxPassValueCents);
     const p = orderPayout({ passCoveredCents: s.passCoveredCents, overageCents: s.overageCents }, commissionBps);
@@ -165,6 +166,7 @@ export function monthEconomics(tier: Pick<Tier, "priceCents" | "passesPerMonth" 
     overage += s.overageCents;
     shop += p.shopCents;
     passNet += p.passNetCents;
+    overageCut += p.overageCommissionCents;
   }
   return {
     passesUsed: orderTotalsCents.length,
@@ -172,6 +174,6 @@ export function monthEconomics(tier: Pick<Tier, "priceCents" | "passesPerMonth" 
     coveredCents: covered,
     overageCents: overage,
     shopCents: shop,
-    platformCents: tier.priceCents - passNet,
+    platformCents: tier.priceCents - passNet + overageCut,
   };
 }

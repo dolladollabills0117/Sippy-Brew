@@ -17,6 +17,7 @@ import {
   previousWeekBounds,
   RULES,
   overageProcessingFee,
+  overageCommission,
   splitOrder,
   splitPassValue,
   starterModifierGroups,
@@ -180,7 +181,7 @@ async function main() {
     const shop = await must(
       db
         .from("shops")
-        .insert({ owner_id: ownerId, name: s.name, address: s.address, lat: s.lat, lng: s.lng, hours: HOURS, story: s.story, status: "active", spotlight: s.spotlight, payouts_enabled: false })
+        .insert({ owner_id: ownerId, name: s.name, address: s.address, lat: s.lat, lng: s.lng, hours: HOURS, story: s.story, status: "active", spotlight: s.spotlight, payouts_enabled: false, founding: true })
         .select("id")
         .single(),
       "shop",
@@ -287,9 +288,9 @@ async function main() {
     );
     if (!orders.length) continue;
     type Row = { id: string; pass_covered_amount: number; overage_amount: number; overage_fee: number };
-    const sum = summarizePayout((orders as Row[]).map((o) => ({ passCoveredCents: o.pass_covered_amount, overageCents: o.overage_amount, overageFeeCents: o.overage_fee })));
+    const sum = summarizePayout((orders as Row[]).map((o) => ({ passCoveredCents: o.pass_covered_amount, overageCents: o.overage_amount, overageFeeCents: o.overage_fee })), RULES.foundingCommissionBps);
     const payoutId = await must(
-      db.rpc("create_payout", { p_shop: shop.id, p_start: week.start.toISOString(), p_end: week.end.toISOString(), p_order_ids: orders.map((o: { id: string }) => o.id), p_gross: sum.grossCents, p_commission: sum.commissionCents, p_net: sum.netCents, p_overage_total: sum.overageTotalCents, p_processing_fees: sum.processingFeesCents }),
+      db.rpc("create_payout", { p_shop: shop.id, p_start: week.start.toISOString(), p_end: week.end.toISOString(), p_order_ids: orders.map((o: { id: string }) => o.id), p_gross: sum.grossCents, p_commission: sum.commissionCents, p_net: sum.netCents, p_overage_total: sum.overageTotalCents, p_processing_fees: sum.processingFeesCents, p_overage_commission: sum.overageCommissionCents }),
       "payout",
     );
     await db.from("payouts").update({ status: "paid", paid_at: new Date(week.end.getTime() + 10 * 3600_000).toISOString(), stripe_transfer_id: "tr_demo" }).eq("id", payoutId);
@@ -317,7 +318,7 @@ async function insertOrder(o: {
 }) {
   const total = o.items.reduce((s, i) => s + i.price, 0);
   const pass = splitPassValue(total, o.maxPassValue);
-  const split = splitOrder(pass.passCoveredCents); // commission on pass-covered value only
+  const split = splitOrder(pass.passCoveredCents, RULES.foundingCommissionBps); // demo shops are founding shops: 12% of pass value
   const order = await must(
     db
       .from("orders")
@@ -334,6 +335,7 @@ async function insertOrder(o: {
         overage_confirmed_at: pass.overageCents > 0 ? o.at.toISOString() : null,
         overage_status: pass.overageCents > 0 ? (o.redeemed ? "captured" : "authorized") : "none",
         overage_fee: o.redeemed ? overageProcessingFee(pass.overageCents) : 0,
+        overage_commission: o.redeemed ? overageCommission(pass.overageCents) : 0,
         pass_day: dayKey(o.at, TZ),
         commission: o.redeemed ? split.commissionCents : null,
         net: o.redeemed ? split.netCents : null,

@@ -1,12 +1,13 @@
 import "server-only";
-import { formatCents, previousWeekBounds, RULES, summarizePayout } from "@sippy/core";
+import { formatCents, previousWeekBounds, RULES } from "@sippy/core";
 import { stripe } from "./billing";
 import { notifyShopPayout } from "./notify";
 import { supabaseAdmin } from "./supabase/server";
 
 /**
  * Weekly payouts. For each active shop, sum last week's redeemed orders (Monday to Monday,
- * local time): 88% of the pass-covered value, plus overages less their card processing, sent to
+ * local time): the shop's share of pass value (88% founding, 85% standard), plus overages less card
+ * processing and 5%, sent to
  * the shop's Stripe Connect account. The platform keeps 12% of pass-covered value only.
  * Safe to run more than once: a (shop, week) pair is only ever paid once.
  */
@@ -20,7 +21,7 @@ export async function runWeeklyPayouts(now = new Date()) {
   for (const shop of shops ?? []) {
     const { data: orders } = await db
       .from("orders")
-      .select("id, pass_covered_amount, overage_amount, overage_fee")
+      .select("id, pass_covered_amount, overage_amount, overage_fee, overage_commission, commission, net")
       .eq("shop_id", shop.id)
       .in("status", ["picked_up", "no_show"]) // no-shows are paid like pickups
       .is("payout_id", null)
@@ -28,10 +29,19 @@ export async function runWeeklyPayouts(now = new Date()) {
       .lt("redeemed_at", end.toISOString());
     if (!orders?.length) continue;
 
-    // 12% commission on pass-covered value only; overage passes through, less processing.
-    const sum = summarizePayout(
-      orders.map((o) => ({ passCoveredCents: o.pass_covered_amount, overageCents: o.overage_amount, overageFeeCents: o.overage_fee })),
-    );
+    // Each order's split was fixed when it was picked up (12% founding / 15% standard on pass
+    // value; 5% and card processing on overages), so the payout adds up the stored amounts.
+    const total = (k: "pass_covered_amount" | "commission" | "net" | "overage_amount" | "overage_fee" | "overage_commission") =>
+      orders.reduce((a, o) => a + (Number(o[k]) || 0), 0);
+    const sum = {
+      grossCents: total("pass_covered_amount"),
+      commissionCents: total("commission"),
+      netCents: total("net"),
+      overageTotalCents: total("overage_amount"),
+      processingFeesCents: total("overage_fee"),
+      overageCommissionCents: total("overage_commission"),
+      transferCents: total("net") + total("overage_amount") - total("overage_fee") - total("overage_commission"),
+    };
 
     const { data: payoutId, error } = await db.rpc("create_payout", {
       p_shop: shop.id,
@@ -43,6 +53,7 @@ export async function runWeeklyPayouts(now = new Date()) {
       p_net: sum.netCents,
       p_overage_total: sum.overageTotalCents,
       p_processing_fees: sum.processingFeesCents,
+      p_overage_commission: sum.overageCommissionCents,
     });
     if (error) {
       if (error.code === "23505") continue; // already created for this week

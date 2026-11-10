@@ -136,28 +136,29 @@ describe("the pass covers the first $8.00; the rest is overage", () => {
   });
 });
 
-describe("overage money: 100% to the shop, no commission, shop pays processing", () => {
-  it("excludes overage from commission", () => {
-    const withOverage = orderPayout({ passCoveredCents: 800, overageCents: 150, overageFeeCents: 0 });
-    const withoutOverage = orderPayout({ passCoveredCents: 800, overageCents: 0 });
+describe("overage money: to the shop, less card processing and Sippy Brew's 5%", () => {
+  const F = RULES.foundingCommissionBps;
+  it("pass commission is on the pass value only", () => {
+    const withOverage = orderPayout({ passCoveredCents: 800, overageCents: 150, overageFeeCents: 0 }, F);
+    const withoutOverage = orderPayout({ passCoveredCents: 800, overageCents: 0 }, F);
     expect(withOverage.commissionCents).toBe(96); // 12% of $8.00 only
     expect(withOverage.commissionCents).toBe(withoutOverage.commissionCents);
   });
-  it("pays the shop the overage minus processing fees", () => {
-    // $1.50 overage, estimated card processing 2.9% + 30¢ = 4¢ + 30¢ = 34¢.
+  it("pays the shop the overage minus processing and 5%", () => {
+    // $1.50 overage: processing 2.9% + 30¢ = 34¢; 5% = 7.5¢ → 8¢.
     expect(overageProcessingFee(150)).toBe(34);
-    const p = orderPayout({ passCoveredCents: 800, overageCents: 150 });
-    expect(p).toEqual({ passCoveredCents: 800, commissionCents: 96, passNetCents: 704, overageCents: 150, processingFeeCents: 34, shopCents: 704 + 150 - 34 });
+    const p = orderPayout({ passCoveredCents: 800, overageCents: 150 }, F);
+    expect(p).toEqual({ passCoveredCents: 800, commissionCents: 96, passNetCents: 704, overageCents: 150, processingFeeCents: 34, overageCommissionCents: 8, shopCents: 704 + 150 - 34 - 8 });
   });
   it("uses the actual Stripe fee when it's known", () => {
-    expect(orderPayout({ passCoveredCents: 800, overageCents: 300, overageFeeCents: 39 }).shopCents).toBe(704 + 300 - 39);
+    expect(orderPayout({ passCoveredCents: 800, overageCents: 300, overageFeeCents: 39 }, F).shopCents).toBe(704 + 300 - 39 - 15);
   });
-  it("overage never changes the platform's take", () => {
+  it("founding shops pay 5% on overages too", () => {
     const tier = getTier("macchiato_double_shot");
-    const plain = monthEconomics(tier, Array(12).fill(800));
-    const over = monthEconomics(tier, Array(12).fill(950));
-    expect(over.platformCents).toBe(plain.platformCents);
-    expect(over.shopCents).toBe(plain.shopCents + 12 * (150 - 34));
+    const plain = monthEconomics(tier, Array(12).fill(800), F);
+    const over = monthEconomics(tier, Array(12).fill(950), F);
+    expect(over.platformCents).toBe(plain.platformCents + 12 * 8);
+    expect(over.shopCents).toBe(plain.shopCents + 12 * (150 - 34 - 8));
   });
   it("overages under the minimum card charge can't be charged, so they're waived with no fee", () => {
     expect(RULES.minOverageChargeCents).toBe(50);
@@ -167,7 +168,7 @@ describe("overage money: 100% to the shop, no commission, shop pays processing",
   });
 });
 
-describe("commission: 12% of pass-covered value; shop gets 88%", () => {
+describe("founding shops: 12% of pass-covered value; shop gets 88%", () => {
   const cases: [string, number, number, number][] = [
     // plan, passes used (each order at or above the daily max), shop, platform
     ["affogato_decaf", 5, 1760, 240],
@@ -180,15 +181,23 @@ describe("commission: 12% of pass-covered value; shop gets 88%", () => {
   for (const [tierId, used, shop, platform] of cases) {
     it(`${getTier(tierId).name}: ${used} passes used → shop $${(shop / 100).toFixed(2)}, platform $${(platform / 100).toFixed(2)}`, () => {
       const tier = getTier(tierId);
-      const e = monthEconomics(tier, Array(used).fill(tier.maxPassValueCents));
+      const e = monthEconomics(tier, Array(used).fill(tier.maxPassValueCents), RULES.foundingCommissionBps);
       expect(e.shopCents).toBe(shop);
       expect(e.platformCents).toBe(platform);
       expect(e.shopCents + e.platformCents).toBe(tier.priceCents);
     });
   }
   it("the platform keeps the value of unused passes", () => {
-    const e = monthEconomics(getTier("affogato_double_shot"), [800, 800, 800]); // 2 of 5 unused
+    const e = monthEconomics(getTier("affogato_double_shot"), [800, 800, 800], RULES.foundingCommissionBps); // 2 of 5 unused
     expect(e).toMatchObject({ passesUnused: 2, shopCents: 3 * 704, platformCents: 4000 - 3 * 704 });
+  });
+  it("standard shops (15%): a fully used Regular · Specialty pays the shop $81.60, platform $14.40", () => {
+    const tier = getTier("macchiato_double_shot");
+    expect(monthEconomics(tier, Array(12).fill(800))).toMatchObject({ shopCents: 8160, platformCents: 1440 });
+  });
+  it("overages: the platform takes 5%, the rest less processing goes to the shop", () => {
+    const e = monthEconomics(getTier("macchiato_double_shot"), [1100], RULES.foundingCommissionBps); // $3 over
+    expect(e.platformCents).toBe(9600 - 704 + 15);
   });
 });
 
