@@ -107,12 +107,23 @@ export interface Order {
   items: OrderItem[];
 }
 
+/** Neighborhood Passport, Grand Tour and referral progress (rules/rewards.ts). */
+export interface MemberRewards {
+  passport: import("./rules/rewards").PassportStatus;
+  referral: import("./rules/rewards").ReferralStatus & { code: string | null; link: string | null };
+}
+
 export interface MemberSummary {
   profile: Profile;
   subscription: Subscription | null;
   tierName: string | null;
   passesPerMonth: number;
+  /** This period's passes left (bonus passes are separate). */
   passesLeft: number;
+  /** Bonus passes from the passport and referrals; they roll over for a year. */
+  bonusPassesLeft: number;
+  bonusExpiresAt: string | null;
+  rewards: MemberRewards | null;
   maxPassValueCents: number;
   /** True if today's pass is already used (one per calendar day, any shop). */
   passUsedToday: boolean;

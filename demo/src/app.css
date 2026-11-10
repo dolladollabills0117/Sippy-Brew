@@ -200,3 +200,10 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700;
 .terms p { line-height: 1.55; }
 
 @media (prefers-reduced-motion: reduce) { .quiz-out, .quiz-in, .result-emoji { animation: none; } }
+
+/* Neighborhood Passport + invite */
+.stamps { display: flex; gap: 8px; flex-wrap: wrap; }
+.stamp { width: 42px; height: 42px; border-radius: 999px; border: 2px dashed var(--pecan); display: grid; place-items: center; font-weight: 800; color: var(--pecan); }
+.stamp.on { border: 2px solid var(--burnt); background: var(--burnt); color: var(--cream); font-size: 1.15rem; }
+.tour { background: var(--vanilla); border-radius: 12px; padding: 10px 12px; font-size: .9rem; }
+.refcode { background: var(--vanilla); border-radius: 10px; padding: 8px 12px; font-weight: 800; letter-spacing: .08em; font-size: 1rem; }

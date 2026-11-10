@@ -4,7 +4,7 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { RefreshControl, View } from "react-native";
+import { RefreshControl, Share, View } from "react-native";
 
 const dateFmt = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: RULES.timeZone });
 
@@ -91,6 +91,48 @@ export default function AccountTab() {
         )}
       </Card>
 
+      {s.rewards && sub && (
+        <>
+          <Card style={{ gap: spacing.sm }}>
+            <Text variant="h2">Neighborhood Passport</Text>
+            <Text>
+              {s.rewards.passport.passportEarned
+                ? `You've visited ${s.rewards.passport.goal} local shops and earned a free day pass. Keep exploring!`
+                : `Pick up at ${s.rewards.passport.goal} different shops and get a free day pass.`}
+            </Text>
+            <Meter value={Math.min(s.rewards.passport.visited, s.rewards.passport.goal)} max={s.rewards.passport.goal} label="Shops visited" />
+            <Text variant="small" color={colors.pecan}>
+              {Math.min(s.rewards.passport.visited, s.rewards.passport.goal)} of {s.rewards.passport.goal} shops ·{" "}
+              {s.rewards.passport.grandTour.earned
+                ? `Grand Tour done: ${RULES.grandTourFreeMonths} months free!`
+                : s.rewards.passport.grandTour.unlocked
+                  ? `Grand Tour: visit every shop for ${RULES.grandTourFreeMonths} months free (${s.rewards.passport.grandTour.visitedCounting} of ${s.rewards.passport.grandTour.countingShops}).`
+                  : `Grand Tour (${RULES.grandTourFreeMonths} months free) unlocks once more than ${s.rewards.passport.grandTour.minShops - 1} shops join.`}
+            </Text>
+          </Card>
+          <Card style={{ gap: spacing.sm }}>
+            <Text variant="h2">
+              Bring {RULES.referralFriendsNeeded} friends, get {s.rewards.referral.passesPerReward} passes
+            </Text>
+            <Text>
+              When {RULES.referralFriendsNeeded} friends join with your link and start their pass, you get {s.rewards.referral.passesPerReward} bonus passes. They roll over
+              for a year.
+            </Text>
+            <Text variant="small" color={colors.pecan}>
+              {RULES.referralFriendsNeeded - s.rewards.referral.friendsToNext} of {RULES.referralFriendsNeeded} friends joined
+              {s.rewards.referral.code ? ` · Your code: ${s.rewards.referral.code}` : ""}
+            </Text>
+            {s.rewards.referral.link && (
+              <Button
+                label="Share my link"
+                variant="secondary"
+                onPress={() => Share.share({ message: `I get my coffee at local shops with Sippy Brew. Join with my link: ${s.rewards!.referral.link}` })}
+              />
+            )}
+          </Card>
+        </>
+      )}
+
       {s.upgrade && <UpgradeCard upgrade={s.upgrade} passesLeft={s.passesLeft} nudge={s.upgrade.suggested} onDone={me.reload} />}
 
       {sub && (
@@ -106,7 +148,16 @@ export default function AccountTab() {
             </Text>
           </Text>
           <Meter value={s.passesLeft} max={s.passesPerMonth} label="Daily Passes remaining" />
-          <Badge label={s.passUsedToday ? "Today's pass used" : s.passesLeft > 0 ? "Today's pass ready" : "No passes left"} tone={s.passUsedToday || s.passesLeft === 0 ? "latte" : "sky"} />
+          {s.bonusPassesLeft > 0 && (
+            <Text variant="bodyBold">
+              + {s.bonusPassesLeft} bonus pass{s.bonusPassesLeft === 1 ? "" : "es"}
+              {s.bonusExpiresAt ? <Text color={colors.pecan}> · roll over until {dateFmt.format(new Date(s.bonusExpiresAt))}</Text> : null}
+            </Text>
+          )}
+          <Badge
+            label={s.passUsedToday ? "Today's pass used" : s.passesLeft + s.bonusPassesLeft > 0 ? "Today's pass ready" : "No passes left"}
+            tone={s.passUsedToday || s.passesLeft + s.bonusPassesLeft === 0 ? "latte" : "sky"}
+          />
           <Text variant="small" color={colors.pecan}>
             Unused passes expire at renewal. Your pass covers the first {formatCents(s.maxPassValueCents, { showZeroCents: true })} of each day’s order. If it’s more, you’ll confirm the overage before paying.
           </Text>

@@ -205,4 +205,57 @@ do $$ begin
   assert (select payout_id is not null from orders where pass_day = '2026-11-04');
 end $$;
 
+-- Rewards: referral codes and links.
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000000a2', 'friend@example.com',
+   json_build_object('name', 'Fran Friend', 'ref', lower((select referral_code from profiles where id = '00000000-0000-0000-0000-0000000000a1')))::jsonb);
+do $$ begin
+  assert (select referral_code ~ '^SB-[A-HJ-NP-Z2-9]{6}$' from profiles where id = '00000000-0000-0000-0000-0000000000a1'), 'referral code format';
+  assert (select referred_by from profiles where id = '00000000-0000-0000-0000-0000000000a2') = '00000000-0000-0000-0000-0000000000a1', 'friend linked to referrer';
+  assert (select count(distinct referral_code) = count(*) from profiles), 'codes are unique';
+  begin
+    update profiles set referred_by = id where id = '00000000-0000-0000-0000-0000000000a1';
+    raise exception 'self-referral accepted';
+  exception when check_violation then null;
+  end;
+end $$;
+
+-- Shops get live_since when they go live.
+do $$ begin
+  assert (select live_since is not null from shops where id = '00000000-0000-0000-0000-00000000005a');
+  assert (select live_since is null from shops where id = '00000000-0000-0000-0000-00000000005b');
+end $$;
+update shops set status = 'active' where id = '00000000-0000-0000-0000-00000000005b';
+do $$ begin assert (select live_since is not null from shops where id = '00000000-0000-0000-0000-00000000005b'); end $$;
+
+-- Bonus passes: with this period's passes used up, an order uses the unexpired bonus that
+-- expires soonest; expired bonuses never count; cancelling gives the bonus pass back.
+insert into bonus_passes (id, member_id, source, source_key, passes, granted_at, expires_at) values
+  ('00000000-0000-0000-0000-0000000000b9', '00000000-0000-0000-0000-0000000000a1', 'referral', 'referral-0', 3, now() - interval '400 days', now() - interval '35 days'),
+  ('00000000-0000-0000-0000-0000000000ba', '00000000-0000-0000-0000-0000000000a1', 'referral', 'referral-1', 3, now() - interval '10 days', now() + interval '355 days'),
+  ('00000000-0000-0000-0000-0000000000bb', '00000000-0000-0000-0000-0000000000a1', 'passport', 'passport', 1, now() - interval '200 days', now() + interval '165 days');
+do $$ begin
+  assert (select coalesce(sum(passes), 0) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 0, 'period passes used up';
+  begin
+    insert into bonus_passes (member_id, source, source_key, passes, expires_at) values ('00000000-0000-0000-0000-0000000000a1', 'passport', 'passport', 1, now() + interval '1 year');
+    raise exception 'passport reward given twice';
+  exception when unique_violation then null;
+  end;
+end $$;
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-08',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
+      now() + interval '10 minutes', null, false) as bonus_order \gset
+do $$ begin
+  assert (select bonus_pass_id from orders where pass_day = '2026-11-08') = '00000000-0000-0000-0000-0000000000bb', 'soonest-expiring bonus used';
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 1;
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000b9') = 0, 'expired bonus untouched';
+  assert (select coalesce(sum(passes), 0) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 0, 'no period pass used';
+end $$;
+select cancel_order(:'bonus_order', false);
+do $$ begin
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 0, 'bonus pass returned on cancel';
+end $$;
+
 rollback;

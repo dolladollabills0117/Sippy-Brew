@@ -23,7 +23,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [sent, setSent] = useState(false);
 
   const callback = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-  const meta = { name: name.trim(), role: isShop ? "shop_owner" : "member" };
+  // A friend's referral code (from /signup?ref=SB-XXXXXX) links this member to them.
+  const ref = params.get("ref");
+  const meta = { name: name.trim(), role: isShop ? "shop_owner" : "member", ...(ref && !isShop ? { ref: ref.trim().toUpperCase() } : {}) };
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

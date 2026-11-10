@@ -31,6 +31,12 @@ A pass has two parts, named so people can tell them apart: **what you drink** (t
 
 **Plan changes:** members can switch to any pass any time; the switch takes effect at their next renewal and this month stays as it is (`pending_tier`, `POST /api/subscription/change`). The in-month House → Specialty upgrade below is the one exception.
 
+**Rewards** (`packages/core/src/rules/rewards.ts`, `apps/web/lib/rewards.ts`, numbers in `rules.json`):
+- *Neighborhood Passport:* pick up at 5 different shops and get a free day pass (once).
+- *Grand Tour:* pick up at every shop that's been live 30+ days and get 2 months of your plan free (a one-time Stripe coupon). Switched on only once more than 50 shops are live.
+- *Referrals:* every 2 friends who join with your link and pay their first month earn you 3 bonus passes.
+- *Bonus passes* cover up to your daily max ($4 House, $8 Specialty) and roll over: each expires a year after it's earned, not at renewal. Orders use this month's passes first, then the bonus pass that expires soonest. Shops are paid for a bonus pass like any pass; the platform funds it. A visit counts when the shop scans the pickup code.
+
 **Our role (Terms):** Sippy Brew isn't the coffee shop. Shops are independent and responsible for their drinks and service; order issues go to the shop. The plain-language text is in `packages/core/src/legal.ts` and shows on `/terms`, at sign-up and checkout, and in the demo.
 
 Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **House** covers up to $4.00 a day ("Your go-to cup: drip, cold brew or tea, black or your way."); **Specialty** covers up to $8.00 ("Lattes, cappuccinos and every new seasonal pour."). The sub-tier is a price cap, not a drink restriction: a House member can order a latte and confirm the overage.

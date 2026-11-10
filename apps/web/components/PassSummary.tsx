@@ -1,4 +1,5 @@
 import { formatCents, RULES, type MemberSummary } from "@sippy/core";
+import { BonusLine } from "./RewardsCards";
 import { Badge, Card, Meter } from "./ui";
 
 const dateFmt = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: RULES.timeZone });
@@ -18,11 +19,12 @@ export function PassSummary({ summary }: { summary: MemberSummary }) {
           <Meter value={summary.passesLeft} max={summary.passesPerMonth} label="Daily Passes remaining this month" />
         </div>
         {sub && <p className="mt-2 text-sm text-pecan">Resets {dateFmt.format(new Date(sub.currentPeriodEnd))}. Unused passes don&apos;t roll over.</p>}
+        <BonusLine summary={summary} />
       </Card>
       <Card>
         <p className="text-sm font-bold text-pecan">Today</p>
         <div className="mt-2">
-          {summary.passUsedToday ? <Badge tone="latte">Today&apos;s pass used</Badge> : summary.passesLeft > 0 ? <Badge>Pass ready</Badge> : <Badge tone="latte">No passes left</Badge>}
+          {summary.passUsedToday ? <Badge tone="latte">Today&apos;s pass used</Badge> : summary.passesLeft + summary.bonusPassesLeft > 0 ? <Badge>Pass ready</Badge> : <Badge tone="latte">No passes left</Badge>}
         </div>
         <p className="mt-3 text-espresso">
           Your pass covers up to <strong>{formatCents(summary.maxPassValueCents, { showZeroCents: true })}</strong>. If an order is more, you'll see the overage

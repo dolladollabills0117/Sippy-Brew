@@ -27,6 +27,7 @@ import { mapMenuItem, mapOrder, mapPayout, mapPost, mapShop, ORDER_SELECT } from
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { getLiveSubscription, getOrder } from "./member";
 import { notifyFollowersOfPost, notifyMemberOrderStatus } from "./notify";
+import { awardVisitRewards } from "./rewards";
 import { supabaseAdmin } from "./supabase/server";
 
 export async function getOwnerShopRow(s: Session, opts: { allowMissing?: boolean } = {}) {
@@ -168,6 +169,8 @@ export async function redeem(s: Session, input: { qr?: string; shortCode?: strin
 
   const order = await getOrder(r.order_id);
   void notifyMemberOrderStatus(order).catch(() => {});
+  // A pickup is a visit: it may complete the member's Neighborhood Passport or Grand Tour.
+  await awardVisitRewards(order.memberId).catch((e) => console.error("visit rewards", e));
   return order;
 }
 

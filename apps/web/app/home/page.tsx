@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PassSummary } from "@/components/PassSummary";
+import { RewardsCards } from "@/components/RewardsCards";
 import { UpgradeCard } from "@/components/UpgradeCard";
 import { ShopCard } from "@/components/ShopCard";
 import { Badge, ButtonLink, Card, EmptyState, PageTitle, SectionTitle } from "@/components/ui";
@@ -28,7 +29,12 @@ export default async function MemberHome() {
           <ButtonLink href="/plans">Choose a plan</ButtonLink>
         </Card>
       ) : (
-        <PassSummary summary={summary} />
+        <>
+          <PassSummary summary={summary} />
+          <div className="mt-4">
+            <RewardsCards summary={summary} />
+          </div>
+        </>
       )}
       {summary.upgrade?.suggested && (
         <div className="mt-4">

@@ -1,4 +1,5 @@
 import { PassSummary } from "@/components/PassSummary";
+import { RewardsCards } from "@/components/RewardsCards";
 import { UpgradeCard } from "@/components/UpgradeCard";
 import { AreasForm } from "@/components/AreasForm";
 import { ManagePlanButton } from "@/components/ManagePlanButton";
@@ -55,6 +56,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <>
           <SectionTitle>This month</SectionTitle>
           <PassSummary summary={summary} />
+          <div className="mt-4">
+            <RewardsCards summary={summary} />
+          </div>
           {summary.upgrade && (
             <div className="mt-4">
               <UpgradeCard upgrade={summary.upgrade} passesLeft={summary.passesLeft} nudge={summary.upgrade.suggested} />

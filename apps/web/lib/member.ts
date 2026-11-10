@@ -24,6 +24,7 @@ import { authorizeOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPost, mapShop, mapSubscription, ORDER_SELECT } from "./db";
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { notifyShopNewOrder } from "./notify";
+import { getBonusLeft, getMemberRewards } from "./rewards";
 import { supabaseAdmin } from "./supabase/server";
 
 const LIVE = ["active", "trialing", "past_due", "incomplete"];
@@ -47,15 +48,24 @@ export function periodAllowance(sub: Subscription) {
 }
 
 /** Passes left this period and the days a pass was already used (any shop). */
-export async function getPassState(memberId: string, sub: Subscription | null): Promise<{ passesLeft: number; passDaysUsed: string[] }> {
-  if (!sub) return { passesLeft: 0, passDaysUsed: [] };
+export async function getPassState(
+  memberId: string,
+  sub: Subscription | null,
+): Promise<{ passesLeft: number; bonusLeft: number; bonusExpiresAt: string | null; passDaysUsed: string[] }> {
+  if (!sub) return { passesLeft: 0, bonusLeft: 0, bonusExpiresAt: null, passDaysUsed: [] };
   const db = supabaseAdmin();
-  const [{ data: ledger }, { data: orders }] = await Promise.all([
+  const [{ data: ledger }, { data: orders }, bonus] = await Promise.all([
     db.from("pass_ledger").select("passes, type, period_start").eq("member_id", memberId).eq("subscription_id", sub.id).eq("period_start", sub.currentPeriodStart),
     db.from("orders").select("pass_day").eq("member_id", memberId).neq("status", "cancelled").gte("pass_day", dayKey(new Date(Date.now() - 2 * 864e5), RULES.timeZone)),
+    getBonusLeft(memberId),
   ]);
   const entries: PassLedgerEntry[] = (ledger ?? []).map((r) => ({ passes: r.passes, type: r.type, periodStart: r.period_start }));
-  return { passesLeft: passBalance(entries, sub.currentPeriodStart), passDaysUsed: (orders ?? []).map((o) => o.pass_day) };
+  return {
+    passesLeft: passBalance(entries, sub.currentPeriodStart),
+    bonusLeft: bonus.left,
+    bonusExpiresAt: bonus.expiresSoonest,
+    passDaysUsed: (orders ?? []).map((o) => o.pass_day),
+  };
 }
 
 export async function getAreas(memberId: string): Promise<SavedArea[]> {
@@ -93,18 +103,29 @@ export async function getUpgradeOption(sub: Subscription | null, passesLeft: num
   };
 }
 
+async function referralCodeOf(memberId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin().from("profiles").select("referral_code").eq("id", memberId).maybeSingle();
+  return (data?.referral_code as string | undefined) ?? null;
+}
+
 export async function getMemberSummary(s: Session): Promise<MemberSummary> {
   const sub = await getLiveSubscription(s.userId);
   const [passes, areas] = await Promise.all([getPassState(s.userId, sub), getAreas(s.userId)]);
   const allowance = sub ? periodAllowance(sub) : null;
   const today = dayKey(new Date(), RULES.timeZone);
-  const upgrade = await getUpgradeOption(sub, passes.passesLeft);
+  const [upgrade, rewards] = await Promise.all([
+    getUpgradeOption(sub, passes.passesLeft),
+    s.profile.role === "member" ? getMemberRewards(s.userId, await referralCodeOf(s.userId)) : Promise.resolve(null),
+  ]);
   return {
     profile: s.profile,
     subscription: sub,
     tierName: allowance?.tier.name ?? null,
     passesPerMonth: allowance?.passesPerMonth ?? 0,
     passesLeft: passes.passesLeft,
+    bonusPassesLeft: passes.bonusLeft,
+    bonusExpiresAt: passes.bonusExpiresAt,
+    rewards,
     maxPassValueCents: allowance?.maxPassValueCents ?? 0,
     passUsedToday: passes.passDaysUsed.includes(today),
     passDaysUsed: passes.passDaysUsed,
@@ -222,7 +243,8 @@ export async function placeOrder(
     shop: { id: shop.id, status: shop.status, hours: shop.hours ?? {} },
     subscription: sub,
     menu: (menu ?? []).map((m) => mapMenuItem(m, now)),
-    passesLeft: passes.passesLeft,
+    // This month's passes first, then bonus passes (the database picks which, atomically).
+    passesLeft: passes.passesLeft + passes.bonusLeft,
     passDaysUsed: passes.passDaysUsed,
     maxPassValueCents: allowance?.maxPassValueCents ?? 0,
     confirmedOverageCents: typeof input.confirmedOverageCents === "number" ? input.confirmedOverageCents : null,

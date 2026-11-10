@@ -19,6 +19,12 @@
       story: "Family-run since 2009. Cardamom lattes from our grandmother's recipe.",
       menu: [["vespresso", "Espresso", "single", 275, "espresso"], ["cardamom", "Cardamom Latte", "12 oz", 600, "specialty"], ["vmocha", "Mocha", "12 oz", 575, "specialty"],
              ["vdrip", "Drip Coffee", "16 oz", 300, "brewed"], ["viced", "Iced Coffee", "16 oz", 375, "cold"]] },
+    { id: "montclair", name: "Common Grounds Montclair", address: "12 Church St, Montclair", lat: 40.8150, lng: -74.2120, hours: "6am–7pm",
+      story: "Communal tables, local art on the walls and a cold brew that's steeped for 20 hours.",
+      menu: [["mlatte", "Latte", "12 oz", 500, "espresso"], ["mcold", "Cold Brew", "16 oz", 475, "cold"], ["mdrip", "Drip Coffee", "12 oz", 275, "brewed"], ["mhoney", "Honey Lavender Latte", "12 oz", 625, "specialty"]] },
+    { id: "southorange", name: "South Orange Social", address: "15 Sloan St, South Orange", lat: 40.7490, lng: -74.2580, hours: "7am–4pm",
+      story: "Right by the train. Commuter-fast espresso and the friendliest morning crew in town.",
+      menu: [["sespresso", "Espresso", "double", 300, "espresso"], ["sflat", "Flat White", "8 oz", 475, "espresso"], ["sdrip", "House Drip", "12 oz", 250, "brewed"], ["siced", "Iced Coffee", "16 oz", 375, "cold"]] },
   ].map(function (s) {
     s.menu = s.menu.map(function (m) {
       var mods = m[4] === "espresso" || m[4] === "specialty" ? S.starterModifierGroups() : m[4] === "cold" ? S.starterModifierGroups().slice(0, 1) : [];
@@ -76,7 +82,8 @@
       session: null, tab: "shops", shopTab: "orders", counterShop: "main", detail: null, cart: [], customize: null, picked: [], cqty: 1, mods: {}, editMods: null, confirmedOverage: null, pickupIdx: 0,
       orders: [], tickets: [], soldOut: {}, customShops: [], extraMenu: {}, paused: {}, shopError: null, shopStatus: {}, spotlight: {}, adminTab: "overview", adminError: null, pickSub: S.DEFAULT_SUB_TIER, upgradeConfirm: false,
       error: null, scan: null, sheet: null, authMode: "signup",
-      quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null };
+      quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
+      bonus: [], refCode: null, friends: 0, grandTour: false };
   }
   var state = fresh();
   try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved && saved.screen) state = Object.assign(fresh(), saved, { sheet: null, scan: null, error: null }); } catch (e) {}
@@ -98,6 +105,64 @@
   function money2(c) { return S.formatCents(c, { showZeroCents: true }); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
   function tier() { return state.tierId ? S.getTier(state.tierId) : null; }
+  // ---- Rewards (rules from core: passport, Grand Tour, referrals; bonus passes roll over a year)
+  function bonusLeft() { return S.bonusBalance(state.bonus || [], now()); }
+  function totalPassesLeft() { return state.passesLeft + bonusLeft(); }
+  function hasBonus(key) { return (state.bonus || []).some(function (g) { return g.key === key; }); }
+  function grantBonus(source, key, passes) {
+    if (hasBonus(key)) return false;
+    var n = now();
+    state.bonus.push({ source: source, key: key, passes: passes, used: 0, grantedAt: n.toISOString(), expiresAt: S.bonusExpiry(n).toISOString() });
+    return true;
+  }
+  function liveShopsForPassport() {
+    var ago = new Date(now().getTime() - 90 * 864e5).toISOString();
+    return memberShops().map(function (x) { return { id: x.id, liveSince: x.custom ? now().toISOString() : ago }; });
+  }
+  function passport() {
+    var visited = state.orders.filter(function (o) { return o.status === "picked_up"; }).map(function (o) { return o.shopId; });
+    return S.passportStatus({ visitedShopIds: visited, liveShops: liveShopsForPassport(), passportEarned: hasBonus("passport"), grandTourEarned: !!state.grandTour, now: now() });
+  }
+  /** After a pickup: maybe complete the passport or the Grand Tour. */
+  function awardVisit() {
+    var st = passport();
+    if (st.passportDue && grantBonus("passport", "passport", S.RULES.passportFreePasses)) {
+      setTimeout(function () { toast("🎉 Passport stamped! " + st.goal + " local shops visited. A free day pass is yours, good for a year."); }, 700);
+    }
+    if (st.grandTour.due) { state.grandTour = true; setTimeout(function () { toast("🏆 Grand Tour complete! " + S.RULES.grandTourFreeMonths + " months free."); }, 900); }
+  }
+  function friendJoined() {
+    state.friends = (state.friends || 0) + 1;
+    var granted = (state.bonus || []).filter(function (g) { return g.source === "referral"; }).length;
+    var r = S.referralStatus(state.friends, granted);
+    for (var i = 0; i < r.rewardsDue; i++) grantBonus("referral", "referral-" + (granted + i + 1), r.passesPerReward);
+    return r;
+  }
+  function bonusLine() {
+    var b = bonusLeft(); if (!b) return "";
+    var exp = S.bonusExpiresSoonest(state.bonus, now());
+    return '<span class="small"><b>+ ' + b + " bonus pass" + (b === 1 ? "" : "es") + "</b> · " + (b === 1 ? "rolls" : "roll") + " over until " + dateFmt.format(exp) + "</span>";
+  }
+  function passportCard() {
+    var st = passport(), gt = st.grandTour, stamps = Math.min(st.visited, st.goal);
+    var dots = ""; for (var i = 0; i < st.goal; i++) dots += '<span class="stamp' + (i < stamps ? " on" : "") + '" aria-hidden="true">' + (i < stamps ? "☕" : i + 1) + "</span>";
+    return '<div class="card stack" style="gap:10px"><div class="row between"><b style="font-family:var(--head);font-weight:400;font-size:1.3rem">Neighborhood Passport</b>' + (st.passportEarned ? '<span class="badge honey">Stamped!</span>' : "") + "</div>" +
+      '<span class="small">' + (st.passportEarned ? "You visited " + st.goal + " local shops and earned a free day pass. Keep exploring!" : "Pick up at " + st.goal + " different shops and get a free day pass.") + "</span>" +
+      '<div class="stamps" role="img" aria-label="' + stamps + " of " + st.goal + ' shops visited">' + dots + "</div>" +
+      '<div class="tour"><b>🏆 Grand Tour:</b> ' + (gt.earned ? "done! " + S.RULES.grandTourFreeMonths + " months of your plan are on us."
+        : gt.unlocked ? "visit every participating shop and get " + S.RULES.grandTourFreeMonths + " months free. " + gt.visitedCounting + " of " + gt.countingShops + " visited."
+        : "visit every shop for " + S.RULES.grandTourFreeMonths + " months free. Unlocks once more than " + (gt.minShops - 1) + " shops join (" + gt.liveShops + " so far).") + "</div></div>";
+  }
+  function inviteCard() {
+    var granted = (state.bonus || []).filter(function (g) { return g.source === "referral"; }).length;
+    var r = S.referralStatus(state.friends || 0, granted);
+    var need = S.RULES.referralFriendsNeeded;
+    return '<div class="card stack" style="gap:10px"><b style="font-family:var(--head);font-weight:400;font-size:1.3rem">Bring ' + need + " friends, get " + r.passesPerReward + " passes</b>" +
+      '<span class="small">When ' + need + " friends join with your link and start their pass, you get " + r.passesPerReward + " bonus passes. Bonus passes roll over for a year.</span>" +
+      '<span class="muted small"><b>' + (need - r.friendsToNext) + " of " + need + " friends joined</b>" + (r.rewardsEarned ? " · " + r.rewardsEarned * r.passesPerReward + " bonus passes earned so far" : "") + "</span>" +
+      '<div class="row" style="flex-wrap:wrap;gap:8px"><code class="refcode">' + esc(state.refCode || "") + '</code><button class="pill dark" data-a="share-link">Share my link</button></div>' +
+      '<button class="btn ghost" data-a="friend-joined">Demo: a friend joins with my link</button></div>';
+  }
   // Demo billing month: 30 demo days from the day you joined (or last renewed).
   function periodStartDate() { return new Date(Date.now() + state.periodStart * 864e5); }
   function periodEndDate() { return new Date(Date.now() + (state.periodStart + 30) * 864e5); }
@@ -384,7 +449,7 @@
   function passStatus() {
     var today = S.dayKey(now(), TZ);
     if (state.passDaysUsed.indexOf(today) >= 0) return '<span class="badge">Today\'s pass used</span>';
-    if (state.passesLeft < 1) return '<span class="badge">No passes left</span>';
+    if (totalPassesLeft() < 1) return '<span class="badge">No passes left</span>';
     return '<span class="badge sky">Today\'s pass ready</span>';
   }
 
@@ -421,7 +486,7 @@
       (up && up.suggested ? upgradeCard(up, true) : "") +
       '<div class="card stack" style="gap:8px"><div class="row between"><span class="muted small">Daily Passes left this month</span><b class="num">' + state.passesLeft + " of " + t.passesPerMonth + "</b></div>" +
       '<div class="meter" role="meter" aria-label="Passes left" aria-valuemin="0" aria-valuemax="' + t.passesPerMonth + '" aria-valuenow="' + state.passesLeft + '"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
-      '<span class="muted small">Each pass covers the first ' + money2(t.maxPassValueCents) + " of one day's order.</span></div>" +
+      '<span class="muted small">Each pass covers the first ' + money2(t.maxPassValueCents) + " of one day's order.</span>" + bonusLine() + "</div>" + passportCard() +
       '<h2 class="section-title">Shops near you</h2>' + localShops(true) +
       (list ? '<div class="stack">' + list + "</div>" : "");
   }
@@ -472,7 +537,7 @@
         '<b class="num">' + (p ? money2(p.lineTotalCents) : "") + "</b></div>";
     }).join("") + "</div>" : '<span class="muted">Add a coffee from the menu.</span>';
     var split = S.splitPassValue(total, t.maxPassValueCents);
-    var pass = S.checkPassAvailable({ passesLeft: state.passesLeft, passDaysUsed: state.passDaysUsed, now: now(), timeZone: TZ });
+    var pass = S.checkPassAvailable({ passesLeft: totalPassesLeft(), passDaysUsed: state.passDaysUsed, now: now(), timeZone: TZ });
     var hasOver = split.overageCents > 0;
     var confirmed = !hasOver || state.confirmedOverage === split.overageCents;
     var slots = S.pickupSlots(now(), ALL_DAY, TZ).slice(0, 12);
@@ -490,7 +555,7 @@
         '<label for="ov"><input id="ov" type="checkbox" data-a="confirm-overage" data-amount="' + split.overageCents + '" ' + (confirmed ? "checked" : "") + "><span>I confirm the " + money2(split.overageCents) + " overage. My pass covers " + money2(split.passCoveredCents) + " of the " + money2(total) + " total.</span></label>" +
         (upgradeInfo() && S.overageCoveredByUpgrade(t, total) > 0 ? '<span class="small" style="background:var(--cream);border-radius:12px;padding:8px 10px">Tip: on <b>' + S.upgradeTarget(t).name + "</b>, " + money2(S.overageCoveredByUpgrade(t, total)) + ' of this overage would be covered by your pass. <button class="linkbtn" style="min-height:0;padding:0" data-a="goto-upgrade">See upgrade</button></span>' : "") +
         "</div>" : "") +
-      '<span class="muted small">' + state.passesLeft + " of " + t.passesPerMonth + " passes left · one pass per day</span>" +
+      '<span class="muted small">' + state.passesLeft + " of " + t.passesPerMonth + " passes left" + (bonusLeft() ? " + " + bonusLeft() + " bonus" : "") + " · one pass per day</span>" +
       '<b>Pickup time</b><div class="chips">' + chips + "</div>" +
       (!pass.ok && total > 0 ? '<div class="alert" role="alert">' + esc(pass.message) + "</div>" : "") +
       (state.error ? '<div class="alert" role="alert">' + esc(state.error) + "</div>" : "") +
@@ -517,7 +582,7 @@
       '<div class="lines"><div class="row"><span class="muted">Covered by your Daily Pass</span><span class="num">' + money2(o.passCoveredCents) + "</span></div>" +
       (o.overageCents ? '<div class="row"><span class="muted">Overage you confirmed</span><span class="num">' + money2(o.overageCents) + "</span></div>" : "") +
       '<div class="row total"><span>Order total</span><span class="num">' + money2(o.totalCents) + "</span></div></div></div></div>" +
-      (open ? '<p class="demo-note">Demo: to redeem it, sign out on the Account tab, then tap <b>Shop log in</b> on the home screen.</p>' : "");
+      (open ? '<button class="btn line" data-a="demo-pickup" data-id="' + o.id + '">Demo: the shop scans it</button><p class="demo-note">Or sign out on the Account tab and tap <b>Shop log in</b> to scan it from the shop side.</p>' : "");
   }
 
   function ordersTab() {
@@ -548,7 +613,8 @@
       '<div class="card stack"><div class="row between"><span class="muted small">Daily Passes this month</span>' + passStatus() + "</div>" +
       '<b style="font-size:1.75rem" class="num">' + state.passesLeft + ' <span class="muted" style="font-size:1rem;font-weight:400">of ' + t.passesPerMonth + " left</span></b>" +
       '<div class="meter"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
-      '<span class="muted small">Unused passes expire at renewal. Nothing rolls over.</span></div>' +
+      '<span class="muted small">Unused monthly passes expire at renewal. Bonus passes roll over for a year.</span>' + bonusLine() + "</div>" +
+      inviteCard() + passportCard() +
       '<div class="card stack"><b>Demo controls</b><span class="muted small">Today in the demo: ' + dateFmt.format(now()) + ". You get one pass a day, so move to the next day to order again.</span>" +
       '<button class="btn line" data-a="new-day">Start the next day</button><button class="btn line" data-a="new-month">Skip to next month</button><button class="btn danger" data-a="reset">Reset the demo</button></div>' +
       '<button class="btn line" data-a="sign-out">Sign out</button>' +
@@ -835,7 +901,7 @@
     var r = S.validateOrder(lines, {
       shop: { id: s.id, status: isPaused(s.id) || shopStatus(s.id) !== "active" ? "paused" : "active", hours: ALL_DAY },
       subscription: { status: "active", currentPeriodEnd: new Date(n.getTime() + 30 * 864e5).toISOString() },
-      menu: menu, passesLeft: state.passesLeft, passDaysUsed: state.passDaysUsed, maxPassValueCents: t.maxPassValueCents,
+      menu: menu, passesLeft: totalPassesLeft(), passDaysUsed: state.passDaysUsed, maxPassValueCents: t.maxPassValueCents,
       confirmedOverageCents: state.confirmedOverage, pickupAt: pickupAt, now: n, timeZone: TZ,
     });
     if (!r.ok) { state.error = r.message; return render(); }
@@ -844,12 +910,17 @@
     state.orders.unshift({ id: id, shopId: s.id, status: "received", totalCents: r.totalCents, passCoveredCents: r.passCoveredCents, overageCents: r.overageCents,
       passDay: r.passDay, pickupAt: pickupAt.toISOString(), createdAt: n.toISOString(), redeemedAt: null,
       items: r.lines.map(function (l) { return { name: l.name, size: sizes[l.menuItemId], quantity: l.quantity, options: l.options }; }) });
-    state.passesLeft = r.passesLeftAfter; state.passDaysUsed.push(r.passDay);
+    // This month's passes first (they expire sooner), then the bonus pass that expires soonest.
+    var bonusKey = null;
+    if (S.passSourceForOrder(state.passesLeft, bonusLeft()) === "bonus") { var g = S.nextBonusToUse(state.bonus, n); g.used += 1; bonusKey = g.key; }
+    else state.passesLeft -= 1;
+    state.orders[0].bonusKey = bonusKey;
+    state.passDaysUsed.push(r.passDay);
     state.cart = []; state.confirmedOverage = null; state.error = null; state.counterShop = s.id;
     state.detail = { type: "qr", id: id };
     issueTicket(id);
     render(); window.scrollTo(0, 0);
-    toast("Order placed. Your pass is used for today.");
+    toast(bonusKey ? "Order placed with a bonus pass." : "Order placed. Your pass is used for today.");
   }
 
   function redeem(input) {
@@ -868,6 +939,7 @@
       return render();
     }
     t.redeemedAt = nowMs; o.status = "picked_up"; o.redeemedAt = now().toISOString();
+    awardVisit();
     state.scan = { ok: true, order: o, pay: S.orderPayout({ passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }) };
     render();
   }
@@ -970,7 +1042,7 @@
         var changing = !!state.tierId;
         var t = S.getTier(state.selectedTier);
         state.sheet = null; state.screen = "app"; state.session = "member"; state.tab = changing ? "account" : "shops"; state.detail = null;
-        if (!changing) { state.tierId = t.id; state.passesLeft = t.passesPerMonth; state.passDaysUsed = []; state.periodStart = state.dayOffset; state.pendingTier = null; }
+        if (!changing) { state.tierId = t.id; state.passesLeft = t.passesPerMonth; state.passDaysUsed = []; state.periodStart = state.dayOffset; state.pendingTier = null; state.refCode = state.refCode || S.makeReferralCode(); }
         else state.pendingTier = t.id === state.tierId ? null : t.id; // takes effect next month
         render(); window.scrollTo(0, 0);
         return toast(changing ? "Done! " + t.name + " starts " + dateFmt.format(periodEndDate()) + ". This month stays as it is." : "You're in! " + t.passesPerMonth + " Daily Passes loaded.");
@@ -1021,12 +1093,29 @@
         if (oc && OPEN.indexOf(oc.status) >= 0) {
           oc.status = "cancelled";
           var i = state.passDaysUsed.indexOf(oc.passDay); if (i >= 0) state.passDaysUsed.splice(i, 1);
-          state.passesLeft += 1;
+          var bg = oc.bonusKey && (state.bonus || []).filter(function (g) { return g.key === oc.bonusKey; })[0];
+          if (bg) bg.used = Math.max(0, bg.used - 1); else state.passesLeft += 1;
           toast("Order cancelled. The member's pass was returned.");
         }
         break;
       }
       case "scan-phone": return redeem({ orderId: id });
+      case "demo-pickup": {
+        var od = orderById(id); if (!od || OPEN.indexOf(od.status) < 0) break;
+        var tk = latestTicket(id); if (tk) tk.redeemedAt = Date.now();
+        od.status = "picked_up"; od.redeemedAt = now().toISOString();
+        awardVisit(); render(); return toast("Picked up. Enjoy!");
+      }
+      case "friend-joined": {
+        var fr = friendJoined(); render();
+        return toast(fr.friendsToNext === S.RULES.referralFriendsNeeded ? "🎉 " + fr.passesPerReward + " bonus passes added! They roll over for a year." : "A friend joined! " + fr.friendsToNext + " more to go.");
+      }
+      case "share-link": {
+        var link = "https://sippybrew.com/signup?ref=" + (state.refCode || "");
+        try { if (navigator.share) { navigator.share({ title: "Sippy Brew", text: "Join me on Sippy Brew:", url: link }).catch(function () {}); return; } } catch (e) {}
+        try { navigator.clipboard.writeText(link); } catch (e) {}
+        return toast("Link copied: " + link);
+      }
       case "new-day": state.dayOffset += 1; render(); return toast("It's " + dateFmt.format(now()) + ". Today's pass is ready.");
       case "reset": try { localStorage.removeItem(KEY); } catch (e) {} state = fresh(); render(); return window.scrollTo(0, 0);
       default: return;

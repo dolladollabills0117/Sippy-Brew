@@ -16,6 +16,7 @@ export * from "./rules/posts";
 export * from "./rules/order";
 export * from "./rules/quiz";
 export * from "./rules/planChange";
+export * from "./rules/rewards";
 export { PLATFORM_ROLE_TERMS, PLATFORM_ROLE_SHORT } from "./legal";
 export { LOGO_SVG, logoSvg, BACKGROUND_BEANS_SVG, BEAN_TILE_SVG } from "./logo";
 export { brand, colors, gradient, fonts, radii, spacing, shadows, focusRing, touchTarget } from "./brand";

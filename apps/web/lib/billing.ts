@@ -5,6 +5,7 @@ import type { Session } from "./auth";
 import { env } from "./env";
 import { AppError, badRequest } from "./http";
 import { notifyMemberRenewal } from "./notify";
+import { qualifyReferral } from "./rewards";
 import { supabaseAdmin } from "./supabase/server";
 
 let stripeClient: Stripe | null = null;
@@ -133,6 +134,8 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
   // Snapshot this period's allowance so later edits to tiers.json apply from the next renewal.
   await db.from("subscriptions").update({ period_passes: tierCfg.passesPerMonth, period_max_pass_value: tierCfg.maxPassValueCents }).eq("id", saved.id);
   if (!ledgerErr) void notifyMemberRenewal(memberId, tierCfg.name, tierCfg.passesPerMonth).catch(() => {});
+  // First paid month: counts toward the friend who referred them (no-op after the first time).
+  if (!ledgerErr) await qualifyReferral(memberId).catch((e) => console.error("referral", e));
 }
 
 // ---------------------------------------------------------------------------

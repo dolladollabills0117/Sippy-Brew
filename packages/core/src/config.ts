@@ -77,6 +77,19 @@ export interface Rules {
   /** Shop search radius, in miles. Capped to keep it local. */
   defaultRadiusMiles: number;
   maxRadiusMiles: number;
+  /** Neighborhood passport: visit this many different shops for a free bonus pass. */
+  passportShopsForFreePass: number;
+  passportFreePasses: number;
+  /** Grand Tour: visit every live shop for free months. Only on once this many shops are live. */
+  grandTourMinShops: number;
+  /** Shops count toward the Grand Tour once they've been live this many days. */
+  grandTourShopMinLiveDays: number;
+  grandTourFreeMonths: number;
+  /** Referrals: every N friends who join and pay earns M bonus passes. */
+  referralFriendsNeeded: number;
+  referralBonusPasses: number;
+  /** Bonus passes (passport, referral) roll over and expire this many days after they're earned. */
+  bonusPassLifetimeDays: number;
 }
 
 export const SUB_TIERS: readonly SubTier[] = tiersJson.subTiers as SubTier[];

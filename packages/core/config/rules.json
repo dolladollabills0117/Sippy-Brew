@@ -15,5 +15,13 @@
   "minPickupLeadMinutes": 5,
   "maxPickupLeadMinutes": 120,
   "defaultRadiusMiles": 5,
-  "maxRadiusMiles": 15
+  "maxRadiusMiles": 15,
+  "passportShopsForFreePass": 5,
+  "passportFreePasses": 1,
+  "grandTourMinShops": 51,
+  "grandTourShopMinLiveDays": 30,
+  "grandTourFreeMonths": 2,
+  "referralFriendsNeeded": 2,
+  "referralBonusPasses": 3,
+  "bonusPassLifetimeDays": 365
 }
