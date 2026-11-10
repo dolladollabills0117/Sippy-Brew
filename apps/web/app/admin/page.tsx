@@ -1,5 +1,8 @@
-import { formatCents, getTier, platformTake, monthBounds, RULES, TIERS } from "@sippy/core";
+import { effectiveBps, formatCents, getTier, platformTake, monthBounds, payoutLines, recentWeeks, RULES, TIERS } from "@sippy/core";
 import { AdminShopActions } from "@/components/AdminShopActions";
+import { ExpandableStats } from "@/components/ExpandableStats";
+import { PayoutLines } from "@/components/PayoutLines";
+import { byWeek, mapSettled, SETTLED_SELECT, summarize, weekLabel } from "@/lib/settled";
 import { Badge, Card, EmptyState, PageTitle, SectionTitle, Stat } from "@/components/ui";
 import { requirePageSession } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -14,17 +17,29 @@ export default async function AdminPage() {
   const s = await requirePageSession("admin", "/admin");
   if (s.profile.role !== "admin") redirect("/");
   const db = supabaseAdmin();
-  const month = monthBounds(new Date(), RULES.timeZone);
-  const [{ data: shops }, { data: subs }, { data: members }, { data: monthOrders }, { data: failures }, { data: alerts }] = await Promise.all([
+  const now = new Date();
+  const month = monthBounds(now, RULES.timeZone);
+  const weeksBack = recentWeeks(now, 8, RULES.timeZone);
+  const since = new Date(Math.min(month.start.getTime(), weeksBack[weeksBack.length - 1].start.getTime()));
+  const [{ data: shops }, { data: subs }, { data: members }, { data: settledRows }, { data: failures }, { data: alerts }] = await Promise.all([
     db.from("shops").select("id, name, address, status, spotlight, payouts_enabled, created_at, removal_reason, appeal_note, appealed_at, founding, profiles:owner_id(email)").order("created_at", { ascending: false }),
     db.from("subscriptions").select("tier, status, member_id"),
     db.from("profiles").select("id, name, email, created_at").eq("role", "member").order("created_at", { ascending: false }).limit(200),
-    db.from("orders").select("commission, net, total, overage_commission").in("status", ["picked_up", "no_show"]).gte("redeemed_at", month.start.toISOString()),
+    db.from("orders").select(SETTLED_SELECT).in("status", ["picked_up", "no_show"]).gte("redeemed_at", since.toISOString()).limit(20000),
     db.from("payment_failures").select("id, amount, reason, created_at, profiles:member_id(email)").order("created_at", { ascending: false }).limit(25),
     db.from("platform_alerts").select("id, kind, message, created_at, order_id, shops:shop_id(name), profiles:member_id(name, email)").is("resolved_at", null).order("created_at", { ascending: false }).limit(25),
   ]);
   type AlertRow = { id: string; kind: string; message: string; created_at: string; order_id: string | null; shops: { name: string } | null; profiles: { name: string; email: string } | null };
 
+  const settled = (settledRows ?? []).map(mapSettled);
+  const monthSettled = settled.filter((o) => new Date(o.redeemedAt) >= month.start);
+  const monthOrders = monthSettled.map((o) => ({ commission: o.commissionCents, net: o.netCents, overage_commission: o.overageCommissionCents }));
+  const shopName = new Map((shops ?? []).map((x) => [x.id, x.name as string]));
+  const foundingShop = new Map((shops ?? []).map((x) => [x.id, !!x.founding]));
+  const perShop = (list: typeof settled) =>
+    [...new Set(list.map((o) => o.shopId))].map((id) => ({ id, name: shopName.get(id) ?? "Shop", sum: summarize(list.filter((o) => o.shopId === id)) })).sort((a, b) => b.sum.grossCents - a.sum.grossCents);
+  const weeks = byWeek(settled, 8, now);
+  const money = (c: number) => formatCents(c, { showZeroCents: true });
   const live = (subs ?? []).filter((x) => x.status === "active" || x.status === "trialing");
   const tierCounts = TIERS.map((t) => `${t.name} ${live.filter((x) => x.tier === t.id).length}`).join(" · ");
   const mrr = live.reduce((sum, x) => sum + getTier(x.tier).priceCents, 0);
@@ -38,17 +53,158 @@ export default async function AdminPage() {
   return (
     <>
       <PageTitle kicker="Platform">Admin</PageTitle>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Stat label="Active subscriptions" value={live.length} sub={tierCounts} />
-        <Stat label="Monthly revenue" value={formatCents(mrr)} sub="From active plans" />
-        <Stat label="Commission this month" value={formatCents(commission, { showZeroCents: true })} sub={`${monthOrders?.length ?? 0} redemptions`} />
-        <Stat
-          label="You keep (so far)"
-          value={formatCents(take.keepCents, { showZeroCents: true })}
-          sub={`Revenue − ${formatCents(take.shopPayoutCents, { showZeroCents: true })} to shops − ${formatCents(take.cardFeesCents, { showZeroCents: true })} card fees + ${formatCents(take.overageCommissionCents, { showZeroCents: true })} overage fees`}
-        />
-        <Stat label="Failed payments" value={failures?.length ?? 0} sub="Most recent 25" />
-      </div>
+      <ExpandableStats
+        className="lg:grid-cols-5"
+        tiles={[
+          {
+            id: "subs",
+            label: "Active subscriptions",
+            value: live.length,
+            sub: tierCounts,
+            detailTitle: "Members by pass",
+            detail: (
+              <ul className="flex flex-col gap-1.5">
+                {TIERS.map((t) => (
+                  <li key={t.id} className="flex justify-between">
+                    <span>{t.name}</span>
+                    <strong className="tabular-nums">{live.filter((x) => x.tier === t.id).length}</strong>
+                  </li>
+                ))}
+              </ul>
+            ),
+          },
+          {
+            id: "revenue",
+            label: "Monthly revenue",
+            value: formatCents(mrr),
+            sub: "From active plans",
+            detailTitle: "Revenue by pass",
+            detail: (
+              <ul className="flex flex-col gap-1.5">
+                {TIERS.map((t) => {
+                  const n = live.filter((x) => x.tier === t.id).length;
+                  return (
+                    <li key={t.id} className="flex justify-between">
+                      <span>
+                        {t.name} × {n}
+                      </span>
+                      <strong className="tabular-nums">{money(n * t.priceCents)}</strong>
+                    </li>
+                  );
+                })}
+              </ul>
+            ),
+          },
+          {
+            id: "commission",
+            label: "Commission this month",
+            value: money(commission + take.overageCommissionCents),
+            sub: `${monthSettled.length} redemptions`,
+            detailTitle: "Commission by shop this month",
+            detail: perShop(monthSettled).length ? (
+              <ul className="divide-y divide-latte">
+                {perShop(monthSettled).map((r) => (
+                  <li key={r.id} className="py-2">
+                    <div className="flex justify-between gap-3">
+                      <strong>{r.name}</strong>
+                      <Badge tone={foundingShop.get(r.id) ? "sky" : "latte"}>{foundingShop.get(r.id) ? "Founding" : "Standard"}</Badge>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>{r.sum.orderCount} orders · pass commission</span>
+                      <span className="tabular-nums text-success">{money(r.sum.commissionCents)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>{RULES.overageCommissionBps / 100}% overage fees</span>
+                      <span className="tabular-nums text-success">{money(r.sum.overageCommissionCents)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-pecan">No redemptions this month.</p>
+            ),
+          },
+          {
+            id: "keep",
+            label: "You keep (so far)",
+            value: money(take.keepCents),
+            detailTitle: "What you keep this month (so far)",
+            detail: (
+              <>
+                <PayoutLines
+                  lines={[
+                    { label: "Members' monthly payments", cents: take.revenueCents, kind: "base" },
+                    { label: `${RULES.overageCommissionBps / 100}% overage fees`, cents: take.overageCommissionCents, kind: "plus" },
+                    { label: "Paid to shops for passes used", cents: take.shopPayoutCents, kind: "minus" },
+                    { label: "Card processing on monthly payments", cents: take.cardFeesCents, kind: "minus" },
+                    { label: "You keep", cents: take.keepCents, kind: "total" },
+                  ]}
+                />
+                <p className="mt-3 text-sm text-pecan">This goes down as members use passes and settles when the month renews.</p>
+              </>
+            ),
+          },
+          {
+            id: "failed",
+            label: "Failed payments",
+            value: failures?.length ?? 0,
+            sub: "Most recent 25",
+            detailTitle: "Failed payments",
+            detail: (failures ?? []).length ? (
+              <ul className="divide-y divide-latte">
+                {((failures ?? []) as unknown as { id: string; amount: number; reason: string | null; created_at: string; profiles: { email: string } | null }[]).map((f) => (
+                  <li key={f.id} className="flex flex-wrap justify-between gap-2 py-2">
+                    <span>
+                      <strong>{f.profiles?.email ?? "Member"}</strong> · {f.reason ?? "Card declined"}
+                    </span>
+                    <span className="tabular-nums text-danger">{money(f.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-pecan">None.</p>
+            ),
+          },
+        ]}
+      />
+
+      <section aria-labelledby="weeks-title" className="mt-6">
+        <h2 id="weeks-title" className="mb-1 text-2xl text-espresso">Weekly payouts</h2>
+        <p className="mb-2 text-sm text-pecan">Tap a week to see each shop. Green is what Sippy Brew earned that week.</p>
+        <div className="flex flex-col gap-2">
+          {weeks.map((w, i) => {
+            const sum = summarize(w.orders);
+            return (
+              <details key={w.start.toISOString()} className="card group p-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                  <span>
+                    <strong className="text-espresso">{weekLabel(w, i)}</strong>
+                    <span className="block text-sm text-pecan">
+                      {sum.orderCount} orders · shops get {money(sum.transferCents)}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <strong className="tabular-nums text-success">{money(sum.commissionCents + sum.overageCommissionCents)}</strong>
+                    <span aria-hidden="true" className="transition group-open:rotate-180">▾</span>
+                  </span>
+                </summary>
+                {perShop(w.orders).length ? (
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    {perShop(w.orders).map((r) => (
+                      <div key={r.id} className="rounded-2xl border border-latte p-4">
+                        <h3 className="mb-2 font-extrabold text-espresso">{r.name}</h3>
+                        <PayoutLines lines={payoutLines(r.sum, effectiveBps(r.sum, RULES.standardCommissionBps))} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-pecan">No orders that week.</p>
+                )}
+              </details>
+            );
+          })}
+        </div>
+      </section>
 
       {(alerts ?? []).length > 0 && (
         <section aria-labelledby="alerts-title" className="mt-6">

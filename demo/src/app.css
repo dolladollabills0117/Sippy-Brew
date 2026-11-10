@@ -260,3 +260,17 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700;
 .agree input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--burnt); flex-shrink: 0; }
 .email-preview summary { cursor: pointer; display: flex; flex-direction: column; gap: 2px; list-style: none; }
 .email-preview pre { white-space: pre-wrap; font-family: var(--body); font-size: .85rem; margin: 8px 0 0; }
+
+/* Dashboards: tappable stats, details, colored payout lines */
+.stat-btn { border: 2px solid transparent; text-align: left; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+.stat-btn.open { border-color: var(--espresso); }
+.stat-more { font-size: .75rem; font-weight: 800; color: var(--burnt-ink); margin-top: 4px; }
+.detail { border: 2px solid var(--espresso); }
+.pl.plus .num, .plus-t { color: var(--success); font-weight: 800; }
+.pl.minus, .pl.minus .num, .minus-t { color: var(--danger); }
+.pl.minus .num { font-weight: 800; }
+.pl.total { border-top: 1px solid var(--latte); padding-top: 8px; font-weight: 800; }
+.pl.total .num { font-size: 1.2rem; }
+.order-row { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--latte); padding-top: 8px; }
+.week-nav b { font-size: .95rem; }
+.week-row { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-top: 1px solid var(--latte); background: none; padding: 10px 0; min-height: 56px; cursor: pointer; }

@@ -19,7 +19,7 @@ import {
   type MenuItemInput,
   type ModifierGroup,
   type OrderStatus,
-  type ShopHours, canFlagNoShow, commissionBpsFor, overageCommission } from "@sippy/core";
+  type ShopHours, canFlagNoShow, commissionBpsFor, overageCommission, weekBounds } from "@sippy/core";
 import type { Session } from "./auth";
 import { captureOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPayout, mapPost, mapShop, ORDER_SELECT } from "./db";
@@ -27,6 +27,7 @@ import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { getLiveSubscription, getOrder } from "./member";
 import { notifyFollowersOfPost, notifyMemberNoShow, notifyMemberOrderStatus, notifyTeamNoShow } from "./notify";
 import { awardVisitRewards } from "./rewards";
+import { mapSettled, SETTLED_SELECT } from "./settled";
 import { supabaseAdmin } from "./supabase/server";
 
 export async function getOwnerShopRow(s: Session, opts: { allowMissing?: boolean } = {}) {
@@ -267,10 +268,38 @@ export async function getShopStats(s: Session) {
   return { stats: shopStats(orders, now, RULES.timeZone, commissionBpsFor(shopRow)), shop: mapShop(shopRow) };
 }
 
-export async function shopPayouts(s: Session) {
+/** Picked-up and no-show orders since `since`, with their locked-in split, newest first. */
+export async function shopSettledOrders(s: Session, since: Date) {
   const shop = await getOwnerShopRow(s);
-  const { data } = await supabaseAdmin().from("payouts").select("*").eq("shop_id", shop.id).order("period_start", { ascending: false }).limit(52);
-  return (data ?? []).map(mapPayout);
+  const { data } = await supabaseAdmin()
+    .from("orders")
+    .select(SETTLED_SELECT)
+    .eq("shop_id", shop.id)
+    .in("status", ["picked_up", "no_show"])
+    .gte("redeemed_at", since.toISOString())
+    .order("redeemed_at", { ascending: false })
+    .limit(5000);
+  return (data ?? []).map(mapSettled);
+}
+
+/** Past payouts with the orders in each, plus this week's orders not yet paid out. */
+export async function shopPayoutHistory(s: Session) {
+  const shop = await getOwnerShopRow(s);
+  const db = supabaseAdmin();
+  const week = weekBounds(new Date(), RULES.timeZone);
+  const { data: rows } = await db.from("payouts").select("*").eq("shop_id", shop.id).order("period_start", { ascending: false }).limit(52);
+  const payouts = (rows ?? []).map(mapPayout);
+  const [{ data: paid }, { data: open }] = await Promise.all([
+    payouts.length
+      ? db.from("orders").select(SETTLED_SELECT).in("payout_id", payouts.map((p) => p.id)).order("redeemed_at", { ascending: false })
+      : Promise.resolve({ data: [] as unknown[] }),
+    db.from("orders").select(SETTLED_SELECT).eq("shop_id", shop.id).in("status", ["picked_up", "no_show"]).is("payout_id", null).gte("redeemed_at", week.start.toISOString()).order("redeemed_at", { ascending: false }),
+  ]);
+  const paidOrders = (paid ?? []).map(mapSettled);
+  return {
+    thisWeek: { ...week, orders: (open ?? []).map(mapSettled) },
+    payouts: payouts.map((p) => ({ ...p, orders: paidOrders.filter((o) => o.payoutId === p.id) })),
+  };
 }
 
 export async function shopPosts(s: Session) {

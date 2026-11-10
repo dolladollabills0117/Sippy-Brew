@@ -10,6 +10,7 @@ import type {
   MenuItem,
   Order,
   Payout,
+  SettledOrder,
   Post,
   QrTicket,
   Shop,
@@ -108,8 +109,9 @@ export function createApiClient(opts: ApiClientOptions) {
     updateMenuItem: (id: string, patch: Partial<Pick<MenuItem, "available" | "soldOutToday" | "priceCents" | "name" | "size" | "modifierGroups">>) =>
       request<{ item: MenuItem }>("PATCH", `/api/shop/menu/${id}`, patch),
     deleteMenuItem: (id: string) => request<{ ok: true }>("DELETE", `/api/shop/menu/${id}`),
-    shopStats: () => request<{ stats: ShopStats; shop: Shop }>("GET", "/api/shop/stats"),
-    shopPayouts: () => request<{ payouts: Payout[] }>("GET", "/api/shop/payouts"),
+    shopStats: () => request<{ stats: ShopStats; shop: Shop; recent: SettledOrder[] }>("GET", "/api/shop/stats"),
+    shopPayouts: () =>
+      request<{ payouts: (Payout & { orders: SettledOrder[] })[]; thisWeek: { start: string; end: string; orders: SettledOrder[] } }>("GET", "/api/shop/payouts"),
     shopPost: (body: string) => request<{ post: Post }>("POST", "/api/shop/posts", { body }),
     shopPosts: () => request<{ posts: Post[] }>("GET", "/api/shop/posts"),
     saveShop: (input: { name: string; address: string; lat: number; lng: number; hours: ShopHours; story: string; photoUrl?: string | null; acceptFoodPolicy?: boolean }) =>

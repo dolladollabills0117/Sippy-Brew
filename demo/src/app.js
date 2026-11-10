@@ -99,7 +99,7 @@
       error: null, scan: null, sheet: null, authMode: "signup",
       quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
       bonus: [], refCode: null, friends: 0, grandTour: false,
-      removed: {}, appeals: {}, foundingOverride: {}, agreed: false, lastEmail: null, contactSent: false, cartShop: null, editLine: null, customizeShop: null,
+      removed: {}, appeals: {}, foundingOverride: {}, dashOpen: null, payWeek: 0, payOrdersOpen: false, adminOpen: null, adminWeekOpen: null, agreed: false, lastEmail: null, contactSent: false, cartShop: null, editLine: null, customizeShop: null,
       minuteOffset: 0, prices: {}, priceChangedAt: {}, notices: [], teamAlerts: [], scanRows: null, scanSkipped: [], scanning: false, orderNote: "", orderAllergy: "" };
   }
   var state = fresh();
@@ -894,33 +894,64 @@
       '<button class="btn" type="submit">Add to menu</button></form>';
   }
 
+  /** Payout breakdown in reading order: pass sales, overages (green +), deductions (red −), net. */
+  function linesHtml(lines) {
+    return '<div class="lines">' + lines.map(function (l) {
+      var v = l.kind === "plus" ? "+" + money2(l.cents) : l.kind === "minus" ? "−" + money2(l.cents) : money2(l.cents);
+      return '<div class="row between pl ' + l.kind + '"><span>' + esc(l.label) + '</span><span class="num">' + v + "</span></div>";
+    }).join("") + "</div>";
+  }
+  function settled(o) { return (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt; }
+  function weekLabel(w, i) { return i === 0 ? "This week" : i === 1 ? "Last week" : dateFmt.format(w.start) + " – " + dateFmt.format(new Date(w.end.getTime() - 1)); }
+  function orderRows(list, withBreakdown) {
+    if (!list.length) return '<span class="muted small">No orders.</span>';
+    return list.map(function (o) {
+      var pay = payoutFor(o), when = new Date(o.redeemedAt || o.createdAt);
+      return '<div class="order-row"><div class="row between"><b>' + dateFmt.format(when) + " · " + timeFmt.format(when) + '</b><span class="num">' + money2(o.totalCents) + "</span></div>" +
+        '<span class="muted small">' + esc(o.items.map(function (x) { return x.quantity + "× " + x.name; }).join(", ")) + (o.status === "no_show" ? " · not picked up" : "") + "</span>" +
+        (withBreakdown ? '<span class="small">Pass ' + money2(pay.passCoveredCents) + (pay.overageCents ? ' · <span class="plus-t">+' + money2(pay.overageCents) + " overage</span>" : "") +
+          ' · <span class="minus-t">−' + money2(pay.commissionCents + pay.overageCommissionCents + pay.processingFeeCents) + "</span> · you get <b>" + money2(pay.shopCents) + "</b></span>" : "") + "</div>";
+    }).join("");
+  }
+
   function shopDashTab() {
-    var mine = state.orders.filter(function (o) { return o.shopId === state.counterShop; }).map(function (o) {
-      return { id: o.id, memberId: "member", totalCents: o.totalCents, passCoveredCents: o.passCoveredCents, overageCents: o.overageCents, status: o.status, createdAt: o.createdAt, redeemedAt: o.redeemedAt, items: o.items.map(function (i) { return { name: i.name, quantity: i.quantity }; }) };
-    });
-    var st = S.shopStats(mine, now(), TZ);
-    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Today</h1><div class="stats">' +
-      '<div class="stat"><span class="muted small">Redemptions today</span><b>' + st.redemptions.today + "</b></div>" +
-      '<div class="stat"><span class="muted small">This week</span><b>' + st.redemptions.week + "</b></div>" +
-      '<div class="stat"><span class="muted small">Pass sales this month</span><b>' + money2(st.grossCents.month) + "</b></div>" +
-      '<div class="stat"><span class="muted small">Est. payout this week</span><b>' + money2(st.estimatedWeeklyPayoutCents) + "</b></div></div>" +
+    var mine = state.orders.filter(function (o) { return o.shopId === state.counterShop; });
+    var st = S.shopStats(mine.map(function (o) {
+      return { id: o.id, memberId: "member", totalCents: o.totalCents, passCoveredCents: o.passCoveredCents, overageCents: o.overageCents, status: o.status === "no_show" ? "picked_up" : o.status, createdAt: o.createdAt, redeemedAt: o.redeemedAt, items: o.items.map(function (i) { return { name: i.name, quantity: i.quantity }; }) };
+    }), now(), TZ, rateFor(state.counterShop));
+    var done = mine.filter(settled).sort(function (a, b) { return new Date(b.redeemedAt) - new Date(a.redeemedAt); });
+    var day = S.dayBounds(now(), TZ), week = S.weekBounds(now(), TZ), month = S.monthBounds(now(), TZ);
+    var inR = function (r) { return done.filter(function (o) { return S.isWithin(new Date(o.redeemedAt), r); }); };
+    var tile = function (key, label, value, sub) {
+      var open = state.dashOpen === key;
+      return '<button class="stat stat-btn' + (open ? " open" : "") + '" data-a="dash-open" data-id="' + key + '" aria-expanded="' + open + '"><span class="muted small">' + label + "</span><b>" + value + "</b>" + (sub ? '<span class="muted small">' + sub + "</span>" : "") + '<span class="stat-more">' + (open ? "Hide details ▴" : "Details ▾") + "</span></button>";
+    };
+    var detail = "";
+    if (state.dashOpen === "today") detail = '<div class="card stack detail"><b>Today\'s orders</b>' + orderRows(inR(day), true) + "</div>";
+    else if (state.dashOpen === "week") detail = '<div class="card stack detail"><b>This week\'s orders</b>' + orderRows(inR(week), true) + "</div>";
+    else if (state.dashOpen === "month") {
+      var m = inR(month), sm = sumPayouts(m);
+      detail = '<div class="card stack detail"><b>This month</b>' + linesHtml(S.payoutLines(sm, rateFor(state.counterShop))) + "<b>Orders</b>" + orderRows(m, true) + "</div>";
+    } else if (state.dashOpen === "payout") detail = '<div class="card stack detail"><b>This week\'s payout so far</b>' + linesHtml(S.payoutLines(sumPayouts(inR(week)), rateFor(state.counterShop))) + "<b>Orders</b>" + orderRows(inR(week), true) + "</div>";
+    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Dashboard</h1><p class="muted small" style="padding:0 4px;margin-top:-12px">Tap any number for the details.</p><div class="stats">' +
+      tile("today", "Redemptions today", st.redemptions.today, money2(st.grossCents.today)) +
+      tile("week", "This week", st.redemptions.week, money2(st.grossCents.week)) +
+      tile("month", "Pass sales this month", money2(st.grossCents.month), st.redemptions.month + (st.redemptions.month === 1 ? " order" : " orders")) +
+      tile("payout", "Est. payout this week", money2(st.estimatedWeeklyPayoutCents), "") + "</div>" + detail +
       '<div class="card stack"><b>Top items</b>' + (st.topItems.length ? st.topItems.map(function (i, n) { return '<div class="row between"><span>' + (n + 1) + ". " + esc(i.name) + '</span><b class="num">' + i.quantity + "</b></div>"; }).join("") : '<span class="muted">No redemptions yet.</span>') + "</div>" +
       payoutCard() + listingCard();
   }
 
+  /** Weekly payouts, this week and past weeks; tap to see the orders. */
   function payoutCard() {
-    var week = S.weekBounds(now(), TZ);
-    // No-shows are paid like pickups.
-    var done = state.orders.filter(function (o) { return o.shopId === state.counterShop && (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), week); });
-    var p = sumPayouts(done);
-    var line = function (l, v, cls) { return '<div class="row between"><span class="muted">' + l + '</span><span class="num' + (cls || "") + '">' + v + "</span></div>"; };
-    return '<div class="card stack"><div class="row between"><b>This week\'s payout</b><span class="badge">Pays Monday</span></div><div class="lines">' +
-      line("Pass sales (" + p.orderCount + (p.orderCount === 1 ? " order)" : " orders)"), money2(p.grossCents)) +
-      line(S.pct(rateFor(state.counterShop)) + " commission" + (isFounding(state.counterShop) ? " (founding rate)" : ""), "−" + money2(p.commissionCents)) +
-      line("Overages", "+" + money2(p.overageTotalCents)) +
-      line(S.pct(S.RULES.overageCommissionBps) + " fee on overages", "−" + money2(p.overageCommissionCents)) +
-      line("Card processing on overages", "−" + money2(p.processingFeesCents)) +
-      '<div class="row total"><span>Net payout</span><span class="num" style="font-size:1.25rem">' + money2(p.transferCents) + "</span></div></div>" +
+    var weeks = S.recentWeeks(now(), 12, TZ), i = Math.min(state.payWeek || 0, weeks.length - 1), w = weeks[i];
+    var list = state.orders.filter(function (o) { return o.shopId === state.counterShop && settled(o) && S.isWithin(new Date(o.redeemedAt), w); });
+    var p = sumPayouts(list);
+    return '<div class="card stack"><div class="row between"><b>Payouts</b><span class="badge">' + (i === 0 ? "Pays Monday" : "Paid") + "</span></div>" +
+      '<div class="row between week-nav"><button class="btn ghost" style="width:auto;min-height:40px" data-a="pay-week" data-d="1" ' + (i >= weeks.length - 1 ? "disabled" : "") + '>‹ Earlier</button><b>' + weekLabel(w, i) + '</b><button class="btn ghost" style="width:auto;min-height:40px" data-a="pay-week" data-d="-1" ' + (i === 0 ? "disabled" : "") + ">Later ›</button></div>" +
+      linesHtml(S.payoutLines(p, rateFor(state.counterShop))) +
+      '<button class="linkbtn" style="align-self:flex-start" data-a="pay-orders" aria-expanded="' + !!state.payOrdersOpen + '">' + (state.payOrdersOpen ? "Hide orders" : "Show the " + list.length + " order" + (list.length === 1 ? "" : "s")) + "</button>" +
+      (state.payOrdersOpen ? orderRows(list, true) : "") +
       '<span class="muted small">Sent to your bank through Stripe every Monday.</span></div>';
   }
 
@@ -973,16 +1004,35 @@
     var redeemed = state.orders.filter(function (o) { return (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), month); });
     var sum = sumPayouts(redeemed);
     var pending = allShops().filter(function (x) { return shopStatus(x.id) === "pending"; });
-    return '<h1 style="font-size:2rem;padding:0 4px">Overview</h1><div class="stats">' +
-      '<div class="stat"><span class="muted small">Active subscriptions</span><b>' + members + '</b><span class="muted small">' + (t ? t.name : "None yet") + "</span></div>" +
-      '<div class="stat"><span class="muted small">Monthly revenue</span><b>' + money(t ? t.priceCents : 0) + "</b></div>" +
-      '<div class="stat"><span class="muted small">Commission this month</span><b>' + money2(sum.commissionCents) + '</b><span class="muted small">' + sum.orderCount + " redemptions</span></div>" +
-      (function () {
-        // What Sippy Brew keeps: revenue − shop payouts − card fees (commission + unused passes).
-        var tk = S.platformTake({ planPricesCents: t ? [t.priceCents] : [], shopNetCents: sum.netCents, overageCommissionCents: sum.overageCommissionCents });
-        return '<div class="stat"><span class="muted small">You keep (so far)</span><b>' + money2(tk.keepCents) + '</b><span class="muted small">Revenue − ' + money2(tk.shopPayoutCents) + " to shops − " + money2(tk.cardFeesCents) + " card fees + " + money2(tk.overageCommissionCents) + " overage fees</span></div>";
-      })() +
-      '<div class="stat"><span class="muted small">Failed payments</span><b>0</b></div></div>' +
+    var tk = S.platformTake({ planPricesCents: t ? [t.priceCents] : [], shopNetCents: sum.netCents, overageCommissionCents: sum.overageCommissionCents });
+    var tile = function (key, label, value, sub) {
+      var open = state.adminOpen === key;
+      return '<button class="stat stat-btn' + (open ? " open" : "") + '" data-a="admin-open" data-id="' + key + '" aria-expanded="' + open + '"><span class="muted small">' + label + "</span><b>" + value + "</b>" + (sub ? '<span class="muted small">' + sub + "</span>" : "") + '<span class="stat-more">' + (open ? "Hide details ▴" : "Details ▾") + "</span></button>";
+    };
+    // Per-shop totals this month, at each shop's own rate.
+    var byShop = allShops().map(function (x) { var l = redeemed.filter(function (o) { return o.shopId === x.id; }); return { shop: x, sum: sumPayouts(l) }; }).filter(function (r) { return r.sum.orderCount; });
+    var detail = "";
+    if (state.adminOpen === "subs") detail = '<div class="card stack detail"><b>Members by pass</b>' + (t ? '<div class="row between"><span>' + esc(t.name) + '</span><b class="num">1</b></div>' : '<span class="muted">No members yet.</span>') + "</div>";
+    else if (state.adminOpen === "revenue") detail = '<div class="card stack detail"><b>Revenue by pass</b>' + (t ? '<div class="row between"><span>' + esc(t.name) + " × 1</span><b class=\"num\">" + money2(t.priceCents) + "</b></div>" : '<span class="muted">No revenue yet.</span>') + "</div>";
+    else if (state.adminOpen === "commission") detail = '<div class="card stack detail"><b>Commission by shop this month</b>' + (byShop.length ? byShop.map(function (r) {
+        return '<div class="order-row"><div class="row between"><b>' + esc(r.shop.name) + '</b><span class="badge">' + (isFounding(r.shop.id) ? "Founding 12%" : "Standard 15%") + "</span></div>" +
+          '<div class="row between small"><span>' + r.sum.orderCount + " orders · pass commission</span><span class=\"num\">" + money2(r.sum.commissionCents) + "</span></div>" +
+          '<div class="row between small"><span>5% overage fees</span><span class="num">' + money2(r.sum.overageCommissionCents) + "</span></div></div>";
+      }).join("") : '<span class="muted">No redemptions this month.</span>') + "</div>";
+    else if (state.adminOpen === "keep") detail = '<div class="card stack detail"><b>What you keep this month (so far)</b>' + linesHtml([
+        { label: "Members' monthly payments", cents: tk.revenueCents, kind: "base" },
+        { label: "5% overage fees", cents: tk.overageCommissionCents, kind: "plus" },
+        { label: "Paid to shops for passes used", cents: tk.shopPayoutCents, kind: "minus" },
+        { label: "Card processing on monthly payments", cents: tk.cardFeesCents, kind: "minus" },
+        { label: "You keep", cents: tk.keepCents, kind: "total" },
+      ]) + '<span class="muted small">This goes down as members use passes and settles when the month renews.</span></div>';
+    else if (state.adminOpen === "failed") detail = '<div class="card stack detail"><b>Failed payments</b><span class="muted">None. Failed card charges show here with the member and the reason.</span></div>';
+    return '<h1 style="font-size:2rem;padding:0 4px">Overview</h1><p class="muted small" style="padding:0 4px;margin-top:-12px">Tap any number for the details.</p><div class="stats">' +
+      tile("subs", "Active subscriptions", members, t ? t.name : "None yet") +
+      tile("revenue", "Monthly revenue", money(t ? t.priceCents : 0), "") +
+      tile("commission", "Commission this month", money2(sum.commissionCents + sum.overageCommissionCents), sum.orderCount + " redemptions") +
+      tile("keep", "You keep (so far)", money2(tk.keepCents), "") +
+      tile("failed", "Failed payments", 0, "") + "</div>" + detail + adminWeeks() +
       ((state.teamAlerts || []).length ? '<div class="card stack" style="border:2px solid var(--honey)"><div class="row between"><b>No-shows</b><span class="badge honey">' + state.teamAlerts.length + "</span></div>" +
         state.teamAlerts.slice(0, 6).map(function (a) { return '<div class="small" style="border-top:1px solid var(--latte);padding-top:8px"><b>' + esc(a.shop) + "</b> marked " + esc(a.member) + "'s order as not picked up · " + dateFmt.format(new Date(a.at)) + "</div>"; }).join("") + "</div>" : "") +
       '<div class="card stack"><div class="row between"><b>Shops waiting for approval</b><span class="badge ' + (pending.length ? "honey" : "") + '">' + pending.length + "</span></div>" +
@@ -992,6 +1042,18 @@
       '<div class="card stack"><b>Recent orders</b>' + (state.orders.length ? state.orders.slice(0, 6).map(function (o) {
         return '<div class="row between small" style="border-top:1px solid var(--latte);padding-top:8px"><span class="grow">' + esc(shopById(o.shopId).name) + " · " + dateFmt.format(new Date(o.createdAt)) + '</span><span class="num">' + money2(o.totalCents) + "</span>" + '<span class="badge">' + LABEL[o.status] + "</span></div>";
       }).join("") : '<span class="muted">No orders yet.</span>') + "</div>";
+  }
+
+  /** Past weeks across all shops; tap a week for each shop's payout. */
+  function adminWeeks() {
+    var weeks = S.recentWeeks(now(), 8, TZ);
+    return '<div class="card stack"><b>Weekly payouts</b><span class="muted small">Tap a week to see each shop.</span>' + weeks.map(function (w, i) {
+      var list = state.orders.filter(function (o) { return settled(o) && S.isWithin(new Date(o.redeemedAt), w); });
+      var sm = sumPayouts(list), open = state.adminWeekOpen === i;
+      var shops = allShops().map(function (x) { var l = list.filter(function (o) { return o.shopId === x.id; }); return { shop: x, sum: sumPayouts(l) }; }).filter(function (r) { return r.sum.orderCount; });
+      return '<button class="week-row" data-a="admin-week" data-id="' + i + '" aria-expanded="' + open + '"><span class="grow" style="text-align:left"><b>' + weekLabel(w, i) + '</b><span class="muted small" style="display:block">' + sm.orderCount + " orders · shops get " + money2(sm.transferCents) + '</span></span><span class="num plus-t">' + money2(sm.commissionCents + sm.overageCommissionCents) + "</span><span aria-hidden=\"true\">" + (open ? "▴" : "▾") + "</span></button>" +
+        (open ? '<div class="stack" style="gap:10px;padding:4px 0 8px">' + (shops.length ? shops.map(function (r) { return '<div class="order-row"><b>' + esc(r.shop.name) + "</b>" + linesHtml(S.payoutLines(r.sum, rateFor(r.shop.id))) + "</div>"; }).join("") : '<span class="muted small">No orders that week.</span>') + "</div>" : "");
+    }).join("") + "</div>";
   }
 
   function adminShops() {
@@ -1222,6 +1284,11 @@
       case "shop-login": state.screen = "shop-login"; state.shopError = null; break;
       case "shop-signup": state.screen = "shop-signup"; state.shopError = null; break;
       case "admin-tab": state.adminTab = id; break;
+      case "dash-open": state.dashOpen = state.dashOpen === id ? null : id; break;
+      case "pay-week": state.payWeek = Math.max(0, (state.payWeek || 0) + Number(el.getAttribute("data-d"))); state.payOrdersOpen = false; break;
+      case "pay-orders": state.payOrdersOpen = !state.payOrdersOpen; break;
+      case "admin-open": state.adminOpen = state.adminOpen === id ? null : id; break;
+      case "admin-week": state.adminWeekOpen = state.adminWeekOpen === Number(id) ? null : Number(id); break;
       case "admin-founding": state.foundingOverride[id] = !isFounding(id); render(); return toast(shopById(id).name + (isFounding(id) ? " is a founding shop: 12% on pass value." : " is on the standard rate: 15% on pass value."));
       case "admin-remove-food": {
         // Zero tolerance: removed and hidden right away; the shop can appeal if it was a genuine error.

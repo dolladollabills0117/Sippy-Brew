@@ -195,3 +195,20 @@ export interface Payout {
 export interface ApiErrorBody {
   error: { code: string; message: string };
 }
+
+/** A picked-up (or no-show) order with the split that was locked in when it settled. */
+export interface SettledOrder {
+  id: string;
+  shopId: string;
+  payoutId: string | null;
+  status: string;
+  redeemedAt: string;
+  totalCents: number;
+  passCoveredCents: number;
+  overageCents: number;
+  commissionCents: number;
+  netCents: number;
+  overageFeeCents: number;
+  overageCommissionCents: number;
+  items: { name: string; quantity: number }[];
+}

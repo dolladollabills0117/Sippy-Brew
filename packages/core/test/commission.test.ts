@@ -86,3 +86,43 @@ describe("What Sippy Brew keeps", () => {
     expect(platformTake({ planPricesCents: [9600], shopNetCents: 5148 }).keepCents).toBe(4144);
   });
 });
+
+import { payoutLines, recentWeeks } from "../src";
+
+describe("payout breakdown order", () => {
+  it("pass sales, overages (+), deductions (−), then net", () => {
+    const s = summarizePayout([{ passCoveredCents: 800, overageCents: 300, overageFeeCents: 39 }], 1500);
+    const lines = payoutLines(s, 1500);
+    expect(lines.map((l) => l.kind)).toEqual(["base", "plus", "minus", "minus", "minus", "total"]);
+    expect(lines.map((l) => l.label)).toEqual(["Pass sales (1 order)", "Overages", "15% commission on pass sales", "5% fee on overages", "Card processing on overages", "Net payout"]);
+    expect(lines[5]!.cents).toBe(800 - 120 + 300 - 15 - 39);
+  });
+  it("lists recent Monday-start weeks, newest first", () => {
+    const w = recentWeeks(new Date("2026-11-11T15:00:00Z"), 3);
+    expect(w).toHaveLength(3);
+    expect(w[0]!.start.getTime()).toBeGreaterThan(w[1]!.start.getTime());
+    expect(w[1]!.end.getTime()).toBe(w[0]!.start.getTime());
+  });
+});
+
+import { effectiveBps, settledShopCents, summarizeSettled } from "../src/rules/commission";
+import type { SettledOrder } from "../src/types";
+
+describe("settled orders", () => {
+  const o = (pass: number, over: number, bps: number): SettledOrder => {
+    const commission = Math.round((pass * bps) / 10000);
+    const fee = over ? Math.round(over * 0.029) + 30 : 0;
+    return { id: String(pass + over), shopId: "s", payoutId: null, status: "picked_up", redeemedAt: "2026-11-10T15:00:00Z", totalCents: pass + over, passCoveredCents: pass, overageCents: over, commissionCents: commission, netCents: pass - commission, overageFeeCents: fee, overageCommissionCents: Math.round(over * 0.05), items: [] };
+  };
+  it("matches the scan math: $8 pass + $3.25 overage at 15% pays $9.50", () => {
+    expect(settledShopCents(o(800, 325, 1500))).toBe(950);
+  });
+  it("sums like the weekly payout and recovers the rate charged", () => {
+    const s = summarizeSettled([o(800, 325, 1200), o(400, 0, 1200)]);
+    expect(s.grossCents).toBe(1200);
+    expect(s.commissionCents).toBe(144);
+    expect(s.transferCents).toBe(settledShopCents(o(800, 325, 1200)) + 352);
+    expect(effectiveBps(s, 1500)).toBe(1200);
+    expect(effectiveBps(summarizeSettled([]), 1500)).toBe(1500);
+  });
+});

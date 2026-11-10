@@ -1,4 +1,6 @@
+import type { SettledOrder } from "../types";
 import { RULES } from "../config";
+import { weekBounds } from "../time";
 import { assertCents } from "../money";
 
 export interface Split {
@@ -169,4 +171,67 @@ export function platformTake(params: { planPricesCents: readonly number[]; shopN
   const cardFeesCents = params.planPricesCents.reduce((a, c) => a + subscriptionProcessingFee(c), 0);
   const cut = params.overageCommissionCents ?? 0;
   return { revenueCents, shopPayoutCents: params.shopNetCents, cardFeesCents, overageCommissionCents: cut, keepCents: revenueCents - params.shopNetCents - cardFeesCents + cut };
+}
+
+export type PayoutLineKind = "base" | "plus" | "minus" | "total";
+export interface PayoutLine {
+  label: string;
+  cents: number;
+  /** base: pass sales; plus: overages (shown green); minus: deductions (shown red); total: net. */
+  kind: PayoutLineKind;
+}
+
+/**
+ * The payout breakdown in reading order, the same everywhere: pass sales, then overages (+),
+ * then every deduction (−), then the net. `commissionBps` labels the commission line.
+ */
+export function payoutLines(
+  s: { grossCents: number; commissionCents: number; overageTotalCents: number; overageCommissionCents: number; processingFeesCents: number; transferCents: number; orderCount?: number },
+  commissionBps: number,
+): PayoutLine[] {
+  const lines: PayoutLine[] = [
+    { label: `Pass sales${s.orderCount !== undefined ? ` (${s.orderCount} order${s.orderCount === 1 ? "" : "s"})` : ""}`, cents: s.grossCents, kind: "base" },
+    { label: "Overages", cents: s.overageTotalCents, kind: "plus" },
+    { label: `${pct(commissionBps)} commission on pass sales`, cents: s.commissionCents, kind: "minus" },
+    { label: `${pct(RULES.overageCommissionBps)} fee on overages`, cents: s.overageCommissionCents, kind: "minus" },
+    { label: "Card processing on overages", cents: s.processingFeesCents, kind: "minus" },
+    { label: "Net payout", cents: s.transferCents, kind: "total" },
+  ];
+  return lines;
+}
+
+/** Monday-start week ranges, newest first: this week, then `count - 1` earlier weeks. */
+export function recentWeeks(now: Date, count: number, timeZone: string = RULES.timeZone): { start: Date; end: Date }[] {
+  const out: { start: Date; end: Date }[] = [];
+  let w = weekBounds(now, timeZone);
+  for (let i = 0; i < count; i++) {
+    out.push(w);
+    w = weekBounds(new Date(w.start.getTime() - 12 * 3600_000), timeZone);
+  }
+  return out;
+}
+
+/** What the shop gets for one settled order: net pass value + overage − 5% − card processing. */
+export function settledShopCents(o: SettledOrder): number {
+  return o.netCents + o.overageCents - o.overageFeeCents - o.overageCommissionCents;
+}
+
+/** Adds up stored per-order amounts, the same way the weekly payout does. */
+export function summarizeSettled(list: SettledOrder[]) {
+  const t = (f: (o: SettledOrder) => number) => list.reduce((a, o) => a + f(o), 0);
+  return {
+    grossCents: t((o) => o.passCoveredCents),
+    commissionCents: t((o) => o.commissionCents),
+    netCents: t((o) => o.netCents),
+    overageTotalCents: t((o) => o.overageCents),
+    processingFeesCents: t((o) => o.overageFeeCents),
+    overageCommissionCents: t((o) => o.overageCommissionCents),
+    transferCents: t(settledShopCents),
+    orderCount: list.length,
+  };
+}
+
+/** The commission rate actually charged on a set of orders (falls back when there were none). */
+export function effectiveBps(s: { grossCents: number; commissionCents: number }, fallback: number): number {
+  return s.grossCents ? Math.round((s.commissionCents / s.grossCents) * 10000) : fallback;
 }
