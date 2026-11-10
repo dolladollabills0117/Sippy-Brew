@@ -5,13 +5,14 @@ import { Card, cx } from "./ui";
 
 const dateFmt = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: RULES.timeZone });
 
-/** Neighborhood Passport (+ Grand Tour) and Invite friends. */
-export function RewardsCards({ summary }: { summary: MemberSummary }) {
+/** Neighborhood Passport (+ Grand Tour) and Invite friends. The account page shows only the invite. */
+export function RewardsCards({ summary, inviteOnly = false }: { summary: MemberSummary; inviteOnly?: boolean }) {
   const r = summary.rewards;
   if (!r) return null;
   const p = r.passport;
   const gt = p.grandTour;
   const stamps = Math.min(p.visited, p.goal);
+  if (inviteOnly) return <InviteCard summary={summary} />;
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Card className="flex flex-col gap-3">

@@ -349,6 +349,19 @@
       '<div class="sticky-cta"><button class="btn" data-a="get-pass-selected" aria-label="Get my pass: ' + esc(t.name) + ", " + money(t.priceCents) + ' a month">Get my pass · ' + money(t.priceCents) + "/mo</button></div>";
   }
 
+  function faqScreen() {
+    return '<div class="topbar"><button class="back" data-a="faq-back">‹ Back</button>' + logoHome() + "</div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">FAQ</h1>' +
+      '<p class="muted" style="padding:0 4px">Tap a question to see the answer.</p>' +
+      S.FAQ.map(function (sec) {
+        return '<section class="stack" style="gap:8px"><h2 class="section-title" style="font-size:1.35rem">' + esc(sec.title) + "</h2>" +
+          '<div class="card faq-list">' + sec.items.map(function (it) {
+            return '<details class="faq"><summary>' + esc(it.q) + '</summary><p>' + esc(it.a) + "</p></details>";
+          }).join("") + "</div></section>";
+      }).join("") +
+      '<p class="demo-note">' + esc(S.FAQ_FOOTNOTE) + ' <button class="linkbtn" data-a="terms">Read the Terms</button></p>';
+  }
+
   function termsScreen() {
     return '<div class="topbar"><button class="back" data-a="terms-back">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">Terms, in plain words</h1>' +
@@ -616,7 +629,8 @@
       '<b style="font-size:1.75rem" class="num">' + state.passesLeft + ' <span class="muted" style="font-size:1rem;font-weight:400">of ' + t.passesPerMonth + " left</span></b>" +
       '<div class="meter"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
       '<span class="muted small">Unused monthly passes expire at renewal. Bonus passes roll over for a year.</span>' + bonusLine() + "</div>" +
-      inviteCard() + passportCard() +
+      inviteCard() +
+      '<button class="card faq-cta" data-a="faq"><span aria-hidden="true" style="font-size:1.6rem">❓</span><span class="grow stack" style="gap:2px;text-align:left"><b>Questions?</b><span class="muted small">Passes, orders, billing, rewards and who to contact.</span></span><span aria-hidden="true" style="font-size:1.4rem">›</span></button>' +
       '<div class="card stack"><b>Demo controls</b><span class="muted small">Today in the demo: ' + dateFmt.format(now()) + ". You get one pass a day, so move to the next day to order again.</span>" +
       '<button class="btn line" data-a="new-day">Start the next day</button><button class="btn line" data-a="new-month">Skip to next month</button><button class="btn danger" data-a="reset">Reset the demo</button></div>' +
       '<button class="btn line" data-a="sign-out">Sign out</button>' +
@@ -843,6 +857,7 @@
     else if (state.screen === "result") html = quizResultScreen();
     else if (state.screen === "near") html = nearScreen();
     else if (state.screen === "terms") html = termsScreen();
+    else if (state.screen === "faq") html = faqScreen();
     else {
       html = appTop();
       if (state.session === "admin") {
@@ -986,6 +1001,8 @@
       }
       case "use-sample-loc": state.locAsked = true; state.loc = null; break;
       case "toggle-beyond": state.showBeyond = !state.showBeyond; break;
+      case "faq": state.sheet = null; state.screen = "faq"; render(); return window.scrollTo(0, 0);
+      case "faq-back": state.screen = state.session ? "app" : "landing"; render(); return window.scrollTo(0, 0);
       case "terms": state.termsFrom = state.screen; state.sheet = null; state.screen = "terms"; render(); return window.scrollTo(0, 0);
       case "terms-back": state.screen = state.termsFrom && state.termsFrom !== "terms" ? state.termsFrom : (state.session ? "app" : "landing"); break;
       case "keep-plan": state.pendingTier = null; render(); return toast("You're staying on " + tier().name + ".");

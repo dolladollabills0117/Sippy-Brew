@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PassSummary } from "@/components/PassSummary";
 import { RewardsCards } from "@/components/RewardsCards";
 import { UpgradeCard } from "@/components/UpgradeCard";
@@ -57,7 +58,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <SectionTitle>This month</SectionTitle>
           <PassSummary summary={summary} />
           <div className="mt-4">
-            <RewardsCards summary={summary} />
+            <RewardsCards summary={summary} inviteOnly />
           </div>
           {summary.upgrade && (
             <div className="mt-4">
@@ -66,6 +67,15 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           )}
         </>
       )}
+
+      <Link href="/faq" className="card mt-4 flex items-center gap-3 p-5 hover:shadow-lift">
+        <span aria-hidden="true" className="text-2xl">❓</span>
+        <span className="flex flex-1 flex-col">
+          <b className="text-espresso">Questions?</b>
+          <span className="text-sm text-pecan">Passes, orders, billing, rewards and who to contact.</span>
+        </span>
+        <span aria-hidden="true" className="text-2xl text-pecan">›</span>
+      </Link>
 
       <SectionTitle>
         <span id="areas">Saved areas</span>

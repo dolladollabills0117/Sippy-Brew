@@ -46,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="mx-auto max-w-6xl px-4 pb-10 text-sm text-pecan sm:px-6">
           <p>
             © {new Date().getFullYear()} · Coffee only. Daily Passes reset monthly and do not roll over. ·{" "}
+            <Link href="/faq" className="font-bold underline underline-offset-4">FAQ</Link> ·{" "}
             <Link href="/terms" className="font-bold underline underline-offset-4">Terms</Link>
           </p>
           <p className="mt-1">{PLATFORM_ROLE_SHORT}</p>

@@ -68,6 +68,16 @@ const path = require("path");
   const acct = await txt();
   if (!acct.includes("+ 3 bonus passes")) fail("bonus passes should roll over");
 
+  // Account: no duplicate passport; FAQ opens and answers stay hidden until tapped.
+  if (acct.includes("Neighborhood Passport")) fail("passport should not be on the account page");
+  await tap('[data-a="faq"]');
+  const q = p.locator("details.faq", { hasText: "Who do I contact?" });
+  if (!(await q.count())) fail("FAQ missing the contact-the-shop question");
+  if (await p.locator("details.faq p", { hasText: "Contact the coffee shop that made it" }).isVisible()) fail("answer visible before tap");
+  await q.locator("summary").click();
+  if (!(await p.locator("details.faq p", { hasText: "Contact the coffee shop that made it" }).isVisible())) fail("answer not revealed on tap");
+  if (!(await txt()).includes("the Terms apply")) fail("FAQ footnote missing");
+
   if (errors.length) fail(errors.join("; "));
   if (!process.exitCode) console.log("rewards: ok");
   await b.close();

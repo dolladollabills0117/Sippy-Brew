@@ -207,3 +207,14 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700;
 .stamp.on { border: 2px solid var(--burnt); background: var(--burnt); color: var(--cream); font-size: 1.15rem; }
 .tour { background: var(--vanilla); border-radius: 12px; padding: 10px 12px; font-size: .9rem; }
 .refcode { background: var(--vanilla); border-radius: 10px; padding: 8px 12px; font-weight: 800; letter-spacing: .08em; font-size: 1rem; }
+
+/* FAQ: tap a question to reveal the answer */
+.faq-cta { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; text-align: left; }
+.faq-list { padding: 4px 16px; }
+.faq { border-bottom: 1px solid var(--latte); }
+.faq:last-child { border-bottom: 0; }
+.faq summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; padding: 10px 0; font-weight: 800; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-size: 1.4rem; font-weight: 800; color: var(--burnt-ink); flex-shrink: 0; transition: transform .2s ease; }
+.faq[open] summary::after { transform: rotate(45deg); }
+.faq p { padding: 0 0 14px; line-height: 1.55; color: var(--espresso); }
