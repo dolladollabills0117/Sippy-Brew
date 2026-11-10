@@ -112,3 +112,31 @@ describe("order status transitions", () => {
     expect(canTransition("received", "picked_up")).toBe(false);
   });
 });
+
+describe("Using a bonus pass on an overage (member's choice)", () => {
+  // House: $4 a pass. Latte + cortado = $9.50, so $5.50 over.
+  const items = [{ menuItemId: "latte", quantity: 1 }, { menuItemId: "cortado", quantity: 1 }];
+  const house = (over: Partial<OrderContext> = {}) => ctx({ maxPassValueCents: 400, ...over });
+
+  it("is off unless the member chooses it", () => {
+    expect(validateOrder(items, house({ bonusPassesLeft: 2, passesLeft: 5, confirmedOverageCents: 550 }))).toMatchObject({ ok: true, bonusCoveredCents: 0, overageCents: 550 });
+  });
+
+  it("covers up to the daily max of the overage; the member confirms only what's left", () => {
+    const r = validateOrder(items, house({ passesLeft: 5, bonusPassesLeft: 2, useBonusForOverage: true }));
+    expect(r).toMatchObject({ ok: false, code: "OVERAGE_CONFIRMATION_REQUIRED", overageCents: 150 });
+    const ok = validateOrder(items, house({ passesLeft: 5, bonusPassesLeft: 2, useBonusForOverage: true, confirmedOverageCents: 150 }));
+    expect(ok).toMatchObject({ ok: true, passCoveredCents: 800, bonusCoveredCents: 400, overageCents: 150, passesLeftAfter: 3 });
+  });
+
+  it("can clear a small overage entirely, with no confirmation needed", () => {
+    const r = validateOrder([{ menuItemId: "latte", quantity: 1 }], house({ passesLeft: 3, bonusPassesLeft: 1, useBonusForOverage: true }));
+    expect(r).toMatchObject({ ok: true, passCoveredCents: 525, bonusCoveredCents: 125, overageCents: 0 });
+  });
+
+  it("needs a spare bonus pass: if today's pass is itself a bonus pass, it takes two", () => {
+    expect(validateOrder(items, house({ passesLeft: 1, bonusPassesLeft: 1, useBonusForOverage: true }))).toMatchObject({ ok: false, code: "BONUS_NOT_AVAILABLE" });
+    expect(validateOrder(items, house({ passesLeft: 2, bonusPassesLeft: 2, useBonusForOverage: true, confirmedOverageCents: 150 }))).toMatchObject({ ok: true, bonusCoveredCents: 400 });
+    expect(validateOrder(items, house({ passesLeft: 4, bonusPassesLeft: 0, useBonusForOverage: true }))).toMatchObject({ ok: false, code: "BONUS_NOT_AVAILABLE" });
+  });
+});

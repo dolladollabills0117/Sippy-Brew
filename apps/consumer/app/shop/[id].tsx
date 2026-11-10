@@ -12,6 +12,8 @@ import {
   getTier,
   describeOptions,
   priceOrder,
+  bonusForOverageAvailable,
+  bonusOverageCover,
   type MenuItem,
 } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
@@ -46,6 +48,8 @@ export default function ShopScreen() {
   const [saved, setSaved] = useState<boolean | null>(null);
   // The overage amount the member confirmed. A changed cart needs a new confirmation.
   const [confirmedOverage, setConfirmedOverage] = useState<number | null>(null);
+  // The member's choice to put a bonus pass toward the overage.
+  const [useBonus, setUseBonus] = useState(false);
 
   const shop = detail.data?.shop;
   const slots = useMemo(() => (shop ? pickupSlots(new Date(), shop.hours) : []), [shop]);
@@ -73,8 +77,13 @@ export default function ShopScreen() {
   };
   const bumpLine = (key: string, delta: number) =>
     setCart((c) => c.map((l) => (l.key === key ? { ...l, quantity: Math.min(MAX_QUANTITY_PER_LINE, l.quantity + delta) } : l)).filter((l) => l.quantity > 0));
-  const pass = summary ? checkPassAvailable({ passesLeft: summary.passesLeft, passDaysUsed: summary.passDaysUsed, now: new Date() }) : null;
-  const split = splitPassValue(total, summary?.maxPassValueCents ?? 0);
+  const allPasses = summary ? summary.passesLeft + summary.bonusPassesLeft : 0;
+  const pass = summary ? checkPassAvailable({ passesLeft: allPasses, passDaysUsed: summary.passDaysUsed, now: new Date() }) : null;
+  const base = splitPassValue(total, summary?.maxPassValueCents ?? 0);
+  const spareBonus = summary ? bonusForOverageAvailable(allPasses, summary.bonusPassesLeft) : 0;
+  const bonusCover = useBonus && spareBonus > 0 ? bonusOverageCover(base.overageCents, summary?.maxPassValueCents ?? 0) : 0;
+  // What the member pays after any bonus pass they chose to use.
+  const split = { passCoveredCents: base.passCoveredCents + bonusCover, overageCents: base.overageCents - bonusCover };
   const blocker = pass && !pass.ok ? pass.message : null;
   const hasOverage = split.overageCents > 0;
   const overageConfirmed = !hasOverage || confirmedOverage === split.overageCents;
@@ -92,6 +101,7 @@ export default function ShopScreen() {
         items,
         pickupAt: slots[slot]!.toISOString(),
         confirmedOverageCents: hasOverage ? confirmedOverage : null,
+        useBonusForOverage: bonusCover > 0,
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/order/${order.id}`);
@@ -215,8 +225,16 @@ export default function ShopScreen() {
               <Text color={colors.pecan} style={{ flex: 1 }}>
                 Pass covers (first {money(summary!.maxPassValueCents)})
               </Text>
-              <Text variant="bodyBold">{money(split.passCoveredCents)}</Text>
+              <Text variant="bodyBold">{money(base.passCoveredCents)}</Text>
             </Row>
+            {bonusCover > 0 && (
+              <Row style={{ justifyContent: "space-between" }}>
+                <Text color={colors.pecan} style={{ flex: 1 }}>
+                  Bonus pass toward the overage
+                </Text>
+                <Text variant="bodyBold">{money(bonusCover)}</Text>
+              </Row>
+            )}
             <Row style={{ justifyContent: "space-between" }}>
               <Text color={colors.pecan}>Overage</Text>
               <Text variant="bodyBold">{money(split.overageCents)}</Text>
@@ -225,6 +243,28 @@ export default function ShopScreen() {
               <Text variant="bodyBold">Order total</Text>
               <Text variant="stat">{money(total)}</Text>
             </Row>
+            {base.overageCents > 0 && spareBonus > 0 && (
+              <Card style={{ borderWidth: 2, borderColor: colors.honey, gap: spacing.sm }}>
+                <Row style={{ justifyContent: "space-between", minHeight: 48 }}>
+                  <Text variant="bodyBold" style={{ flex: 1 }} nativeID="use-bonus-label">
+                    Use a bonus pass toward the overage
+                  </Text>
+                  <Switch
+                    accessibilityLabelledBy="use-bonus-label"
+                    value={useBonus}
+                    onValueChange={(v) => {
+                      setUseBonus(v);
+                      setConfirmedOverage(null);
+                    }}
+                    trackColor={{ true: colors.burntSugar, false: colors.latte }}
+                  />
+                </Row>
+                <Text variant="small" color={colors.pecan}>
+                  It covers up to {money(Math.min(base.overageCents, summary!.maxPassValueCents))} of the {money(base.overageCents)} overage. You have {spareBonus} bonus pass
+                  {spareBonus === 1 ? "" : "es"} to use.
+                </Text>
+              </Card>
+            )}
             {hasOverage && (
               <Card style={{ borderWidth: 2, borderColor: colors.espresso, backgroundColor: colors.vanillaBean, gap: spacing.sm }}>
                 <Text variant="bodyBold">This order is {money(split.overageCents)} over your pass.</Text>

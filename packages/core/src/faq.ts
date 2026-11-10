@@ -31,7 +31,7 @@ export const FAQ: readonly FaqSection[] = [
       },
       {
         q: "What if my order costs more than my pass covers?",
-        a: "The app shows you the exact difference (the overage) before you place the order, and you have to confirm it. It's charged to your card when the shop hands over your order, at the shop's menu prices, and it goes to the shop.",
+        a: "The app shows you the exact difference (the overage) before you place the order, and you have to confirm it. It's charged to your card when the shop hands over your order, at the shop's menu prices, and it goes to the shop. If you have a bonus pass, you can choose to put it toward the overage: it covers up to your daily amount and you pay only what's left.",
       },
       {
         q: "Do unused passes roll over?",

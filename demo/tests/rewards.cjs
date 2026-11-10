@@ -62,11 +62,27 @@ const path = require("path");
   await tap('[data-a="back"]');
   if (!(await txt()).includes("+ 3 bonus passes")) fail("bonus not decremented");
 
+  // Day 7: an $8.75 mocha on House ($4). The member chooses to put a bonus pass toward the
+  // $4.75 overage: it covers $4, so they confirm only $0.75. Uses 2 bonus passes in total.
+  await tap('[data-a="tab"][data-id="account"]'); await tap('[data-a="new-day"]');
+  await tap('[data-a="tab"][data-id="shops"]');
+  await tap('.shop-card[data-id="main"]');
+  await tap('[data-a="open-customize"][data-id="mocha"]'); await tap('[data-a="add-custom"]');
+  if (!(await txt()).includes("Use a bonus pass toward the overage")) fail("bonus-for-overage option missing");
+  if (!(await txt()).includes("This order is $4.75 over")) fail("overage before bonus should be $4.75");
+  await tap("#ub");
+  if (!(await txt()).includes("This order is $0.75 over")) fail("bonus should cover $4 of the overage");
+  await tap("#ov"); await tap('[data-a="place"]');
+  const qr = await txt();
+  if (!qr.includes("Show this at the counter")) fail("order with bonus cover not placed: " + ((await p.textContent(".alert").catch(() => "")) || ""));
+  await tap('[data-a="back"]');
+  if (!(await txt()).includes("+ 1 bonus pass")) fail("two bonus passes should be used");
+
   // New month: monthly passes reset, bonus passes stay.
   await tap('[data-a="tab"][data-id="account"]');
   await tap('[data-a="new-month"]');
   const acct = await txt();
-  if (!acct.includes("+ 3 bonus passes")) fail("bonus passes should roll over");
+  if (!acct.includes("+ 1 bonus pass")) fail("bonus passes should roll over");
 
   // Account: no duplicate passport; FAQ opens and answers stay hidden until tapped.
   if (acct.includes("Neighborhood Passport")) fail("passport should not be on the account page");

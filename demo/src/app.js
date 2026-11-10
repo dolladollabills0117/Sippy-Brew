@@ -551,7 +551,11 @@
         '<div class="stepper" style="margin-top:6px"><button data-a="cart-bump" data-id="' + li + '" data-d="-1" aria-label="One fewer">−</button><button data-a="cart-bump" data-id="' + li + '" data-d="1" aria-label="One more" ' + (l.quantity >= S.MAX_QUANTITY_PER_LINE ? "disabled" : "") + ">+</button></div></div>" +
         '<b class="num">' + (p ? money2(p.lineTotalCents) : "") + "</b></div>";
     }).join("") + "</div>" : '<span class="muted">Add a coffee from the menu.</span>';
-    var split = S.splitPassValue(total, t.maxPassValueCents);
+    var base = S.splitPassValue(total, t.maxPassValueCents);
+    var spareBonus = S.bonusForOverageAvailable(totalPassesLeft(), bonusLeft());
+    var bonusCover = state.useBonus && spareBonus > 0 ? S.bonusOverageCover(base.overageCents, t.maxPassValueCents) : 0;
+    // What the member pays after any bonus pass they chose to use.
+    var split = { passCoveredCents: base.passCoveredCents + bonusCover, overageCents: base.overageCents - bonusCover };
     var pass = S.checkPassAvailable({ passesLeft: totalPassesLeft(), passDaysUsed: state.passDaysUsed, now: now(), timeZone: TZ });
     var hasOver = split.overageCents > 0;
     var confirmed = !hasOver || state.confirmedOverage === split.overageCents;
@@ -562,9 +566,11 @@
       '<div style="padding:0 4px" class="stack"><h1 style="font-size:2rem">' + esc(s.name) + '</h1><p class="muted">' + esc(s.address) + "</p><p>" + esc(s.story) + "</p></div>" +
       '<div class="card">' + items + "</div>" +
       '<div class="card stack"><h2 style="font-size:1.4rem">Your order</h2>' + cartHtml + (priced && !priced.ok ? '<div class="alert" role="alert">' + esc(priced.message) + "</div>" : "") +
-      '<div class="lines"><div class="row"><span class="muted">Pass covers (first ' + money2(t.maxPassValueCents) + ')</span><b class="num">' + money2(split.passCoveredCents) + "</b></div>" +
+      '<div class="lines"><div class="row"><span class="muted">Pass covers (first ' + money2(t.maxPassValueCents) + ')</span><b class="num">' + money2(base.passCoveredCents) + "</b></div>" +
+      (bonusCover ? '<div class="row"><span class="muted">Bonus pass toward the overage</span><b class="num">' + money2(bonusCover) + "</b></div>" : "") +
       '<div class="row"><span class="muted">Overage</span><b class="num">' + money2(split.overageCents) + "</b></div>" +
       '<div class="row total"><span>Order total</span><span class="num">' + money2(total) + "</span></div></div>" +
+      (base.overageCents > 0 && spareBonus > 0 ? '<label class="bonus-opt" for="ub"><input id="ub" type="checkbox" data-a="use-bonus" ' + (state.useBonus ? "checked" : "") + '><span><b>Use a bonus pass toward the overage</b><span class="muted small" style="display:block">It covers up to ' + money2(Math.min(base.overageCents, t.maxPassValueCents)) + " of the " + money2(base.overageCents) + " overage. You have " + spareBonus + " bonus pass" + (spareBonus === 1 ? "" : "es") + " to use.</span></span></label>" : "") +
       (hasOver ? '<div class="confirm"><b>This order is ' + money2(split.overageCents) + " over your pass.</b>" +
         '<span class="muted small">' + (S.overageIsCharged(split.overageCents) ? "It's charged to your card on file when the shop hands over your order, at the shop's menu prices. It goes 100% to the shop." : "Overages under " + money2(S.RULES.minOverageChargeCents) + " are waived, so you won't be charged for this one.") + "</span>" +
         '<label for="ov"><input id="ov" type="checkbox" data-a="confirm-overage" data-amount="' + split.overageCents + '" ' + (confirmed ? "checked" : "") + "><span>I confirm the " + money2(split.overageCents) + " overage. My pass covers " + money2(split.passCoveredCents) + " of the " + money2(total) + " total.</span></label>" +
@@ -920,6 +926,7 @@
       subscription: { status: "active", currentPeriodEnd: new Date(n.getTime() + 30 * 864e5).toISOString() },
       menu: menu, passesLeft: totalPassesLeft(), passDaysUsed: state.passDaysUsed, maxPassValueCents: t.maxPassValueCents,
       confirmedOverageCents: state.confirmedOverage, pickupAt: pickupAt, now: n, timeZone: TZ,
+      bonusPassesLeft: bonusLeft(), useBonusForOverage: !!state.useBonus,
     });
     if (!r.ok) { state.error = r.message; return render(); }
     var sizes = {}; s.menu.forEach(function (m) { sizes[m.id] = m.size; });
@@ -932,6 +939,8 @@
     if (S.passSourceForOrder(state.passesLeft, bonusLeft()) === "bonus") { var g = S.nextBonusToUse(state.bonus, n); g.used += 1; bonusKey = g.key; }
     else state.passesLeft -= 1;
     state.orders[0].bonusKey = bonusKey;
+    if (r.bonusCoveredCents > 0) { var g2 = S.nextBonusToUse(state.bonus, n); g2.used += 1; state.orders[0].overageBonusKey = g2.key; state.orders[0].bonusCoveredCents = r.bonusCoveredCents; }
+    state.useBonus = false;
     state.passDaysUsed.push(r.passDay);
     state.cart = []; state.confirmedOverage = null; state.error = null; state.counterShop = s.id;
     state.detail = { type: "qr", id: id };
@@ -1069,7 +1078,7 @@
       case "change-plan": state.selectedTier = state.pendingTier || state.tierId; state.pickSub = S.getTier(state.tierId).subTier; state.screen = "plans"; break;
       case "tab": state.tab = id; state.detail = null; break;
       case "shop-tab": state.shopTab = id; state.scan = null; state.shopError = null; break;
-      case "open-shop": state.detail = { type: "shop", id: id }; state.cart = []; state.customize = null; state.confirmedOverage = null; state.pickupIdx = 0; state.error = null; render(); return window.scrollTo(0, 0);
+      case "open-shop": state.useBonus = false; state.detail = { type: "shop", id: id }; state.cart = []; state.customize = null; state.confirmedOverage = null; state.pickupIdx = 0; state.error = null; render(); return window.scrollTo(0, 0);
       case "open-order": state.detail = { type: "qr", id: id }; render(); return window.scrollTo(0, 0);
       case "back": state.detail = null; state.error = null; break;
       case "add-plain": addToCart(id, [], 1); break;
@@ -1114,6 +1123,8 @@
           var i = state.passDaysUsed.indexOf(oc.passDay); if (i >= 0) state.passDaysUsed.splice(i, 1);
           var bg = oc.bonusKey && (state.bonus || []).filter(function (g) { return g.key === oc.bonusKey; })[0];
           if (bg) bg.used = Math.max(0, bg.used - 1); else state.passesLeft += 1;
+          var obg = oc.overageBonusKey && (state.bonus || []).filter(function (g) { return g.key === oc.overageBonusKey; })[0];
+          if (obg) obg.used = Math.max(0, obg.used - 1);
           toast("Order cancelled. The member's pass was returned.");
         }
         break;
@@ -1153,6 +1164,7 @@
     document.addEventListener("change", function (ev) {
       var el = ev.target, a = el.getAttribute && el.getAttribute("data-a");
       if (a === "confirm-overage") { state.confirmedOverage = el.checked ? Number(el.getAttribute("data-amount")) : null; render(); }
+      else if (a === "use-bonus") { state.useBonus = el.checked; state.confirmedOverage = null; render(); }
       else if (a === "accepting") { state.paused[state.counterShop] = !el.checked; if (el.checked) delete state.paused[state.counterShop]; render(); toast(el.checked ? "You're accepting orders." : "Orders paused. Members can't order until you turn this back on."); }
       else if (a === "sold-out") { state.soldOut[el.getAttribute("data-id")] = el.checked; if (!el.checked) delete state.soldOut[el.getAttribute("data-id")]; save(); toast(el.checked ? "Marked sold out for today." : "Back on the menu."); }
     });

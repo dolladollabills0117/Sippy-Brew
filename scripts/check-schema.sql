@@ -48,7 +48,7 @@ select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-04',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null, false) as first_order \gset
+      now() + interval '10 minutes', null, false, 0) as first_order \gset
 do $$ begin
   assert (select sum(passes) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 1;
 end $$;
@@ -60,7 +60,7 @@ do $$ begin
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005b', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-04',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null, false);
+      now() + interval '10 minutes', null, false, 0);
     raise exception 'one pass per day not enforced';
   exception when raise_exception then
     if sqlerrm <> 'PASS_USED_TODAY' then raise; end if;
@@ -85,7 +85,7 @@ do $$ begin
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 950, 950, 0, 800, '2026-11-05',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":950}]',
-      now() + interval '10 minutes', null, false);
+      now() + interval '10 minutes', null, false, 0);
     raise exception 'pass value above max accepted';
   exception when raise_exception then
     if sqlerrm <> 'PASS_VALUE_MISMATCH' then raise; end if;
@@ -99,7 +99,7 @@ do $$ begin
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 950, 800, 150, 800, '2026-11-05',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":950}]',
-      now() + interval '10 minutes', 'pi_test_authorized', false);
+      now() + interval '10 minutes', 'pi_test_authorized', false, 0);
     raise exception 'overage charged without confirmation';
   exception when raise_exception then
     if sqlerrm <> 'OVERAGE_CONFIRMATION_REQUIRED' then raise; end if;
@@ -110,7 +110,7 @@ select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 950, 800, 150, 800, '2026-11-05',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":950}]',
-      now() + interval '10 minutes', 'pi_test_authorized', true) as second_order \gset
+      now() + interval '10 minutes', 'pi_test_authorized', true, 0) as second_order \gset
 do $$ begin
   assert (select overage_status from orders where pass_day = '2026-11-05') = 'authorized';
   assert (select overage_confirmed_at is not null from orders where pass_day = '2026-11-05');
@@ -128,7 +128,7 @@ do $$ begin
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-06',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null, false);
+      now() + interval '10 minutes', null, false, 0);
     raise exception 'pass allowance not enforced';
   exception when raise_exception then
     if sqlerrm <> 'NO_PASSES_LEFT' then raise; end if;
@@ -143,7 +143,7 @@ do $$ begin
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 100, 100, 0, 800, '2026-11-07',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null, false);
+      now() + interval '10 minutes', null, false, 0);
     raise exception 'total mismatch not caught';
   exception when raise_exception then
     if sqlerrm <> 'ORDER_TOTAL_MISMATCH' then raise; end if;
@@ -157,7 +157,7 @@ select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-06',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null, false);
+      now() + interval '10 minutes', null, false, 0);
 do $$ begin
   assert (select sum(passes) from pass_ledger where member_id = '00000000-0000-0000-0000-0000000000a1') = 0;
 end $$;
@@ -246,7 +246,7 @@ select place_order(
       '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
       '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-08',
       '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
-      now() + interval '10 minutes', null, false) as bonus_order \gset
+      now() + interval '10 minutes', null, false, 0) as bonus_order \gset
 do $$ begin
   assert (select bonus_pass_id from orders where pass_day = '2026-11-08') = '00000000-0000-0000-0000-0000000000bb', 'soonest-expiring bonus used';
   assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 1;
@@ -256,6 +256,36 @@ end $$;
 select cancel_order(:'bonus_order', false);
 do $$ begin
   assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 0, 'bonus pass returned on cancel';
+end $$;
+
+-- The member chooses to put a bonus pass toward the overage: $10 on an $8 pass = $2 over, all
+-- covered by a second bonus pass. Today's pass is the soonest-expiring bonus (bb); the overage
+-- bonus can't be the same pass, so it comes from ba. Cancelling returns both.
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 1000, 1000, 0, 800, '2026-11-09',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":2,"unit_price":500}]',
+      now() + interval '10 minutes', null, false, 200) as ob_order \gset
+do $$ begin
+  assert (select bonus_pass_id from orders where pass_day = '2026-11-09') = '00000000-0000-0000-0000-0000000000bb';
+  assert (select overage_bonus_pass_id from orders where pass_day = '2026-11-09') = '00000000-0000-0000-0000-0000000000ba';
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000ba') = 1;
+  assert (select overage_amount = 0 and pass_covered_amount = 1000 from orders where pass_day = '2026-11-09');
+  begin
+    perform place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 1000, 1000, 0, 800, '2026-11-10',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":2,"unit_price":500}]',
+      now() + interval '10 minutes', null, false, 150);
+    raise exception 'wrong bonus cover accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'PASS_VALUE_MISMATCH' then raise; end if;
+  end;
+end $$;
+select cancel_order(:'ob_order', false);
+do $$ begin
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000ba') = 0, 'overage bonus returned';
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 0, 'day bonus returned';
 end $$;
 
 rollback;

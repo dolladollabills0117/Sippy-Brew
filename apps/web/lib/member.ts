@@ -223,7 +223,7 @@ export async function getShopDetail(id: string, s: Session | null) {
  */
 export async function placeOrder(
   s: Session,
-  input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null },
+  input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null; useBonusForOverage?: boolean },
 ) {
   if (!input?.shopId || !Array.isArray(input.items)) throw badRequest("BAD_ORDER", "Pick a shop and at least one coffee.");
   const pickupAt = new Date(input.pickupAt);
@@ -248,11 +248,13 @@ export async function placeOrder(
     passDaysUsed: passes.passDaysUsed,
     maxPassValueCents: allowance?.maxPassValueCents ?? 0,
     confirmedOverageCents: typeof input.confirmedOverageCents === "number" ? input.confirmedOverageCents : null,
+    bonusPassesLeft: passes.bonusLeft,
+    useBonusForOverage: input.useBonusForOverage === true,
     pickupAt,
     now,
   });
   if (!result.ok) {
-    const conflict = ["PASS_USED_TODAY", "NO_PASSES_LEFT", "OVERAGE_CONFIRMATION_REQUIRED"].includes(result.code);
+    const conflict = ["PASS_USED_TODAY", "NO_PASSES_LEFT", "OVERAGE_CONFIRMATION_REQUIRED", "BONUS_NOT_AVAILABLE"].includes(result.code);
     throw new AppError(conflict ? 409 : 400, result.code, result.message);
   }
 
@@ -283,6 +285,7 @@ export async function placeOrder(
     p_pickup: pickupAt.toISOString(),
     p_overage_payment_intent: paymentIntent,
     p_overage_confirmed: result.overageCents > 0,
+    p_bonus_cover: result.bonusCoveredCents,
   });
   if (error) {
     if (paymentIntent) await voidOverage(paymentIntent).catch(() => {});

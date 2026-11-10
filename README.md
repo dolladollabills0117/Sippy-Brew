@@ -35,7 +35,7 @@ A pass has two parts, named so people can tell them apart: **what you drink** (t
 - *Neighborhood Passport:* pick up at 5 different shops and get a free day pass (once).
 - *Grand Tour:* pick up at every shop that's been live 30+ days and get 2 months of your plan free (a one-time Stripe coupon). Switched on only once more than 50 shops are live.
 - *Referrals:* every 2 friends who join with your link and pay their first month earn you 3 bonus passes.
-- *Bonus passes* cover up to your daily max ($4 House, $8 Specialty) and roll over: each expires a year after it's earned, not at renewal. Orders use this month's passes first, then the bonus pass that expires soonest. Shops are paid for a bonus pass like any pass; the platform funds it. A visit counts when the shop scans the pickup code.
+- *Bonus passes* cover up to your daily max ($4 House, $8 Specialty) and roll over: each expires a year after it's earned, not at renewal. Orders use this month's passes first, then the bonus pass that expires soonest. Shops are paid for a bonus pass like any pass; the platform funds it. A visit counts when the shop scans the pickup code. At checkout, a member with a spare bonus pass can choose to put it toward an overage: it covers up to their daily max of the overage and they confirm and pay only the rest.
 
 **Our role (Terms):** Sippy Brew isn't the coffee shop. Shops are independent and responsible for their drinks and service; order issues go to the shop. The plain-language text is in `packages/core/src/legal.ts` and shows on `/terms`, at sign-up and checkout, and in the demo.
 

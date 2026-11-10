@@ -11,6 +11,8 @@ import {
   getTier,
   describeOptions,
   priceOrder,
+  bonusForOverageAvailable,
+  bonusOverageCover,
   type MemberSummary,
   type MenuItem,
   type Shop,
@@ -45,14 +47,21 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
   const [error, setError] = useState<string | null>(null);
   // The overage amount the member ticked "I agree" for. A changed cart needs a new confirmation.
   const [confirmedOverage, setConfirmedOverage] = useState<number | null>(null);
+  // The member's choice to put a bonus pass toward the overage.
+  const [useBonus, setUseBonus] = useState(false);
 
   const available = menu.filter((m) => m.available && !m.soldOutToday);
   // Price the cart with the same rules the server uses (drink + customizations).
   const priced = cart.length ? priceOrder(cart, available, shop.id) : null;
   const pricedLines = priced && priced.ok ? priced.lines : [];
   const total = priced && priced.ok ? priced.totalCents : 0;
-  const pass = checkPassAvailable({ passesLeft: summary.passesLeft, passDaysUsed: summary.passDaysUsed, now: new Date() });
-  const split = splitPassValue(total, summary.maxPassValueCents);
+  const allPasses = summary.passesLeft + summary.bonusPassesLeft;
+  const pass = checkPassAvailable({ passesLeft: allPasses, passDaysUsed: summary.passDaysUsed, now: new Date() });
+  const base = splitPassValue(total, summary.maxPassValueCents);
+  const spareBonus = bonusForOverageAvailable(allPasses, summary.bonusPassesLeft);
+  const bonusCover = useBonus && spareBonus > 0 ? bonusOverageCover(base.overageCents, summary.maxPassValueCents) : 0;
+  // What the member pays after any bonus pass they chose to use.
+  const split = { passCoveredCents: base.passCoveredCents + bonusCover, overageCents: base.overageCents - bonusCover };
   const blocker = !pass.ok ? pass.message : null;
   const hasOverage = split.overageCents > 0;
   const overageConfirmed = !hasOverage || confirmedOverage === split.overageCents;
@@ -87,6 +96,7 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
         items,
         pickupAt: pickup,
         confirmedOverageCents: hasOverage ? confirmedOverage : null,
+        useBonusForOverage: bonusCover > 0,
       });
       router.push(`/orders/${order.id}`);
     } catch (e) {
@@ -189,9 +199,17 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
             <div className="flex justify-between">
               <dt className="text-pecan">Pass covers (first {money(summary.maxPassValueCents)})</dt>
               <dd className="font-bold text-espresso">
-                <Money cents={split.passCoveredCents} />
+                <Money cents={base.passCoveredCents} />
               </dd>
             </div>
+            {bonusCover > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-pecan">Bonus pass toward the overage</dt>
+                <dd className="font-bold text-espresso">
+                  <Money cents={bonusCover} />
+                </dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt className="text-pecan">Overage</dt>
               <dd className="font-bold text-espresso">
@@ -205,6 +223,27 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
               </dd>
             </div>
           </dl>
+          {base.overageCents > 0 && spareBonus > 0 && (
+            <label htmlFor="use-bonus" className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-[14px] border-2 border-honey bg-cream-swirl p-4 font-bold text-espresso">
+              <input
+                id="use-bonus"
+                type="checkbox"
+                className="mt-1 h-5 w-5 shrink-0 accent-burnt-sugar"
+                checked={useBonus}
+                onChange={(e) => {
+                  setUseBonus(e.target.checked);
+                  setConfirmedOverage(null);
+                }}
+              />
+              <span>
+                Use a bonus pass toward the overage
+                <span className="block text-sm font-normal text-pecan">
+                  It covers up to {money(Math.min(base.overageCents, summary.maxPassValueCents))} of the {money(base.overageCents)} overage. You have {spareBonus} bonus pass
+                  {spareBonus === 1 ? "" : "es"} to use.
+                </span>
+              </span>
+            </label>
+          )}
           {hasOverage && (
             <div className="mt-4 rounded-[14px] border-2 border-espresso bg-vanilla-bean p-4">
               <p className="font-bold text-espresso">

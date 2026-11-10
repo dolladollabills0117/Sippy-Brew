@@ -6,6 +6,7 @@ import { resolveOptions, type ChosenOption, type ModifierGroup } from "./modifie
 import { checkPassAvailable, splitPassValue } from "./passes";
 
 export type OrderErrorCode =
+  | "BONUS_NOT_AVAILABLE"
   | "NO_ACTIVE_SUBSCRIPTION"
   | "SHOP_NOT_ACTIVE"
   | "EMPTY_ORDER"
@@ -58,6 +59,10 @@ export interface OrderContext {
    * whenever the order is over the max. An overage is never charged without it.
    */
   confirmedOverageCents?: number | null;
+  /** Of `passesLeft`, how many are bonus passes (they roll over). */
+  bonusPassesLeft?: number;
+  /** The member chose to spend a bonus pass on this order's overage. */
+  useBonusForOverage?: boolean;
   pickupAt: Date;
   now: Date;
   timeZone?: string;
@@ -78,8 +83,10 @@ export type OrderValidation =
       ok: true;
       totalCents: number;
       lines: PricedLine[];
-      /** Covered by today's pass. */
+      /** Covered by passes: today's pass, plus a bonus pass on the overage if the member chose one. */
       passCoveredCents: number;
+      /** Part of passCoveredCents paid with a bonus pass the member put toward the overage. */
+      bonusCoveredCents: number;
       /** Confirmed by and charged to the member. Goes 100% to the shop. */
       overageCents: number;
       passDay: string;
@@ -149,16 +156,25 @@ export function validateOrder(lines: readonly OrderLineInput[], ctx: OrderContex
   if (!pickup.ok) return pickup;
 
   const split = splitPassValue(priced.totalCents, ctx.maxPassValueCents);
-  const confirm = checkOverageConfirmed(split.overageCents, ctx.confirmedOverageCents);
+  let bonusCoveredCents = 0;
+  if (ctx.useBonusForOverage && split.overageCents > 0) {
+    if (bonusForOverageAvailable(ctx.passesLeft, ctx.bonusPassesLeft ?? 0) < 1) {
+      return { ok: false, code: "BONUS_NOT_AVAILABLE", message: "You don't have a bonus pass to put toward the overage." };
+    }
+    bonusCoveredCents = Math.min(split.overageCents, ctx.maxPassValueCents);
+  }
+  const overageCents = split.overageCents - bonusCoveredCents;
+  const confirm = checkOverageConfirmed(overageCents, ctx.confirmedOverageCents);
   if (!confirm.ok) return confirm;
   return {
     ok: true,
     totalCents: priced.totalCents,
     lines: priced.lines,
-    passCoveredCents: split.passCoveredCents,
-    overageCents: split.overageCents,
+    passCoveredCents: split.passCoveredCents + bonusCoveredCents,
+    bonusCoveredCents,
+    overageCents,
     passDay: pass.passDay,
-    passesLeftAfter: pass.passesLeftAfter,
+    passesLeftAfter: pass.passesLeftAfter - (bonusCoveredCents > 0 ? 1 : 0),
   };
 }
 
@@ -212,4 +228,18 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
 export function nextStatus(from: OrderStatus): OrderStatus | null {
   const next = TRANSITIONS[from].find((s) => s !== "cancelled");
   return next ?? null;
+}
+
+/**
+ * Bonus passes that could go toward an overage: the day's pass comes from this month's passes
+ * when there are any, otherwise from a bonus pass, so that one can't be used twice.
+ */
+export function bonusForOverageAvailable(passesLeft: number, bonusPassesLeft: number): number {
+  const periodLeft = Math.max(0, passesLeft - bonusPassesLeft);
+  return periodLeft > 0 ? bonusPassesLeft : Math.max(0, bonusPassesLeft - 1);
+}
+
+/** What a bonus pass would take off this order's overage (up to the daily max). */
+export function bonusOverageCover(overageCents: number, maxPassValueCents: number): number {
+  return Math.max(0, Math.min(overageCents, maxPassValueCents));
 }

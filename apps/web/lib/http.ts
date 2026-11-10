@@ -19,6 +19,7 @@ export const notFound = (what = "That") => new AppError(404, "NOT_FOUND", `${wha
 const DB_ERRORS: Record<string, [number, string]> = {
   PASS_USED_TODAY: [409, "You've already used today's pass. See you tomorrow!"],
   NO_PASSES_LEFT: [409, "You've used all your Daily Passes this month."],
+  BONUS_NOT_AVAILABLE: [409, "You don't have a bonus pass to put toward the overage."],
   ORDER_TOTAL_MISMATCH: [400, "Order total didn't match the menu. Please try again."],
   PASS_VALUE_MISMATCH: [400, "Order total didn't match your plan. Please try again."],
   OVERAGE_CONFIRMATION_REQUIRED: [409, "Please confirm the overage before placing this order."],
