@@ -112,3 +112,31 @@ export function summarizePayout(orders: readonly OrderMoney[], commissionBps: nu
     orderCount: orders.length,
   };
 }
+
+/** Card processing on a member's monthly payment (Stripe's standard 2.9% + 30¢, from rules.json). */
+export function subscriptionProcessingFee(priceCents: number, rules: Pick<typeof RULES, "overageProcessingFeeBps" | "overageProcessingFeeFixedCents"> = RULES): number {
+  assertCents(priceCents, "priceCents");
+  if (priceCents <= 0) return 0;
+  return Math.floor((priceCents * rules.overageProcessingFeeBps + 5_000) / 10_000) + rules.overageProcessingFeeFixedCents;
+}
+
+export interface PlatformTake {
+  /** What members paid for their passes. */
+  revenueCents: number;
+  /** Paid (or owed) to shops for passes redeemed so far: 88% of pass value. */
+  shopPayoutCents: number;
+  /** Card processing on members' monthly payments. */
+  cardFeesCents: number;
+  /** What Sippy Brew keeps: revenue − shop payouts − card fees. Commission plus unused passes. */
+  keepCents: number;
+}
+
+/**
+ * What the platform actually keeps in a month. Overages aren't included: they pass through to
+ * shops. Mid-month this is "so far": it shrinks as members use passes and settles at renewal.
+ */
+export function platformTake(params: { planPricesCents: readonly number[]; shopNetCents: number }): PlatformTake {
+  const revenueCents = params.planPricesCents.reduce((a, c) => a + c, 0);
+  const cardFeesCents = params.planPricesCents.reduce((a, c) => a + subscriptionProcessingFee(c), 0);
+  return { revenueCents, shopPayoutCents: params.shopNetCents, cardFeesCents, keepCents: revenueCents - params.shopNetCents - cardFeesCents };
+}

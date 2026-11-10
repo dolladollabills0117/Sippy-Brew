@@ -961,6 +961,11 @@
       '<div class="stat"><span class="muted small">Active subscriptions</span><b>' + members + '</b><span class="muted small">' + (t ? t.name : "None yet") + "</span></div>" +
       '<div class="stat"><span class="muted small">Monthly revenue</span><b>' + money(t ? t.priceCents : 0) + "</b></div>" +
       '<div class="stat"><span class="muted small">Commission this month</span><b>' + money2(sum.commissionCents) + '</b><span class="muted small">' + sum.orderCount + " redemptions</span></div>" +
+      (function () {
+        // What Sippy Brew keeps: revenue − shop payouts − card fees (commission + unused passes).
+        var tk = S.platformTake({ planPricesCents: t ? [t.priceCents] : [], shopNetCents: sum.netCents });
+        return '<div class="stat"><span class="muted small">You keep (so far)</span><b>' + money2(tk.keepCents) + '</b><span class="muted small">Revenue − ' + money2(tk.shopPayoutCents) + " to shops − " + money2(tk.cardFeesCents) + " card fees</span></div>";
+      })() +
       '<div class="stat"><span class="muted small">Failed payments</span><b>0</b></div></div>' +
       ((state.teamAlerts || []).length ? '<div class="card stack" style="border:2px solid var(--honey)"><div class="row between"><b>No-shows</b><span class="badge honey">' + state.teamAlerts.length + "</span></div>" +
         state.teamAlerts.slice(0, 6).map(function (a) { return '<div class="small" style="border-top:1px solid var(--latte);padding-top:8px"><b>' + esc(a.shop) + "</b> marked " + esc(a.member) + "'s order as not picked up · " + dateFmt.format(new Date(a.at)) + "</div>"; }).join("") + "</div>" : "") +

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RULES, splitOrder, summarizePayout } from "../src";
+import { platformTake, RULES, splitOrder, subscriptionProcessingFee, summarizePayout } from "../src";
 
 describe("commission math on pass-covered value (12% platform, 88% shop)", () => {
   it("uses 12% from config", () => {
@@ -54,5 +54,16 @@ describe("commission math on pass-covered value (12% platform, 88% shop)", () =>
     expect(() => splitOrder(-1)).toThrow();
     expect(() => splitOrder(4.5)).toThrow();
     expect(() => splitOrder(500, 12.5)).toThrow();
+  });
+});
+
+
+describe("What Sippy Brew keeps", () => {
+  it("revenue minus shop payouts minus card fees", () => {
+    expect(subscriptionProcessingFee(9600)).toBe(308);
+    // One Regular · Specialty member who used all 12 passes at $8: shops got 88% of $96.
+    expect(platformTake({ planPricesCents: [9600], shopNetCents: 8448 })).toEqual({ revenueCents: 9600, shopPayoutCents: 8448, cardFeesCents: 308, keepCents: 844 });
+    // Same member, 9 passes at $6.50.
+    expect(platformTake({ planPricesCents: [9600], shopNetCents: 5148 }).keepCents).toBe(4144);
   });
 });

@@ -1,4 +1,4 @@
-import { formatCents, getTier, monthBounds, RULES, TIERS } from "@sippy/core";
+import { formatCents, getTier, platformTake, monthBounds, RULES, TIERS } from "@sippy/core";
 import { AdminShopActions } from "@/components/AdminShopActions";
 import { Badge, Card, EmptyState, PageTitle, SectionTitle, Stat } from "@/components/ui";
 import { requirePageSession } from "@/lib/auth";
@@ -19,7 +19,7 @@ export default async function AdminPage() {
     db.from("shops").select("id, name, address, status, spotlight, payouts_enabled, created_at, removal_reason, appeal_note, appealed_at, profiles:owner_id(email)").order("created_at", { ascending: false }),
     db.from("subscriptions").select("tier, status, member_id"),
     db.from("profiles").select("id, name, email, created_at").eq("role", "member").order("created_at", { ascending: false }).limit(200),
-    db.from("orders").select("commission, total").in("status", ["picked_up", "no_show"]).gte("redeemed_at", month.start.toISOString()),
+    db.from("orders").select("commission, net, total").in("status", ["picked_up", "no_show"]).gte("redeemed_at", month.start.toISOString()),
     db.from("payment_failures").select("id, amount, reason, created_at, profiles:member_id(email)").order("created_at", { ascending: false }).limit(25),
     db.from("platform_alerts").select("id, kind, message, created_at, order_id, shops:shop_id(name), profiles:member_id(name, email)").is("resolved_at", null).order("created_at", { ascending: false }).limit(25),
   ]);
@@ -29,15 +29,22 @@ export default async function AdminPage() {
   const tierCounts = TIERS.map((t) => `${t.name} ${live.filter((x) => x.tier === t.id).length}`).join(" · ");
   const mrr = live.reduce((sum, x) => sum + getTier(x.tier).priceCents, 0);
   const commission = (monthOrders ?? []).reduce((sum, o) => sum + (o.commission ?? 0), 0);
+  // What Sippy Brew actually keeps: revenue − shop payouts − card fees (commission + unused passes).
+  const take = platformTake({ planPricesCents: live.map((x) => getTier(x.tier).priceCents), shopNetCents: (monthOrders ?? []).reduce((sum, o) => sum + (o.net ?? 0), 0) });
   const subByMember = new Map((subs ?? []).map((x) => [x.member_id, x]));
 
   return (
     <>
       <PageTitle kicker="Platform">Admin</PageTitle>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="Active subscriptions" value={live.length} sub={tierCounts} />
         <Stat label="Monthly revenue" value={formatCents(mrr)} sub="From active plans" />
         <Stat label="Commission this month" value={formatCents(commission, { showZeroCents: true })} sub={`${monthOrders?.length ?? 0} redemptions`} />
+        <Stat
+          label="You keep (so far)"
+          value={formatCents(take.keepCents, { showZeroCents: true })}
+          sub={`Revenue − ${formatCents(take.shopPayoutCents, { showZeroCents: true })} to shops − ${formatCents(take.cardFeesCents, { showZeroCents: true })} card fees`}
+        />
         <Stat label="Failed payments" value={failures?.length ?? 0} sub="Most recent 25" />
       </div>
 
