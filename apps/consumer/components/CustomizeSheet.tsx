@@ -10,9 +10,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
  * The price updates as options change. Pass covers the order up to the daily max; the rest is
  * an overage confirmed at checkout.
  */
-export function CustomizeSheet({ item, onAdd, onClose }: { item: MenuItem; onAdd: (optionIds: string[], quantity: number) => void; onClose: () => void }) {
-  const [picked, setPicked] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(1);
+export function CustomizeSheet({
+  item,
+  onAdd,
+  onClose,
+  initial,
+}: {
+  item: MenuItem;
+  onAdd: (optionIds: string[], quantity: number) => void;
+  onClose: () => void;
+  /** Editing a cart line: start from its options and quantity. */
+  initial?: { optionIds: string[]; quantity: number };
+}) {
+  const [picked, setPicked] = useState<string[]>(initial?.optionIds ?? []);
+  const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [error, setError] = useState<string | null>(null);
 
   const extra = picked.reduce((sum, id) => {
@@ -119,7 +130,7 @@ export function CustomizeSheet({ item, onAdd, onClose }: { item: MenuItem; onAdd
               {money(unit)} each
             </Text>
           </Row>
-          <Button label={`Add to order · ${money(unit * quantity)}`} onPress={add} />
+          <Button label={`${initial ? "Save changes" : "Add to cart"} · ${money(unit * quantity)}`} onPress={add} />
         </View>
       </SafeAreaView>
     </Modal>

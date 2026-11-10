@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allergyNotice, canFlagNoShow, cleanOrderNote, cleanScannedMenu, priceRecentlyUpdated, startMakingAt } from "../src";
+import { allergyNotice, canFlagNoShow, prepUrgency, cleanOrderNote, cleanScannedMenu, priceRecentlyUpdated, startMakingAt } from "../src";
 
 const pickup = new Date("2026-11-10T13:15:00Z");
 const mins = (m: number) => new Date(pickup.getTime() + m * 60_000);
@@ -12,6 +12,12 @@ describe("No-shows", () => {
   });
   it("not for orders picked up, cancelled or already flagged", () => {
     for (const status of ["picked_up", "cancelled", "no_show"]) expect(canFlagNoShow({ status, pickupAt: pickup }, mins(60)).ok).toBe(false);
+  });
+  it("glows as the start time gets close, then says start now", () => {
+    expect(prepUrgency(pickup, mins(-20))).toBe("later");
+    expect(prepUrgency(pickup, mins(-9))).toBe("soon"); // start is at -5; glow from -10
+    expect(prepUrgency(pickup, mins(-5))).toBe("now");
+    expect(prepUrgency(pickup, mins(0))).toBe("late");
   });
   it("tells shops to start making it 5 minutes before pickup", () => {
     expect(startMakingAt(pickup).toISOString()).toBe("2026-11-10T13:10:00.000Z");

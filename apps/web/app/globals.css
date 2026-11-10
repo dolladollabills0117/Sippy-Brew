@@ -125,3 +125,10 @@
 @keyframes quiz-swipe-in { from { transform: translateX(60%) rotate(4deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes quiz-pop { from { transform: scale(.3) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .quiz-out, .quiz-in, .result-emoji { animation: none; } }
+
+/* Shop queue: "Start at" breathes as the start time gets close, stronger when it's time. */
+.prep-soon { background: var(--color-honey); animation: prep-breathe 2.8s ease-in-out infinite; }
+.prep-now { background: var(--color-honey); animation: prep-breathe-strong 1.6s ease-in-out infinite; }
+@keyframes prep-breathe { 0%, 100% { box-shadow: 0 0 0 0 rgba(224, 168, 71, 0.15); filter: brightness(1); } 50% { box-shadow: 0 0 14px 6px rgba(224, 168, 71, 0.65); filter: brightness(1.12); } }
+@keyframes prep-breathe-strong { 0%, 100% { box-shadow: 0 0 0 0 rgba(168, 100, 47, 0.25); transform: scale(1); } 50% { box-shadow: 0 0 22px 9px rgba(224, 168, 71, 0.9); transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .prep-soon, .prep-now { animation: none; box-shadow: 0 0 0 3px var(--color-espresso); } }

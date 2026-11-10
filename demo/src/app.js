@@ -85,7 +85,7 @@
       error: null, scan: null, sheet: null, authMode: "signup",
       quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
       bonus: [], refCode: null, friends: 0, grandTour: false,
-      removed: {}, appeals: {},
+      removed: {}, appeals: {}, cartShop: null, editLine: null, customizeShop: null,
       minuteOffset: 0, prices: {}, priceChangedAt: {}, notices: [], teamAlerts: [], scanRows: null, scanSkipped: [], scanning: false, orderNote: "", orderAllergy: "" };
   }
   var state = fresh();
@@ -482,7 +482,8 @@
       return '<div class="topbar"><span class="row" style="gap:10px">' + logoHome() + '<span class="badge sky">Shop</span></span>' +
         '<button class="pill dark" data-a="sign-out">Sign out</button></div>';
     }
-    return '<div class="topbar">' + logoHome() + "</div>";
+    var n = state.session === "member" ? cartCount() : 0;
+    return '<div class="topbar">' + logoHome() + (state.session === "member" ? '<button class="cart-btn" data-a="view-cart" aria-label="Cart, ' + n + ' item' + (n === 1 ? "" : "s") + '">🛒' + (n ? '<span class="cart-count">' + n + "</span>" : "") + "</button>" : "") + "</div>";
   }
 
   // ---- Member app
@@ -553,11 +554,39 @@
       '<span class="muted small">Customizations are priced by the shop. Your pass covers your order up to its daily max; anything more is an overage you confirm.</span>' +
       (state.error ? '<div class="alert" role="alert">' + esc(state.error) + "</div>" : "") +
       '<div class="row between"><div class="stepper"><button data-a="cqty" data-d="-1" aria-label="One fewer" ' + (state.cqty <= 1 ? "disabled" : "") + '>−</button><output aria-live="polite">' + state.cqty + '</output><button data-a="cqty" data-d="1" aria-label="One more" ' + (state.cqty >= S.MAX_QUANTITY_PER_LINE ? "disabled" : "") + '>+</button></div><span class="muted small">' + money2(unit) + " each</span></div>" +
-      '<button class="btn" data-a="add-custom">Add to order · ' + money2(unit * state.cqty) + "</button></div></div>";
+      '<button class="btn" data-a="add-custom">' + (state.editLine !== null && state.editLine !== undefined ? "Save changes · " : "Add to cart · ") + money2(unit * state.cqty) + "</button></div></div>";
+  }
+
+  function cartCount() { return state.cart.reduce(function (a, l) { return a + l.quantity; }, 0); }
+  function cartTotal() {
+    if (!state.cartShop || !state.cart.length) return 0;
+    var pr = S.priceOrder(state.cart, menuForOrder(shopById(state.cartShop)), state.cartShop);
+    return pr.ok ? pr.totalCents : 0;
+  }
+  /** "View cart" bar, shown wherever there's something in the cart. */
+  function cartBar() {
+    var n = cartCount(); if (!n) return "";
+    return '<div class="sticky-cta cart-bar"><button class="btn" data-a="view-cart"><span>🛒 View cart · ' + n + " item" + (n === 1 ? "" : "s") + "</span><span class=\"num\">" + money2(cartTotal()) + "</span></button></div>";
   }
 
   function shopDetail(id) {
-    var s = shopById(id), t = tier();
+    var s = shopById(id);
+    var other = state.cart.length && state.cartShop && state.cartShop !== id;
+    var items = s.menu.map(function (m) {
+      var out = !!state.soldOut[m.id], custom = m.modifierGroups.length > 0;
+      var inCart = state.cartShop === id ? state.cart.filter(function (l) { return l.menuItemId === m.id; }).reduce(function (a, l) { return a + l.quantity; }, 0) : 0;
+      return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + "</b>" + (inCart ? ' <span class="badge sky">' + inCart + " in cart</span>" : "") + '<div class="muted small">' + m.size + " · " + money2(m.priceCents) + (out ? ' · <span style="color:var(--danger);font-weight:700">Sold out</span>' : custom ? " · Customizable" : "") + (S.priceRecentlyUpdated(m.priceChangedAt, now()) ? ' <span class="badge honey">Price updated</span>' : "") + "</div></div>" +
+        (out || other ? "" : '<button class="btn line" style="width:auto;padding:0 16px;min-height:44px;font-size:.95rem" data-a="' + (custom ? "open-customize" : "add-plain") + '" data-id="' + m.id + '">' + (custom ? "Customize" : "Add") + "</button>") + "</div>";
+    }).join("");
+    return '<button class="back" data-a="back">‹ Shops</button>' +
+      '<div style="padding:0 4px" class="stack"><h1 style="font-size:2rem">' + esc(s.name) + '</h1><p class="muted">' + esc(s.address) + "</p><p>" + esc(s.story) + "</p></div>" +
+      (other ? '<div class="card stack notice-card"><b>Your cart has coffee from ' + esc(shopById(state.cartShop).name) + "</b><span class=\"muted small\">One pass covers one order at one shop. Start a new cart here, or go back to your cart.</span>" +
+        '<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" style="width:auto;padding:0 16px" data-a="new-cart" data-id="' + id + '">Start a new cart here</button><button class="btn ghost" style="width:auto" data-a="view-cart">View my cart</button></div></div>' : "") +
+      '<div class="card">' + items + "</div>" + cartBar();
+  }
+
+  function cartScreen() {
+    var id = state.cartShop, s = shopById(id), t = tier();
     var items = s.menu.map(function (m) {
       var out = !!state.soldOut[m.id], custom = m.modifierGroups.length > 0;
       var inCart = state.cart.filter(function (l) { return l.menuItemId === m.id; }).reduce(function (a, l) { return a + l.quantity; }, 0);
@@ -573,9 +602,11 @@
       var item = s.menu.filter(function (x) { return x.id === l.menuItemId; })[0];
       return '<div class="row between" style="align-items:flex-start;border-bottom:1px solid var(--latte);padding-bottom:8px"><div class="grow"><b>' + l.quantity + "× " + esc(item ? item.name : "Item") + "</b>" +
         (p && p.options.length ? '<div class="muted small">' + esc(S.describeOptions(p.options)) + "</div>" : "") +
-        '<div class="stepper" style="margin-top:6px"><button data-a="cart-bump" data-id="' + li + '" data-d="-1" aria-label="One fewer">−</button><button data-a="cart-bump" data-id="' + li + '" data-d="1" aria-label="One more" ' + (l.quantity >= S.MAX_QUANTITY_PER_LINE ? "disabled" : "") + ">+</button></div></div>" +
+        '<div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"><div class="stepper"><button data-a="cart-bump" data-id="' + li + '" data-d="-1" aria-label="One fewer">−</button><button data-a="cart-bump" data-id="' + li + '" data-d="1" aria-label="One more" ' + (l.quantity >= S.MAX_QUANTITY_PER_LINE ? "disabled" : "") + ">+</button></div>" +
+        (item && item.modifierGroups.length ? '<button class="linkbtn" style="min-height:36px;padding:0 4px" data-a="edit-line" data-id="' + li + '">Edit</button>' : "") +
+        '<button class="linkbtn" style="min-height:36px;padding:0 4px;color:var(--danger)" data-a="remove-line" data-id="' + li + '">Remove</button></div></div>' +
         '<b class="num">' + (p ? money2(p.lineTotalCents) : "") + "</b></div>";
-    }).join("") + "</div>" : '<span class="muted">Add a coffee from the menu.</span>';
+    }).join("") + "</div>" : "";
     var base = S.splitPassValue(total, t.maxPassValueCents);
     var spareBonus = S.bonusForOverageAvailable(totalPassesLeft(), bonusLeft());
     var bonusCover = state.useBonus && spareBonus > 0 ? S.bonusOverageCover(base.overageCents, t.maxPassValueCents) : 0;
@@ -587,10 +618,15 @@
     var slots = S.pickupSlots(now(), ALL_DAY, TZ).slice(0, 12);
     var chips = slots.map(function (d, i) { return '<button class="chip" data-a="pickup" data-id="' + i + '" aria-pressed="' + (i === state.pickupIdx) + '">' + timeFmt.format(d) + "</button>"; }).join("");
     var label = hasOver ? "Use pass + pay " + money2(split.overageCents) + " overage" : "Use today's pass";
-    return '<button class="back" data-a="back">‹ Shops</button>' +
-      '<div style="padding:0 4px" class="stack"><h1 style="font-size:2rem">' + esc(s.name) + '</h1><p class="muted">' + esc(s.address) + "</p><p>" + esc(s.story) + "</p></div>" +
-      '<div class="card">' + items + "</div>" +
-      '<div class="card stack"><h2 style="font-size:1.4rem">Your order</h2>' + cartHtml + (priced && !priced.ok ? '<div class="alert" role="alert">' + esc(priced.message) + "</div>" : "") +
+    if (!state.cart.length) {
+      return '<button class="back" data-a="back">‹ Back</button><h1 style="font-size:2rem;padding:0 4px">Your cart</h1>' +
+        '<div class="card stack" style="align-items:center;text-align:center"><span style="font-size:2.4rem" aria-hidden="true">🛒</span><b>Your cart is empty</b><span class="muted small">Pick a shop and add a coffee.</span>' +
+        '<button class="btn" data-a="tab" data-id="shops">Find a shop</button></div>';
+    }
+    return '<button class="back" data-a="cart-back">‹ ' + esc(s.name) + "</button>" +
+      '<h1 style="font-size:2rem;padding:0 4px">Your cart</h1><p class="muted" style="padding:0 4px;margin-top:-12px">From ' + esc(s.name) + "</p>" +
+      '<div class="card stack"><h2 style="font-size:1.4rem">Items</h2>' + cartHtml +
+      '<button class="btn line" data-a="open-shop" data-id="' + s.id + '">+ Add more from ' + esc(s.name) + "</button>" + (priced && !priced.ok ? '<div class="alert" role="alert">' + esc(priced.message) + "</div>" : "") +
       '<div class="lines"><div class="row"><span class="muted">Pass covers (first ' + money2(t.maxPassValueCents) + ')</span><b class="num">' + money2(base.passCoveredCents) + "</b></div>" +
       (bonusCover ? '<div class="row"><span class="muted">Bonus pass toward the overage</span><b class="num">' + money2(bonusCover) + "</b></div>" : "") +
       '<div class="row"><span class="muted">Overage</span><b class="num">' + money2(split.overageCents) + "</b></div>" +
@@ -688,6 +724,13 @@
       "</div>";
   }
 
+  /** "Start at" glows and breathes as the start time gets close; "Start now" pulses stronger. */
+  function startAt(o) {
+    var u = o.status === "received" ? S.prepUrgency(o.pickupAt, now()) : "later";
+    var label = u === "now" ? "Start now" : u === "late" ? "Due now: start it" : "Start at " + timeFmt.format(S.startMakingAt(o.pickupAt));
+    return '<span class="start-at ' + u + '"' + (u === "later" ? "" : ' role="status"') + ">" + (u === "later" ? "" : '<span aria-hidden="true">●</span>') + label + "</span>";
+  }
+
   function shopOrdersTab() {
     var list = state.orders.filter(function (o) { return o.shopId === state.counterShop && OPEN.indexOf(o.status) >= 0; });
     var cards = list.map(function (o) {
@@ -696,7 +739,7 @@
       return '<div class="card stack' + (o.allergy ? " allergy-card" : "") + '"' + (o.status === "ready" && !o.allergy ? ' style="box-shadow:0 0 0 3px var(--sky)"' : "") + ">" +
         (o.allergy ? '<div class="allergy-notice" role="alert"><b>⚠️ ALLERGY NOTICE</b><span>' + esc(o.allergy) + "</span></div>" : "") +
         '<div class="row between"><h2 style="font-size:1.6rem">' + firstName() + '</h2><span class="badge' + (o.status === "ready" ? " sky" : "") + '">' + LABEL[o.status] + "</span></div>" +
-        '<span class="muted"><b>Pickup ' + timeFmt.format(new Date(o.pickupAt)) + '</b> · <b style="color:var(--burnt-ink)">Start at ' + timeFmt.format(S.startMakingAt(o.pickupAt)) + "</b></span>" +
+        '<span class="muted"><b>Pickup ' + timeFmt.format(new Date(o.pickupAt)) + "</b></span>" + startAt(o) +
         (o.note ? '<div class="order-note"><b>Note:</b> ' + esc(o.note) + "</div>" : "") +
         o.items.map(function (i) { return '<div style="font-size:1.2rem">' + i.quantity + "× " + esc(i.name) + ' <span class="muted">(' + i.size + ")</span>" + (i.options && i.options.length ? '<div style="font-size:1rem;font-weight:800;color:var(--burnt-ink)">' + esc(S.describeOptions(i.options)) + "</div>" : "") + "</div>"; }).join("") +
         '<span class="muted small">' + money2(o.totalCents) + " · Daily Pass" + (o.overageCents ? " + " + money2(o.overageCents) + " overage (paid in app, 100% yours)" : "") + "</span>" +
@@ -952,7 +995,8 @@
       if (state.session === "admin") {
         html += state.adminTab === "shops" ? adminShops() : state.adminTab === "members" ? adminMembers() : adminOverview();
       } else if (state.session === "member") {
-        if (state.detail && state.detail.type === "shop") html += shopDetail(state.detail.id) + (state.customize ? customizeSheet(shopById(state.detail.id)) : "");
+        if (state.detail && state.detail.type === "shop") html += shopDetail(state.detail.id) + (state.customize ? customizeSheet(shopById(state.customizeShop || state.detail.id)) : "");
+        else if (state.detail && state.detail.type === "cart") html += cartScreen() + (state.customize ? customizeSheet(shopById(state.customizeShop || state.cartShop)) : "");
         else if (state.detail && state.detail.type === "qr") html += qrDetail(state.detail.id);
         else html += state.tab === "orders" ? ordersTab() : state.tab === "account" ? accountTab() : shopsTab();
       } else {
@@ -990,7 +1034,8 @@
   }
 
   // ---------------------------------------------------------------- Actions
-  function addToCart(menuItemId, optionIds, quantity) {
+  function addToCart(menuItemId, optionIds, quantity, shopId) {
+    if (shopId) state.cartShop = shopId;
     var key = menuItemId + "|" + optionIds.slice().sort().join(",");
     var existing = state.cart.filter(function (l) { return l.key === key; })[0];
     if (existing) existing.quantity = Math.min(S.MAX_QUANTITY_PER_LINE, existing.quantity + quantity);
@@ -1027,7 +1072,7 @@
     if (r.bonusCoveredCents > 0) { var g2 = S.nextBonusToUse(state.bonus, n); g2.used += 1; state.orders[0].overageBonusKey = g2.key; state.orders[0].bonusCoveredCents = r.bonusCoveredCents; }
     state.useBonus = false; state.orderNote = ""; state.orderAllergy = "";
     state.passDaysUsed.push(r.passDay);
-    state.cart = []; state.confirmedOverage = null; state.error = null; state.counterShop = s.id;
+    state.cart = []; state.cartShop = null; state.confirmedOverage = null; state.error = null; state.counterShop = s.id;
     state.detail = { type: "qr", id: id };
     issueTicket(id);
     render(); window.scrollTo(0, 0);
@@ -1169,14 +1214,23 @@
       case "change-plan": state.selectedTier = state.pendingTier || state.tierId; state.pickSub = S.getTier(state.tierId).subTier; state.screen = "plans"; break;
       case "tab": state.tab = id; state.detail = null; break;
       case "shop-tab": state.shopTab = id; state.scan = null; state.shopError = null; break;
-      case "open-shop": state.useBonus = false; state.detail = { type: "shop", id: id }; state.cart = []; state.customize = null; state.confirmedOverage = null; state.pickupIdx = 0; state.error = null; render(); return window.scrollTo(0, 0);
+      // The cart is kept when you leave a shop and come back (one shop per cart).
+      case "open-shop": state.useBonus = false; state.detail = { type: "shop", id: id }; state.customize = null; state.editLine = null; state.error = null; render(); return window.scrollTo(0, 0);
+      case "view-cart": state.detail = { type: "cart" }; state.customize = null; state.error = null; render(); return window.scrollTo(0, 0);
+      case "cart-back": state.detail = state.cartShop ? { type: "shop", id: state.cartShop } : null; break;
+      case "new-cart": state.cart = []; state.cartShop = id; state.confirmedOverage = null; state.useBonus = false; state.pickupIdx = 0; render(); return toast("New cart started.");
+      case "remove-line": state.cart.splice(Number(id), 1); state.confirmedOverage = null; if (!state.cart.length) state.useBonus = false; render(); return toast("Removed from your cart.");
+      case "edit-line": {
+        var ln = state.cart[Number(id)]; if (!ln) break;
+        state.editLine = Number(id); state.customize = ln.menuItemId; state.customizeShop = state.cartShop; state.picked = ln.optionIds.slice(); state.cqty = ln.quantity; state.error = null; break;
+      }
       case "open-order": state.detail = { type: "qr", id: id }; render(); return window.scrollTo(0, 0);
       case "back": state.detail = null; state.error = null; break;
-      case "add-plain": addToCart(id, [], 1); break;
-      case "open-customize": state.customize = id; state.picked = []; state.cqty = 1; state.error = null; break;
-      case "close-customize": if (el.classList.contains("sheet-back") && ev.target !== el) return; state.customize = null; state.error = null; break;
+      case "add-plain": addToCart(id, [], 1, state.detail.id); render(); return toast("Added to your cart.");
+      case "open-customize": state.customize = id; state.customizeShop = state.detail.id; state.editLine = null; state.picked = []; state.cqty = 1; state.error = null; break;
+      case "close-customize": if (el.classList.contains("sheet-back") && ev.target !== el) return; state.customize = null; state.editLine = null; state.error = null; break;
       case "pick-opt": {
-        var sh = shopById(state.detail.id), item = sh.menu.filter(function (x) { return x.id === state.customize; })[0];
+        var sh = shopById(state.customizeShop || state.detail.id), item = sh.menu.filter(function (x) { return x.id === state.customize; })[0];
         var g = item.modifierGroups.filter(function (x) { return x.id === el.getAttribute("data-g"); })[0];
         var ids = g.options.map(function (o) { return o.id; });
         if (state.picked.indexOf(id) >= 0) state.picked = state.picked.filter(function (x) { return x !== id; });
@@ -1186,11 +1240,13 @@
       }
       case "cqty": state.cqty = Math.max(1, Math.min(S.MAX_QUANTITY_PER_LINE, state.cqty + Number(el.getAttribute("data-d")))); break;
       case "add-custom": {
-        var sh2 = shopById(state.detail.id), it2 = sh2.menu.filter(function (x) { return x.id === state.customize; })[0];
+        var sh2 = shopById(state.customizeShop || state.detail.id), it2 = sh2.menu.filter(function (x) { return x.id === state.customize; })[0];
         var res = S.resolveOptions(it2.name, it2.modifierGroups, state.picked);
         if (!res.ok) { state.error = res.message; break; }
-        addToCart(it2.id, state.picked.slice(), state.cqty); state.customize = null; state.error = null;
-        render(); return toast(it2.name + " added.");
+        var editing = state.editLine !== null && state.editLine !== undefined;
+        if (editing) state.cart.splice(state.editLine, 1);
+        addToCart(it2.id, state.picked.slice(), state.cqty, sh2.id); state.customize = null; state.editLine = null; state.error = null;
+        render(); return toast(editing ? it2.name + " updated." : it2.name + " added to your cart.");
       }
       case "cart-bump": {
         var line = state.cart[Number(id)];
@@ -1381,6 +1437,10 @@
       if (location.hash === "#admin" && state.session !== "admin") { state.screen = "admin-login"; state.session = null; state.adminError = null; render(); window.scrollTo(0, 0); }
     };
     window.addEventListener("hashchange", openAdmin);
+    setInterval(function () {
+      var focused = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+      if (state.session === "shop" && state.shopTab === "orders" && state.screen === "app" && !focused) render();
+    }, 20000);
     // Typing in fields that shouldn't re-render on every key.
     document.addEventListener("input", function (ev) {
       var a = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-a");

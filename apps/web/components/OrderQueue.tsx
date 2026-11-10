@@ -1,5 +1,5 @@
 "use client";
-import { canFlagNoShow, describeOptions, nextStatus, ORDER_STATUS_LABELS, RULES, startMakingAt, type Order } from "@sippy/core";
+import { canFlagNoShow, describeOptions, nextStatus, ORDER_STATUS_LABELS, prepUrgency, RULES, startMakingAt, type Order } from "@sippy/core";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
@@ -88,9 +88,8 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-heading text-2xl text-espresso">{o.memberFirstName}</p>
-                  <p className="text-sm font-bold text-pecan">
-                    Pickup {timeFmt.format(new Date(o.pickupTime))} · <span className="text-burnt-sugar-ink">Start at {timeFmt.format(startMakingAt(o.pickupTime))}</span>
-                  </p>
+                  <p className="text-sm font-bold text-pecan">Pickup {timeFmt.format(new Date(o.pickupTime))}</p>
+                  <StartAt order={o} />
                 </div>
                 <Badge tone={o.status === "ready" ? "sky" : "latte"}>{ORDER_STATUS_LABELS[o.status]}</Badge>
               </div>
@@ -133,5 +132,26 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
         })}
       </ul>
     </div>
+  );
+}
+
+/**
+ * "Start at" for orders not started yet. It glows and slowly "breathes" as the start time gets
+ * close, then says "Start now" with a stronger pulse, so the barista notices it.
+ */
+function StartAt({ order }: { order: Order }) {
+  const urgency = order.status === "received" ? prepUrgency(order.pickupTime, new Date()) : "later";
+  const label =
+    urgency === "now" ? "Start now" : urgency === "late" ? "Due now: start it" : `Start at ${timeFmt.format(startMakingAt(order.pickupTime))}`;
+  return (
+    <p
+      className={`mt-1 inline-block rounded-full px-3 py-1 text-sm font-extrabold ${
+        urgency === "later" ? "text-burnt-sugar-ink" : urgency === "soon" ? "prep-soon text-espresso" : "prep-now text-espresso"
+      }`}
+      aria-live={urgency === "later" ? undefined : "polite"}
+    >
+      {urgency !== "later" && <span aria-hidden="true">● </span>}
+      {label}
+    </p>
   );
 }

@@ -17,10 +17,10 @@ import {
   priceRecentlyUpdated,
   type MenuItem,
 } from "@sippy/core";
-import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
+import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad, type ScrollHandle } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Switch, TextInput, View } from "react-native";
 import { CustomizeSheet } from "../../components/CustomizeSheet";
 
@@ -37,12 +37,22 @@ const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-d
  * Shop page + order flow: menu, today's pass, pickup time. If the order is over the pass, the
  * member sees the pass amount, overage and total and must confirm the exact overage first.
  */
+/** Carts by shop, kept while the app is open so leaving a shop and coming back keeps the cart. */
+const savedCarts = new Map<string, CartLine[]>();
+
 export default function ShopScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const detail = useLoad(() => api.getShop(id), [id]);
   const me = useLoad(() => api.me(), []);
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cart, setCart] = useState<CartLine[]>(() => savedCarts.get(id) ?? []);
+  useEffect(() => {
+    savedCarts.set(id, cart);
+  }, [id, cart]);
   const [customizing, setCustomizing] = useState<MenuItem | null>(null);
+  // Editing a cart line: which line, so saving replaces it.
+  const [editing, setEditing] = useState<CartLine | null>(null);
+  const scroller = useRef<ScrollHandle>(null);
+  const cartY = useRef(0);
   const [slot, setSlot] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +120,7 @@ export default function ShopScreen() {
         allergy: allergy.trim() || null,
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      savedCarts.delete(id);
       router.replace(`/order/${order.id}`);
     } catch (e) {
       setError(errorMessage(e));
@@ -118,15 +129,32 @@ export default function ShopScreen() {
   }
 
   return (
-    <Screen>
+    <Screen
+      scrollRef={scroller}
+      footer={
+        cart.length > 0 ? (
+          <Button
+            big
+            label={`🛒 View cart · ${cart.reduce((n, l) => n + l.quantity, 0)} item${cart.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"} · ${money(total)}`}
+            onPress={() => scroller.current?.scrollTo({ y: cartY.current, animated: true })}
+          />
+        ) : null
+      }
+    >
       <Stack.Screen options={{ title: shop.name }} />
       {customizing && (
         <CustomizeSheet
           item={customizing}
-          onClose={() => setCustomizing(null)}
+          initial={editing ? { optionIds: editing.optionIds, quantity: editing.quantity } : undefined}
+          onClose={() => {
+            setCustomizing(null);
+            setEditing(null);
+          }}
           onAdd={(optionIds, quantity) => {
+            if (editing) setCart((c) => c.filter((l) => l.key !== editing.key));
             addLine(customizing.id, optionIds, quantity);
             setCustomizing(null);
+            setEditing(null);
           }}
         />
       )}
@@ -198,10 +226,10 @@ export default function ShopScreen() {
         </Card>
       ) : (
         available.length > 0 && (
-          <Card style={{ gap: spacing.md }}>
-            <Text variant="h2">Order for pickup</Text>
+          <Card style={{ gap: spacing.md }} onLayout={(e) => (cartY.current = e.nativeEvent.layout.y)}>
+            <Text variant="h2">🛒 Your cart</Text>
             {cart.length === 0 ? (
-              <Text color={colors.pecan}>Add a coffee from the menu.</Text>
+              <Text color={colors.pecan}>Your cart is empty. Add a coffee from the menu.</Text>
             ) : (
               cart.map((l) => {
                 const p = lineFor(l);
@@ -220,6 +248,19 @@ export default function ShopScreen() {
                       <Row>
                         <Button label="−" variant="secondary" onPress={() => bumpLine(l.key, -1)} accessibilityHint="One fewer" />
                         <Button label="+" variant="secondary" disabled={l.quantity >= MAX_QUANTITY_PER_LINE} onPress={() => bumpLine(l.key, 1)} accessibilityHint="One more" />
+                      </Row>
+                      <Row>
+                        {item && item.modifierGroups.length > 0 && (
+                          <Button
+                            label="Edit"
+                            variant="ghost"
+                            onPress={() => {
+                              setEditing(l);
+                              setCustomizing(item);
+                            }}
+                          />
+                        )}
+                        <Button label="Remove" variant="ghost" onPress={() => setCart((c) => c.filter((x) => x.key !== l.key))} />
                       </Row>
                     </View>
                     <Text variant="bodyBold">{p ? money(p.lineTotalCents) : ""}</Text>

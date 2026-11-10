@@ -11,13 +11,16 @@ export function CustomizeDialog({
   item,
   onAdd,
   onClose,
+  initial,
 }: {
   item: MenuItem;
   onAdd: (optionIds: string[], quantity: number) => void;
   onClose: () => void;
+  /** Editing a cart line: start from its options and quantity. */
+  initial?: { optionIds: string[]; quantity: number };
 }) {
-  const [picked, setPicked] = useState<string[]>([]);
-  const [quantity, setQuantity] = useState(1);
+  const [picked, setPicked] = useState<string[]>(initial?.optionIds ?? []);
+  const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -140,7 +143,9 @@ export function CustomizeDialog({
             </div>
             <span className="text-sm text-pecan">{formatCents(unit, { showZeroCents: true })} each</span>
           </div>
-          <Button onClick={add}>Add to order · {formatCents(unit * quantity, { showZeroCents: true })}</Button>
+          <Button onClick={add}>
+            {initial ? "Save changes" : "Add to cart"} · {formatCents(unit * quantity, { showZeroCents: true })}
+          </Button>
         </div>
       </div>
     </div>

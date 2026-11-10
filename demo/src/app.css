@@ -233,3 +233,17 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 700;
 .scan-row { display: flex; flex-direction: column; gap: 6px; background: var(--vanilla); border-radius: 14px; padding: 10px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 .removed-card { border: 2px solid var(--danger); }
+
+/* Cart */
+.cart-btn { position: relative; border: 0; background: var(--cream); border-radius: 999px; width: 48px; height: 48px; font-size: 1.35rem; box-shadow: var(--shadow); }
+.cart-count { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; border-radius: 999px; background: var(--burnt); color: var(--cream); font-size: .75rem; font-weight: 800; display: grid; place-items: center; padding: 0 5px; }
+.cart-bar .btn { justify-content: space-between; padding: 8px 20px; }
+.tabs ~ .sticky-cta, .cart-bar { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+/* Shop queue: "Start at" breathes as the start time gets close, stronger when it's time. */
+.start-at { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px; font-weight: 800; color: var(--burnt-ink); }
+.start-at.soon { background: var(--honey); color: var(--espresso); animation: breathe 2.8s ease-in-out infinite; }
+.start-at.now, .start-at.late { background: var(--honey); color: var(--espresso); font-size: 1.1rem; animation: breathe-strong 1.6s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgba(224,168,71,.15); filter: brightness(1); } 50% { box-shadow: 0 0 14px 6px rgba(224,168,71,.65); filter: brightness(1.12); } }
+@keyframes breathe-strong { 0%, 100% { box-shadow: 0 0 0 0 rgba(168,100,47,.25); transform: scale(1); } 50% { box-shadow: 0 0 22px 9px rgba(224,168,71,.9); transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .start-at.soon, .start-at.now, .start-at.late { animation: none; box-shadow: 0 0 0 3px var(--espresso); } }

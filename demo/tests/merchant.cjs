@@ -22,6 +22,7 @@ const path = require("path");
   await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
   await tap('.shop-card[data-id="main"]');
   await tap('[data-a="add-plain"]');
+  await tap('[data-a="view-cart"]');
   if (!(await txt()).includes("Any allergies? Tell the shop here")) fail("allergy prompt missing");
   await p.fill("#o-allergy", "tree nuts");
   await p.fill("#o-note", "extra hot");

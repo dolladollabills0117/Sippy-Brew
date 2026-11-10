@@ -19,7 +19,7 @@ import {
   type Shop,
 } from "@sippy/core";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { CustomizeDialog } from "./CustomizeDialog";
 import { Alert, Button, Card, EmptyState, Money } from "./ui";
@@ -40,8 +40,30 @@ const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-d
  */
 export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuItem[]; summary: MemberSummary }) {
   const router = useRouter();
+  // The cart is kept (in this browser tab) if the member leaves the shop and comes back.
+  const cartKey = `sippy-cart:${shop.id}`;
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.sessionStorage.getItem(cartKey) ?? "[]");
+      if (Array.isArray(saved)) setCart(saved as CartLine[]);
+    } catch {
+      /* storage unavailable */
+    }
+    setCartLoaded(true);
+  }, [cartKey]);
+  useEffect(() => {
+    if (!cartLoaded) return;
+    try {
+      window.sessionStorage.setItem(cartKey, JSON.stringify(cart));
+    } catch {
+      /* storage unavailable */
+    }
+  }, [cart, cartKey, cartLoaded]);
   const [customizing, setCustomizing] = useState<MenuItem | null>(null);
+  // Editing a cart line: which line, so saving replaces it.
+  const [editing, setEditing] = useState<CartLine | null>(null);
   const slots = useMemo(() => pickupSlots(new Date(), shop.hours), [shop.hours]);
   const [pickup, setPickup] = useState<string>(slots[0]?.toISOString() ?? "");
   const [busy, setBusy] = useState(false);
@@ -104,6 +126,11 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
         note: note.trim() || null,
         allergy: allergy.trim() || null,
       });
+      try {
+        window.sessionStorage.removeItem(cartKey);
+      } catch {
+        /* storage unavailable */
+      }
       router.push(`/orders/${order.id}`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't place your order. Please try again.");
@@ -124,10 +151,16 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
       {customizing && (
         <CustomizeDialog
           item={customizing}
-          onClose={() => setCustomizing(null)}
+          initial={editing ? { optionIds: editing.optionIds, quantity: editing.quantity } : undefined}
+          onClose={() => {
+            setCustomizing(null);
+            setEditing(null);
+          }}
           onAdd={(optionIds, quantity) => {
+            if (editing) setCart((c) => c.filter((l) => l.key !== editing.key));
             addLine(customizing.id, optionIds, quantity);
             setCustomizing(null);
+            setEditing(null);
           }}
         />
       )}
@@ -172,10 +205,10 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
       </Card>
 
       <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
-        <Card>
-          <h2 className="text-2xl text-espresso">Your order</h2>
+        <Card id="cart" className="scroll-mt-24">
+          <h2 className="text-2xl text-espresso">🛒 Your cart</h2>
           {cart.length === 0 ? (
-            <p className="mt-3 text-pecan">Add a coffee from the menu.</p>
+            <p className="mt-3 text-pecan">Your cart is empty. Add a coffee from the menu.</p>
           ) : (
             <ul className="mt-3 divide-y divide-latte">
               {cart.map((l) => {
@@ -194,6 +227,25 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
                         </button>
                         <button type="button" className="grid h-9 w-9 place-items-center rounded-full border-2 border-pecan text-lg font-extrabold disabled:opacity-40" aria-label="One more" disabled={l.quantity >= MAX_QUANTITY_PER_LINE} onClick={() => bumpLine(l.key, 1)}>
                           +
+                        </button>
+                        {item && item.modifierGroups.length > 0 && (
+                          <button
+                            type="button"
+                            className="ml-2 min-h-9 px-1 text-sm font-bold text-burnt-sugar-ink underline underline-offset-4"
+                            onClick={() => {
+                              setEditing(l);
+                              setCustomizing(item);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="min-h-9 px-1 text-sm font-bold text-danger underline underline-offset-4"
+                          onClick={() => setCart((c) => c.filter((x) => x.key !== l.key))}
+                        >
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -346,6 +398,15 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
           </div>
         </Card>
       </div>
+      {cart.length > 0 && (
+        <a
+          href="#cart"
+          className="sticky bottom-[calc(12px+env(safe-area-inset-bottom))] z-10 flex min-h-14 items-center justify-between rounded-2xl bg-burnt-sugar px-5 text-lg font-extrabold text-cream-swirl shadow-card lg:hidden"
+        >
+          <span>🛒 View cart · {cart.reduce((n, l) => n + l.quantity, 0)} item{cart.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"}</span>
+          <span className="tabular-nums">{money(total)}</span>
+        </a>
+      )}
     </div>
   );
 }

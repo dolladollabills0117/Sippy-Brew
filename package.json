@@ -13,7 +13,7 @@
     "seed": "tsx scripts/seed.ts",
     "db:check": "bash scripts/check-schema.sh",
     "demo:build": "tsx demo/build.ts",
-    "demo:test": "pnpm demo:build && node demo/tests/admin.cjs demo/dist && node demo/tests/upgrade.cjs demo/dist && node demo/tests/customizations.cjs demo/dist && node demo/tests/logo-home.cjs && node demo/tests/admin-login.cjs && node demo/tests/quiz.cjs && node demo/tests/rewards.cjs && node demo/tests/merchant.cjs && node demo/tests/food.cjs"
+    "demo:test": "pnpm demo:build && node demo/tests/admin.cjs demo/dist && node demo/tests/upgrade.cjs demo/dist && node demo/tests/customizations.cjs demo/dist && node demo/tests/logo-home.cjs && node demo/tests/admin-login.cjs && node demo/tests/quiz.cjs && node demo/tests/rewards.cjs && node demo/tests/merchant.cjs && node demo/tests/food.cjs && node demo/tests/cart.cjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.119.0",

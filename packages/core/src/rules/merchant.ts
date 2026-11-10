@@ -26,6 +26,22 @@ export function startMakingAt(pickupAt: Date | string): Date {
   return new Date(new Date(pickupAt).getTime() - RULES.prepLeadMinutes * 60_000);
 }
 
+/**
+ * How urgent it is to start a received order, for the queue's breathing "Start at" light:
+ * "later" (nothing yet), "soon" (within `prepAlertMinutes` of the start time: gentle glow),
+ * "now" (start time reached: "Start now", stronger), "late" (pickup time reached: "Due now").
+ */
+export type PrepUrgency = "later" | "soon" | "now" | "late";
+export function prepUrgency(pickupAt: Date | string, now: Date): PrepUrgency {
+  const pickup = new Date(pickupAt).getTime();
+  const start = startMakingAt(pickupAt).getTime();
+  const t = now.getTime();
+  if (t >= pickup) return "late";
+  if (t >= start) return "now";
+  if (t >= start - RULES.prepAlertMinutes * 60_000) return "soon";
+  return "later";
+}
+
 // ---------------------------------------------------------------------------
 // Order notes and allergies
 // ---------------------------------------------------------------------------

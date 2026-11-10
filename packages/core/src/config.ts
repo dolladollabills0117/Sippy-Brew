@@ -94,6 +94,8 @@ export interface Rules {
   noShowGraceMinutes: number;
   /** Shops are told to start a Sippy Brew order this many minutes before pickup. */
   prepLeadMinutes: number;
+  /** The queue's "Start at" time starts glowing this many minutes before it. */
+  prepAlertMinutes: number;
   orderNoteMaxChars: number;
   /** Members see "price updated" on a menu item for this many days after the shop changes it. */
   priceUpdatedBadgeDays: number;

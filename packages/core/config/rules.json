@@ -26,6 +26,7 @@
   "bonusPassLifetimeDays": 365,
   "noShowGraceMinutes": 30,
   "prepLeadMinutes": 5,
+  "prepAlertMinutes": 5,
   "orderNoteMaxChars": 200,
   "priceUpdatedBadgeDays": 14,
   "maxScannedMenuItems": 40

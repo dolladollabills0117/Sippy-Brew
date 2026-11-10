@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentRef, ReactNode, Ref } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -27,16 +27,35 @@ export function Text({ variant = "body", color = colors.espresso, style, ...prop
   );
 }
 
-export function Screen({ children, scroll = true, refreshControl, contentStyle }: { children: ReactNode; scroll?: boolean; refreshControl?: ScrollViewProps["refreshControl"]; contentStyle?: StyleProp<ViewStyle> }) {
+/** What `Screen`'s scrollRef points at (for scrollTo). */
+export type ScrollHandle = ComponentRef<typeof ScrollView>;
+
+export function Screen({
+  children,
+  scroll = true,
+  refreshControl,
+  contentStyle,
+  scrollRef,
+  footer,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  refreshControl?: ScrollViewProps["refreshControl"];
+  contentStyle?: StyleProp<ViewStyle>;
+  scrollRef?: Ref<ScrollHandle>;
+  /** Pinned below the scrolling content, e.g. a "View cart" bar. */
+  footer?: ReactNode;
+}) {
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1, backgroundColor: colors.vanillaBean }}>
       {scroll ? (
-        <ScrollView contentContainerStyle={[{ padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.lg }, contentStyle]} refreshControl={refreshControl}>
+        <ScrollView ref={scrollRef} contentContainerStyle={[{ padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.lg }, contentStyle]} refreshControl={refreshControl}>
           {children}
         </ScrollView>
       ) : (
         <View style={[{ flex: 1, padding: spacing.lg, gap: spacing.lg }, contentStyle]}>{children}</View>
       )}
+      {footer ? <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>{footer}</View> : null}
     </SafeAreaView>
   );
 }

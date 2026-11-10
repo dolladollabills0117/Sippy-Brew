@@ -1,9 +1,9 @@
-import { canFlagNoShow, describeOptions, formatCents, nextStatus, ORDER_STATUS_LABELS, RULES, startMakingAt, type Order } from "@sippy/core";
+import { canFlagNoShow, describeOptions, formatCents, nextStatus, ORDER_STATUS_LABELS, prepUrgency, RULES, startMakingAt, type Order } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, RefreshControl, View } from "react-native";
+import { AccessibilityInfo, Alert, Animated, Easing, RefreshControl, View } from "react-native";
 
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: RULES.timeZone });
 
@@ -111,8 +111,9 @@ export default function OrdersScreen() {
                   <Badge label={ORDER_STATUS_LABELS[o.status]} tone={o.status === "ready" ? "sky" : "latte"} />
                 </Row>
                 <Text variant="bodyBold" color={colors.pecan}>
-                  Pickup {timeFmt.format(new Date(o.pickupTime))} · <Text variant="bodyBold" color={colors.burntSugarInk}>Start at {timeFmt.format(startMakingAt(o.pickupTime))}</Text>
+                  Pickup {timeFmt.format(new Date(o.pickupTime))}
                 </Text>
+                <StartAt order={o} />
                 {o.note ? (
                   <Text style={{ backgroundColor: colors.vanillaBean, borderRadius: 10, padding: spacing.sm }}>
                     <Text variant="bodyBold">Note: </Text>
@@ -161,5 +162,62 @@ export default function OrdersScreen() {
         </View>
       )}
     </Screen>
+  );
+}
+
+/**
+ * "Start at" for orders not started yet. It glows and slowly "breathes" as the start time gets
+ * close, then says "Start now" with a stronger, faster pulse so the barista notices it.
+ */
+function StartAt({ order }: { order: Order }) {
+  const urgency = order.status === "received" ? prepUrgency(order.pickupTime, new Date()) : "later";
+  const glow = useRef(new Animated.Value(0)).current;
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduce).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (urgency === "later" || reduce) return;
+    const ms = urgency === "soon" ? 1400 : 800;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [urgency, reduce, glow]);
+
+  const label = urgency === "now" ? "Start now" : urgency === "late" ? "Due now: start it" : `Start at ${timeFmt.format(startMakingAt(order.pickupTime))}`;
+  if (urgency === "later") {
+    return (
+      <Text variant="bodyBold" color={colors.burntSugarInk}>
+        {label}
+      </Text>
+    );
+  }
+  const strong = urgency !== "soon";
+  return (
+    <View accessibilityLiveRegion="polite" style={{ alignSelf: "flex-start" }}>
+      <Animated.View
+        style={{
+          position: "absolute",
+          top: -6,
+          bottom: -6,
+          left: -8,
+          right: -8,
+          borderRadius: 999,
+          backgroundColor: colors.honey,
+          opacity: reduce ? 0.6 : glow.interpolate({ inputRange: [0, 1], outputRange: [0.15, strong ? 0.95 : 0.7] }),
+          transform: [{ scale: reduce ? 1 : glow.interpolate({ inputRange: [0, 1], outputRange: [1, strong ? 1.12 : 1.06] }) }],
+        }}
+      />
+      <View style={{ backgroundColor: colors.honey, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
+        <Text variant="bodyBold" style={{ fontSize: 18 }}>
+          ● {label}
+        </Text>
+      </View>
+    </View>
   );
 }

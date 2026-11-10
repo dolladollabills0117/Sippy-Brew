@@ -30,6 +30,7 @@ const fs = require('fs');
     await tap('[data-a="open-shop"][data-id="main"]');
     await tap('[data-a="open-customize"][data-id="latte"]');
     await tap('[data-a="add-custom"]');
+    await tap('[data-a="view-cart"]');
   };
   await orderLatte();
   out.tipShown = (await txt()).includes('Tip: on Visitor · Specialty');
