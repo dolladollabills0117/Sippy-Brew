@@ -1,5 +1,5 @@
 "use client";
-import { RULES, WEEKDAYS, type LatLng, type Shop, type ShopHours, type Weekday } from "@sippy/core";
+import { RULES, WEEKDAYS, type LatLng, type Shop, type ShopHours, type Weekday, FOOD_POLICY } from "@sippy/core";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ export function OnboardingForm({ shop, userId }: { shop: Shop | null; userId: st
   const [hours, setHours] = useState<ShopHours>(shop?.hours && Object.keys(shop.hours).length ? shop.hours : DEFAULT_HOURS);
   const [photoUrl, setPhotoUrl] = useState<string | null>(shop?.photoUrl ?? null);
   const [busy, setBusy] = useState(false);
+  const [acceptFood, setAcceptFood] = useState(Boolean(shop));
   const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   async function upload(file: File) {
@@ -40,7 +41,7 @@ export function OnboardingForm({ shop, userId }: { shop: Shop | null; userId: st
     setBusy(true);
     setMsg(null);
     try {
-      await api.saveShop({ name, address, lat: point.lat, lng: point.lng, hours, story, photoUrl });
+      await api.saveShop({ name, address, lat: point.lat, lng: point.lng, hours, story, photoUrl, acceptFoodPolicy: acceptFood });
       setMsg({ tone: "success", text: "Saved." });
       router.refresh();
     } catch (err) {
@@ -123,8 +124,18 @@ export function OnboardingForm({ shop, userId }: { shop: Shop | null; userId: st
           </ul>
         </Card>
 
+        {!shop && (
+          <Card className="border-2 border-danger">
+            <h2 className="text-2xl text-espresso">No food, whatsoever</h2>
+            <p className="mt-2 text-espresso">{FOOD_POLICY}</p>
+            <label htmlFor="accept-food" className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 font-bold text-espresso">
+              <input id="accept-food" type="checkbox" required className="mt-1 h-5 w-5 shrink-0 accent-burnt-sugar" checked={acceptFood} onChange={(e) => setAcceptFood(e.target.checked)} />
+              <span>I understand: my shop will sell only drinks through Sippy Brew, and selling food means removal.</span>
+            </label>
+          </Card>
+        )}
         {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
-        <Button type="submit" disabled={busy} className="self-start">
+        <Button type="submit" disabled={busy || (!shop && !acceptFood)} className="self-start">
           {shop ? "Save changes" : "Create my shop"}
         </Button>
       </form>

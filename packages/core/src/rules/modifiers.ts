@@ -1,5 +1,5 @@
 import { assertCents } from "../money";
-import { looksLikeFood } from "./menu";
+import { foodProblemInCustomization } from "./food";
 
 /**
  * Drink customizations ("modifiers"), set by each shop: milk choices, extra shots, syrups,
@@ -59,7 +59,8 @@ export function validateModifierGroups(groups: readonly ModifierGroup[]): Modifi
       if (!o?.id || optionIds.has(o.id)) return { ok: false, message: `Each option in “${gname}” needs its own id.` };
       optionIds.add(o.id);
       if (!oname || oname.length > MODIFIER_LIMITS.nameMaxChars) return { ok: false, message: `Option names in “${gname}” must be 1 to ${MODIFIER_LIMITS.nameMaxChars} characters.` };
-      if (looksLikeFood(oname)) return { ok: false, message: `“${oname}” looks like food. Customizations are for coffee only.` };
+      const food = foodProblemInCustomization(oname);
+      if (food) return { ok: false, message: food };
       try {
         assertCents(o.priceCents);
       } catch {
@@ -133,9 +134,9 @@ export function starterModifierGroups(): ModifierGroup[] {
       required: false,
       maxSelect: 2,
       options: [
-        { id: "vanilla", name: "Vanilla", priceCents: 50 },
-        { id: "caramel", name: "Caramel", priceCents: 50 },
-        { id: "hazelnut", name: "Hazelnut", priceCents: 50 },
+        { id: "vanilla", name: "Vanilla syrup", priceCents: 50 },
+        { id: "caramel", name: "Caramel syrup", priceCents: 50 },
+        { id: "hazelnut", name: "Hazelnut syrup", priceCents: 50 },
       ],
     },
   ];

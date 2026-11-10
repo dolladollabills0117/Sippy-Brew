@@ -23,7 +23,7 @@ describe("picking customizations", () => {
   it("prices the picks and keeps the shop's order", () => {
     const r = resolveOptions("Latte", groups, ["vanilla", "oat", "extra-shot"]);
     expect(r).toMatchObject({ ok: true, extraCents: 225 });
-    if (r.ok) expect(describeOptions(r.chosen)).toBe("Oat milk, Extra shot, Vanilla");
+    if (r.ok) expect(describeOptions(r.chosen)).toBe("Oat milk, Extra shot, Vanilla syrup");
   });
   it("enforces pick-one, pick-up-to and required groups", () => {
     expect(resolveOptions("Latte", groups, ["oat", "almond"])).toMatchObject({ ok: false });
@@ -52,7 +52,7 @@ describe("customizations in an order", () => {
     expect(validateOrder(two, ctx())).toMatchObject({ ok: false, code: "OVERAGE_CONFIRMATION_REQUIRED", overageCents: 550 });
     const r = validateOrder(two, ctx({ confirmedOverageCents: 550 }));
     expect(r).toMatchObject({ ok: true, totalCents: 1350, passCoveredCents: 800, overageCents: 550 });
-    if (r.ok) expect(r.lines.map((l) => [l.unitPriceCents, describeOptions(l.options)])).toEqual([[750, "Oat milk, Extra shot, Vanilla"], [600, "Oat milk"]]);
+    if (r.ok) expect(r.lines.map((l) => [l.unitPriceCents, describeOptions(l.options)])).toEqual([[750, "Oat milk, Extra shot, Vanilla syrup"], [600, "Oat milk"]]);
   });
 
   it("on House, an oat-milk latte is mostly covered and the rest is overage", () => {

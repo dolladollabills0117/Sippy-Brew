@@ -85,11 +85,20 @@
       error: null, scan: null, sheet: null, authMode: "signup",
       quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
       bonus: [], refCode: null, friends: 0, grandTour: false,
+      removed: {}, appeals: {},
       minuteOffset: 0, prices: {}, priceChangedAt: {}, notices: [], teamAlerts: [], scanRows: null, scanSkipped: [], scanning: false, orderNote: "", orderAllergy: "" };
   }
   var state = fresh();
   try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved && saved.screen) state = Object.assign(fresh(), saved, { sheet: null, scan: null, error: null }); } catch (e) {}
   delete state["view"];
+  // Drinks only: drop any saved items or add-ons that break the food rule (from older versions of the demo).
+  Object.keys(state.extraMenu || {}).forEach(function (k) {
+    state.extraMenu[k] = state.extraMenu[k].filter(function (m) { return !S.foodProblemInMenuItem(m.name); });
+  });
+  (state.customShops || []).forEach(function (sh) { sh.menu = sh.menu.filter(function (m) { return !S.foodProblemInMenuItem(m.name); }); });
+  Object.keys(state.mods || {}).forEach(function (k) {
+    state.mods[k] = state.mods[k].map(function (g) { return Object.assign({}, g, { options: g.options.filter(function (o) { return !S.foodProblemInCustomization(o.name); }) }); }).filter(function (g) { return g.options.length; });
+  });
   if (state.screen === "app" && state.session !== "member" && state.session !== "shop") state.session = state.user && state.tierId ? "member" : null;
   if (state.screen === "app" && !state.session) state.screen = "landing";
   function save() { try { var c = Object.assign({}, state); delete c.sheet; delete c.scan; delete c.error; localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) {} }
@@ -424,6 +433,8 @@
       '<div class="card stack"><b>Starter menu</b><span class="muted small">Coffee only. Food can\'t be sold through the app. Leave a row blank to skip it.</span>' +
       row(0, "Latte", "12 oz", "5.00", "espresso") + row(1, "House Drip", "12 oz", "3.00", "brewed") + row(2, "Cold Brew", "16 oz", "4.75", "cold") + "</div>" +
       '<div class="card stack"><b>Payouts</b><span class="muted">In the real app you connect your bank through Stripe here. You keep 88% of what a member\'s pass covers, plus 100% of any overage less card processing, paid every Monday.</span></div>' +
+      '<div class="card stack" style="border:2px solid var(--danger)"><b>No food, whatsoever</b><span class="small">' + esc(S.FOOD_POLICY) + '</span>' +
+      '<label class="row" for="food-ok" style="gap:10px;align-items:flex-start;font-weight:700;cursor:pointer"><input id="food-ok" name="foodpolicy" type="checkbox" style="width:22px;height:22px;accent-color:var(--burnt);flex-shrink:0;margin-top:2px"><span>I understand: my shop will sell only drinks through Sippy Brew, and selling food means removal.</span></label></div>' +
       '<button class="btn" type="submit">List my shop</button></form>';
   }
 
@@ -666,7 +677,15 @@
     var st = shopStatus(state.counterShop);
     return '<p class="muted small" style="padding:0 4px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">' + esc(shopById(state.counterShop).name) + "</p>" +
       (st === "pending" ? '<div class="alert ok" role="status" style="color:var(--espresso);border-color:var(--honey)">Your shop is waiting for approval. Members can\'t see it yet. We\'ll email you as soon as you\'re live.</div>' : "") +
-      (st === "paused" ? '<div class="alert" role="alert">Your shop is paused by Sippy Brew and hidden from members. Contact support.</div>' : "");
+      ((state.removed || {})[state.counterShop] ? removedCard() : st === "paused" ? '<div class="alert" role="alert">Your shop is paused by Sippy Brew and hidden from members. Contact support.</div>' : "");
+  }
+  function removedCard() {
+    var appeal = (state.appeals || {})[state.counterShop];
+    return '<div class="card stack removed-card" role="alert"><b style="color:var(--danger);font-size:1.15rem">Your shop was removed for selling food</b>' +
+      '<span class="small">Sippy Brew is drinks only, with no exceptions. Your shop is hidden from members and can\'t take orders. If this happened by genuine error rather than misrepresentation, you can appeal once.</span>' +
+      (appeal ? '<b>We have your appeal and will email you our decision.</b>' :
+        '<form class="stack" data-form="appeal" style="gap:8px"><label class="field" for="appeal-note">Appeal: tell us what happened<textarea class="input" id="appeal-note" name="note" rows="3" maxlength="1000" placeholder="e.g. We meant the dragonfruit topping for our refresher, not fruit. We\'ve renamed it."></textarea></label><button class="btn" type="submit">Send appeal</button></form>') +
+      "</div>";
   }
 
   function shopOrdersTab() {
@@ -772,6 +791,7 @@
   function shopMenuTab() {
     var s = shopById(state.counterShop);
     return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Menu</h1>' + photoImportCard() +
+      '<div class="tip-card" style="border:2px solid var(--danger)"><b>Drinks only, no food whatsoever.</b> Name add-ons for what they are, like "Cookie syrup" or "Dragonfruit topping". Shops caught selling food are removed from Sippy Brew.</div>' +
       '<div class="tip-card"><b>Changed a price?</b> Update it here right away. Your Sippy Brew menu is how members are told, and they see the price before they order.</div>' +
       '<div class="card">' +
       s.menu.map(function (m) {
@@ -783,7 +803,7 @@
           (state.editMods === m.id ? modsEditor(m) : (m.modifierGroups.length ? '<p class="muted small" style="margin:-4px 0 8px">' + esc(m.modifierGroups.map(function (g) { return g.name + ": " + g.options.map(function (o) { return o.name + (o.priceCents ? " +" + money2(o.priceCents) : ""); }).join(", "); }).join(" · ")) + "</p>" : ""));
       }).join("") + "</div>" +
       (state.shopError ? '<div class="alert" role="alert">' + esc(state.shopError) + "</div>" : "") +
-      '<form class="card stack" data-form="menu-add"><b>Add a coffee</b><span class="muted small">Coffee only. Try adding a muffin to see it blocked.</span>' +
+      '<form class="card stack" data-form="menu-add"><b>Add a drink</b><span class="muted small">Drinks only, no food whatsoever. Try adding "Apples" to see it blocked.</span>' +
       '<label class="field" for="a-name">Name<input class="input" id="a-name" name="name" placeholder="Honey Oat Latte"></label>' +
       '<div class="row" style="gap:8px;align-items:flex-end"><label class="field grow" for="a-size">Size<input class="input" id="a-size" name="size" value="12 oz"></label>' +
       '<label class="field grow" for="a-price">Price ($)<input class="input" id="a-price" name="price" inputmode="decimal" placeholder="6.25"></label></div>' +
@@ -887,13 +907,15 @@
 
   function adminShops() {
     return '<h1 style="font-size:2rem;padding:0 4px">Shops</h1><div class="stack">' + allShops().map(function (x) {
-      var st = shopStatus(x.id), spot = isSpotlight(x.id);
-      return '<div class="card stack"><div class="row between"><b style="font-family:var(--head);font-weight:400;font-size:1.2rem">' + esc(x.name) + "</b>" + statusBadge(st) + "</div>" +
+      var st = shopStatus(x.id), spot = isSpotlight(x.id), removed = !!(state.removed || {})[x.id], appeal = (state.appeals || {})[x.id];
+      return '<div class="card stack"><div class="row between"><b style="font-family:var(--head);font-weight:400;font-size:1.2rem">' + esc(x.name) + "</b>" + (removed ? '<span class="badge bad">Removed: food</span>' : statusBadge(st)) + "</div>" +
+        (appeal ? '<div class="order-note"><b>Appeal:</b> ' + esc(appeal) + "</div>" : "") +
         '<span class="muted small">' + esc(x.address) + " · " + x.menu.length + " coffees" + (isPaused(x.id) && st === "active" ? " · not accepting orders right now" : "") + "</span>" +
         '<div class="row" style="flex-wrap:wrap;gap:8px">' +
         (st === "pending" ? '<button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">Approve</button>' : "") +
         (st === "active" ? '<button class="btn danger" style="width:auto;padding:0 18px" data-a="admin-pause" data-id="' + x.id + '">Pause</button>' : "") +
-        (st === "paused" ? '<button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">Resume</button>' : "") +
+        (st === "paused" ? '<button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">' + (removed ? "Reinstate" : "Resume") + "</button>" : "") +
+        (!removed && st !== "pending" ? '<button class="btn danger" style="width:auto;padding:0 18px" data-a="admin-remove-food" data-id="' + x.id + '">Remove: selling food</button>' : "") +
         (st === "active" ? '<button class="btn line" style="width:auto;padding:0 18px;font-size:.95rem;min-height:44px" data-a="admin-spotlight" data-id="' + x.id + '" aria-pressed="' + spot + '">' + (spot ? "★ Spotlighted" : "Spotlight") + "</button>" : "") +
         "</div></div>";
     }).join("") + "</div>";
@@ -1105,7 +1127,13 @@
       case "shop-login": state.screen = "shop-login"; state.shopError = null; break;
       case "shop-signup": state.screen = "shop-signup"; state.shopError = null; break;
       case "admin-tab": state.adminTab = id; break;
+      case "admin-remove-food": {
+        // Zero tolerance: removed and hidden right away; the shop can appeal if it was a genuine error.
+        state.shopStatus[id] = "paused"; state.removed[id] = true; delete state.appeals[id]; delete state.spotlight[id];
+        render(); return toast(shopById(id).name + " was removed for selling food. We emailed the owner how to appeal.");
+      }
       case "admin-approve": {
+        if ((state.removed || {})[id]) { delete state.removed[id]; delete state.appeals[id]; }
         var wasPending = shopStatus(id) === "pending";
         state.shopStatus[id] = "active";
         render(); return toast(shopById(id).name + (wasPending ? " is approved and live for members. We emailed the owner." : " is live again."));
@@ -1286,7 +1314,8 @@
       } else if (kind === "shop-signup") {
         var v = function (n) { return (f.elements[n] && f.elements[n].value || "").trim(); };
         var err = null;
-        if (v("name").length < 2) err = "Add your business name.";
+        if (!f.elements.foodpolicy.checked) err = "Please confirm you won't sell food through Sippy Brew.";
+        else if (v("name").length < 2) err = "Add your business name.";
         else if (!v("address")) err = "Add your street address.";
         else err = S.validateStory(v("story")) || S.validateHours({ mon: { open: v("open"), close: v("close") } });
         var id = "c" + Date.now().toString(36), menu = [];
@@ -1305,6 +1334,11 @@
         state.session = "shop"; state.counterShop = id; state.shopTab = "dashboard"; state.screen = "app"; state.shopError = null; state.detail = null;
         render(); window.scrollTo(0, 0);
         toast("Your shop is listed! An admin reviews new shops before members can see them.");
+      } else if (kind === "appeal") {
+        var note = (f.elements.note.value || "").trim();
+        if (note.length < 20) { toast("Tell us what happened in at least 20 characters."); return; }
+        state.appeals[state.counterShop] = note.slice(0, 1000);
+        render(); toast("Appeal sent. We'll email you our decision.");
       } else if (kind === "price") {
         var pid = f.getAttribute("data-id"), cents = Math.round(Number(f.elements.price.value) * 100);
         if (!Number.isFinite(cents) || cents < 50 || cents > 5000) { toast("Enter a price between $0.50 and $50."); return; }

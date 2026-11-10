@@ -43,7 +43,7 @@ export const FAQ: readonly FaqSection[] = [
       },
       {
         q: "Can I order food?",
-        a: "Not through Sippy Brew. Passes are for coffee drinks only. You can always buy food from the shop directly.",
+        a: "No. Sippy Brew is drinks only, so passes never cover food. You can always buy food from the shop directly. If a shop offers you food through Sippy Brew, let us know.",
       },
     ],
   },
@@ -179,7 +179,15 @@ export const MERCHANT_FAQ: readonly FaqSection[] = [
       },
       {
         q: "Can I sell food?",
-        a: "Not through Sippy Brew. Passes cover coffee drinks only. Members can still buy food from you directly.",
+        a: "No. Sippy Brew is drinks only: no food, whatsoever. Members can still buy food from you directly, outside Sippy Brew.",
+      },
+      {
+        q: "What happens if my shop sells food through Sippy Brew?",
+        a: "Your shop is removed from the platform, with no exceptions. If it happened by genuine error rather than misrepresentation (for example, a topping named so it read like a food item), you can appeal once from your shop dashboard and we'll review it.",
+      },
+      {
+        q: "How do I list fruit toppings or flavors like cookie?",
+        a: "Name them for what they are, as part of the drink: \"Cookie syrup\", \"Dragonfruit topping\", \"Strawberry puree\", \"Almond milk\". A drink name works too, like \"Dragonfruit Refresher\". Anything that reads like food on its own, like \"Apples\" or \"Cookie\", can't be saved.",
       },
       {
         q: "Can I offer customizations like oat milk or an extra shot?",

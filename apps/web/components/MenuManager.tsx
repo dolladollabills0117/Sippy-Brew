@@ -62,6 +62,10 @@ export function MenuManager({ initial }: { initial: MenuItem[] }) {
   return (
     <div className="flex flex-col gap-6">
     <MenuPhotoImport onAdded={(added) => setItems((l) => [...l, ...added])} />
+    <p className="rounded-xl border-2 border-danger bg-cream-swirl px-4 py-3 text-sm text-espresso">
+      <strong>Drinks only, no food whatsoever.</strong> Name add-ons for what they are, like &quot;Cookie syrup&quot; or &quot;Dragonfruit topping&quot;. Shops caught
+      selling food are removed from Sippy Brew.
+    </p>
     <p className="rounded-xl bg-cream-swirl px-4 py-3 text-sm text-espresso">
       <strong>Changed a price?</strong> Update it here right away. Your Sippy Brew menu is how members find out, and they see the price here before they order.
     </p>

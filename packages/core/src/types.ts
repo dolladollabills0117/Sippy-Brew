@@ -45,6 +45,12 @@ export interface Shop {
   status: ShopStatus;
   spotlight: boolean;
   payoutsEnabled: boolean;
+  /** Set when Sippy Brew removed the shop, e.g. "food" for selling food. */
+  removalReason?: "food" | null;
+  removedAt?: string | null;
+  /** The shop's appeal, if it sent one. */
+  appealNote?: string | null;
+  appealedAt?: string | null;
 }
 
 export interface ShopListItem extends Shop {

@@ -43,6 +43,7 @@ A pass has two parts, named so people can tell them apart: **what you drink** (t
 - *Allergies:* members can add an allergy (and a note) to an order; the shop sees a big red ALLERGY NOTICE, including in the new-order push.
 - *Prices:* shops can change prices any time and must update their Sippy Brew menu; members see "Price updated" for 14 days.
 - *Menu from a photo:* shops photograph their menu; Claude reads the drinks and prices, food is skipped, and the shop reviews every item before it's added.
+- *No food, whatsoever* (`packages/core/src/rules/food.ts`): menu items that mention a food must name a drink ("Dragonfruit Refresher"), and customizations that mention a food must say what they are ("Cookie syrup", "Dragonfruit topping"). Shops accept the policy at sign-up; admins can remove a shop for selling food ("Remove: selling food"), and the shop can appeal once from its dashboard if it was a genuine error. Add words to the lists in `food.ts` as new cases come up.
 - *Merchant FAQ:* `/shop/faq`, a FAQ tab in the shop app and demo (`packages/core/src/faq.ts`).
 
 **Our role (Terms):** Sippy Brew isn't the coffee shop. Shops are independent and responsible for their drinks and service; order issues go to the shop. The plain-language text is in `packages/core/src/legal.ts` and shows on `/terms`, at sign-up and checkout, and in the demo.

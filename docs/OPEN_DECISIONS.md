@@ -36,4 +36,5 @@ These need a business or legal decision. The code has a working default for each
 - **No-show timing.** Shops can flag an order 30 minutes after its pickup time (`noShowGraceMinutes` in `rules.json`). Members can't cancel orders themselves; they contact the shop.
 - **Menu photo reading** uses the Claude API (`ANTHROPIC_API_KEY`, model `claude-opus-5-5` with server-side refusal fallback). Each photo costs a few cents. Shops always review items before they're saved.
 - **Allergy wording.** The ALLERGY NOTICE and FAQ answers put allergen responsibility on the shop and ask members to tell the barista too. Have your lawyer review this along with the Terms.
+- **Food policy wording.** The zero-tolerance removal and appeal policy (`FOOD_POLICY` in `packages/core/src/rules/food.ts`) is shown at shop sign-up, in the merchant FAQ and in the Terms. Put the same terms in the merchant agreement and have your lawyer review it. The food word list catches common foods; review menus during shop approval too, since no word list catches everything.
 

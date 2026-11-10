@@ -20,6 +20,7 @@ const fs = require('fs');
 
   // A shop lists itself: pending.
   await tap('[data-a="shop-signup"]');
+  await p.check('#food-ok');
   await tap('form[data-form="shop-signup"] button[type="submit"]');
   out.shopSeesPending = (await text()).includes('waiting for approval');
   await tap('[data-a="sign-out"]');

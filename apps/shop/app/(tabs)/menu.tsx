@@ -140,6 +140,10 @@ export default function MenuScreen() {
       </Text>
       <MenuPhotoImport onAdded={menu.reload} />
       <Text color={colors.espresso}>
+        <Text variant="bodyBold">Drinks only, no food whatsoever.</Text> Name add-ons for what they are, like &quot;Cookie syrup&quot; or &quot;Dragonfruit topping&quot;. Shops caught
+        selling food are removed.
+      </Text>
+      <Text color={colors.espresso}>
         <Text variant="bodyBold">Changed a price?</Text> Update your Sippy Brew menu right away: that&apos;s how members are told.
       </Text>
       <Text color={colors.pecan}>“Sold out today” clears itself tomorrow. Edit items and set up customizations (milk, shots, syrups) on the web portal.</Text>

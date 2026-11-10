@@ -94,6 +94,8 @@ export function createApiClient(opts: ApiClientOptions) {
     shopOrders: (scope: "active" | "today" = "active") => request<{ orders: Order[] }>("GET", `/api/shop/orders${q({ scope })}`),
     setOrderStatus: (orderId: string, status: OrderStatus) => request<{ order: Order }>("PATCH", `/api/shop/orders/${orderId}`, { status }),
     /** The member didn't pick up (from 30 minutes after pickup time). Not refunded; the shop is paid. */
+    /** Appeal a removal for selling food (once), if it was a genuine error. */
+    appealRemoval: (note: string) => request<{ appealed: boolean }>("POST", "/api/shop/appeal", { note }),
     flagNoShow: (orderId: string) => request<{ order: Order }>("POST", `/api/shop/orders/${orderId}/no-show`),
     /** Read a photo of the menu. Returns items for the shop to review; nothing is saved. */
     scanMenu: (image: string, mediaType: string) =>
@@ -108,7 +110,7 @@ export function createApiClient(opts: ApiClientOptions) {
     shopPayouts: () => request<{ payouts: Payout[] }>("GET", "/api/shop/payouts"),
     shopPost: (body: string) => request<{ post: Post }>("POST", "/api/shop/posts", { body }),
     shopPosts: () => request<{ posts: Post[] }>("GET", "/api/shop/posts"),
-    saveShop: (input: { name: string; address: string; lat: number; lng: number; hours: ShopHours; story: string; photoUrl?: string | null }) =>
+    saveShop: (input: { name: string; address: string; lat: number; lng: number; hours: ShopHours; story: string; photoUrl?: string | null; acceptFoodPolicy?: boolean }) =>
       request<{ shop: Shop }>("POST", "/api/shop/onboarding", input),
     connectOnboarding: () => request<{ url: string }>("POST", "/api/shop/connect"),
   };

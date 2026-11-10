@@ -37,7 +37,7 @@ export async function getOwnerShopRow(s: Session, opts: { allowMissing?: boolean
 
 export async function saveShop(
   s: Session,
-  input: { name: string; address: string; lat: number; lng: number; hours: ShopHours; story: string; photoUrl?: string | null },
+  input: { name: string; address: string; lat: number; lng: number; hours: ShopHours; story: string; photoUrl?: string | null; acceptFoodPolicy?: boolean },
 ) {
   // Shop tools are only for shop accounts. Subscribers (members) can never set up or run a shop;
   // a coffee shop signs up with its own shop account.
@@ -53,6 +53,7 @@ export async function saveShop(
 
   const db = supabaseAdmin();
   const existing = await getOwnerShopRow(s, { allowMissing: true });
+  if (!existing && input.acceptFoodPolicy !== true) throw badRequest("FOOD_POLICY", "Please confirm you won't sell food through Sippy Brew.");
   const row = {
     owner_id: s.userId,
     name,
@@ -63,7 +64,9 @@ export async function saveShop(
     story: input.story.trim(),
     photo_url: input.photoUrl ?? existing?.photo_url ?? null,
   };
-  const q = existing ? db.from("shops").update(row).eq("id", existing.id) : db.from("shops").insert({ ...row, status: "pending" });
+  const q = existing
+    ? db.from("shops").update(row).eq("id", existing.id)
+    : db.from("shops").insert({ ...row, status: "pending", food_policy_accepted_at: new Date().toISOString() });
   const { data, error } = await q.select("*").single();
   if (error) throw fromDbError(error);
   return mapShop(data);
@@ -333,4 +336,20 @@ export async function flagNoShowRow(
   const order = await getOrder(row.id);
   await Promise.all([notifyMemberNoShow(order), notifyTeamNoShow(order)]).catch((e) => console.error("no-show notify", e));
   return order;
+}
+
+// ---- Food policy appeals ----
+
+/** A shop removed for selling food can appeal once, if it was a genuine error. An admin decides. */
+export async function appealRemoval(s: Session, note: string) {
+  const shop = await getOwnerShopRow(s);
+  if (!shop.removal_reason) throw badRequest("NOT_REMOVED", "Your shop hasn't been removed.");
+  if (shop.appealed_at) throw new AppError(409, "ALREADY_APPEALED", "We already have your appeal and will email you our decision.");
+  const text = String(note ?? "").trim();
+  if (text.length < 20 || text.length > 1000) throw badRequest("BAD_APPEAL", "Tell us what happened in 20 to 1,000 characters.");
+  const db = supabaseAdmin();
+  const { error } = await db.from("shops").update({ appeal_note: text, appealed_at: new Date().toISOString() }).eq("id", shop.id);
+  if (error) throw fromDbError(error);
+  await db.from("platform_alerts").insert({ kind: "appeal", shop_id: shop.id, message: `Appeal: ${text}` });
+  return { appealed: true };
 }

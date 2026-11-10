@@ -43,6 +43,10 @@ export const mapShop = (r: Row): Shop => ({
   status: r.status,
   spotlight: Boolean(r.spotlight),
   payoutsEnabled: Boolean(r.payouts_enabled),
+  removalReason: r.removal_reason ?? null,
+  removedAt: r.removed_at ?? null,
+  appealNote: r.appeal_note ?? null,
+  appealedAt: r.appealed_at ?? null,
 });
 
 export const mapMenuItem = (r: Row, now = new Date()): MenuItem => ({

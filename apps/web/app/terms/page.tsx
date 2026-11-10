@@ -1,4 +1,4 @@
-import { PLATFORM_ROLE_TERMS } from "@sippy/core";
+import { FOOD_POLICY, PLATFORM_ROLE_TERMS } from "@sippy/core";
 import { PageTitle } from "@/components/ui";
 
 export const metadata = { title: "Terms of Service" };
@@ -16,6 +16,10 @@ export default function TermsPage() {
         {PLATFORM_ROLE_TERMS.map((p) => (
           <p key={p} className="leading-relaxed text-espresso">{p}</p>
         ))}
+      </section>
+      <section aria-labelledby="food" className="flex flex-col gap-3 rounded-[22px] bg-cream-swirl p-6 shadow-card">
+        <h2 id="food" className="text-2xl text-espresso">Drinks only</h2>
+        <p className="leading-relaxed text-espresso">{FOOD_POLICY}</p>
       </section>
       <section aria-labelledby="plans" className="flex flex-col gap-3 rounded-[22px] bg-cream-swirl p-6 shadow-card">
         <h2 id="plans" className="text-2xl text-espresso">Your pass</h2>

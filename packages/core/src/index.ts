@@ -18,6 +18,7 @@ export * from "./rules/quiz";
 export * from "./rules/planChange";
 export * from "./rules/rewards";
 export * from "./rules/merchant";
+export { FOOD_POLICY, foodProblemInCustomization, foodProblemInMenuItem, foodWordIn } from "./rules/food";
 export { PLATFORM_ROLE_TERMS, PLATFORM_ROLE_SHORT } from "./legal";
 export { FAQ, FAQ_FOOTNOTE, MERCHANT_FAQ, MERCHANT_FAQ_FOOTNOTE, type FaqItem, type FaqSection } from "./faq";
 export { LOGO_SVG, logoSvg, BACKGROUND_BEANS_SVG, BEAN_TILE_SVG } from "./logo";

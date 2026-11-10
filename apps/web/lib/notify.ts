@@ -129,3 +129,14 @@ export async function notifyTeamNoShow(order: Order) {
   const text = `${order.shopName} marked ${order.memberFirstName}'s order (${order.id}) as not picked up. Pickup was ${new Date(order.pickupTime).toLocaleString("en-US", { timeZone: "America/New_York" })}.`;
   await Promise.all([...to].map((email) => sendEmail(email, `No-show at ${order.shopName}`, text)));
 }
+
+export async function notifyShopRemovedForFood(shopId: string) {
+  const { data: shop } = await supabaseAdmin().from("shops").select("owner_id, name").eq("id", shopId).maybeSingle();
+  if (!shop) return;
+  await sendEmail(
+    await emailOf(shop.owner_id),
+    "Your shop was removed from Sippy Brew",
+    `${shop.name} was removed from Sippy Brew for selling food. Sippy Brew is drinks only, and selling food through it isn't allowed, with no exceptions.\n\nIf this happened by genuine error rather than misrepresentation, you can appeal once from your shop dashboard: ${env.siteUrl()}/shop`,
+  );
+  await sendPush([shop.owner_id], "shop", "Shop removed", "Your shop was removed for selling food. Open your dashboard to appeal if it was an error.", { screen: "dashboard" });
+}

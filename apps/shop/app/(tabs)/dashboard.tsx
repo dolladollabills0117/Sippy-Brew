@@ -33,7 +33,20 @@ export default function DashboardScreen() {
       <Text variant="display" accessibilityRole="header">
         Today
       </Text>
-      {shop.status !== "active" && <Badge label={shop.status === "pending" ? "Waiting for approval" : "Paused"} tone="danger" />}
+      {shop.removalReason === "food" ? (
+        <Card style={{ gap: spacing.sm, borderWidth: 2, borderColor: colors.danger }}>
+          <Text variant="h2" color={colors.danger}>
+            Your shop was removed for selling food
+          </Text>
+          <Text>
+            Sippy Brew is drinks only, with no exceptions. If this happened by genuine error rather than misrepresentation, you can appeal once from the web portal
+            dashboard.
+          </Text>
+          {shop.appealedAt ? <Text variant="bodyBold">We have your appeal and will email you our decision.</Text> : null}
+        </Card>
+      ) : (
+        shop.status !== "active" && <Badge label={shop.status === "pending" ? "Waiting for approval" : "Paused"} tone="danger" />
+      )}
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.md }}>
         <Stat label="Redemptions today" value={String(stats.redemptions.today)} sub={money(stats.grossCents.today)} />

@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "./ui";
 
-export function AdminShopActions({ id, status, spotlight }: { id: string; status: string; spotlight: boolean }) {
+export function AdminShopActions({ id, status, spotlight, removedForFood }: { id: string; status: string; spotlight: boolean; removedForFood?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   async function patch(body: Record<string, unknown>) {
@@ -16,11 +16,21 @@ export function AdminShopActions({ id, status, spotlight }: { id: string; status
     <div className="flex flex-wrap gap-2">
       {status !== "active" ? (
         <Button size="sm" disabled={busy} onClick={() => patch({ status: "active" })}>
-          {status === "pending" ? "Approve" : "Resume"}
+          {status === "pending" ? "Approve" : removedForFood ? "Reinstate" : "Resume"}
         </Button>
       ) : (
         <Button size="sm" variant="danger" disabled={busy} onClick={() => patch({ status: "paused" })}>
           Pause
+        </Button>
+      )}
+      {!removedForFood && (
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={busy}
+          onClick={() => window.confirm("Remove this shop for selling food? It's hidden from members right away and the owner is emailed with how to appeal.") && patch({ remove: "food" })}
+        >
+          Remove: selling food
         </Button>
       )}
       <Button size="sm" variant="secondary" disabled={busy} aria-pressed={spotlight} onClick={() => patch({ spotlight: !spotlight })}>
