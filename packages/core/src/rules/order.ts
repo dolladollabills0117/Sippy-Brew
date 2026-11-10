@@ -212,8 +212,9 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   received: ["preparing", "ready", "cancelled"],
-  preparing: ["ready", "cancelled"],
-  ready: ["picked_up", "cancelled"],
+  // Cancelling (which returns the member's pass) is only possible before the shop starts making it.
+  preparing: ["ready"],
+  ready: ["picked_up"],
   picked_up: [],
   // Set by the shop's "Not picked up" flag (rules/merchant.ts canFlagNoShow), never a status button.
   no_show: [],

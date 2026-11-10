@@ -136,13 +136,25 @@ export default function OrdersScreen() {
                   {o.overageCents > 0 ? ` + ${formatCents(o.overageCents, { showZeroCents: true })} overage (paid in app, 100% yours)` : ""}
                 </Text>
                 {next && next !== "picked_up" && (
-                  <Button big label={`Mark ${ORDER_STATUS_LABELS[next].toLowerCase()}`} loading={busy === o.id} onPress={() => move(o, next)} />
+                  <Button
+                    big
+                    label={`Mark ${ORDER_STATUS_LABELS[next].toLowerCase()}`}
+                    loading={busy === o.id}
+                    onPress={() =>
+                      next === "preparing" && o.allergyNote
+                        ? Alert.alert(`ALLERGY NOTICE: ${o.allergyNote}`, "Once you mark this order as preparing it can't be cancelled. Can you make it safely?", [
+                            { text: "Not yet", style: "cancel" },
+                            { text: "Yes, start it", onPress: () => move(o, next) },
+                          ])
+                        : move(o, next)
+                    }
+                  />
                 )}
                 {o.status === "ready" && <Button big label="Scan to hand off" onPress={() => router.push("/scan")} />}
                 {canFlagNoShow({ status: o.status, pickupAt: o.pickupTime }, new Date()).ok && (
                   <Button variant="secondary" label="Not picked up" onPress={() => noShow(o)} disabled={busy === o.id} />
                 )}
-                <Button variant="ghost" label="Cancel order" onPress={() => cancel(o)} disabled={busy === o.id} />
+                {o.status === "received" && <Button variant="ghost" label="Cancel order" onPress={() => cancel(o)} disabled={busy === o.id} />}
               </Card>
             );
           })}

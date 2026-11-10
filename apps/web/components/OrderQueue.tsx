@@ -33,6 +33,7 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
 
   async function advance(o: Order, to: Order["status"]) {
     if (to === "cancelled" && !window.confirm(`Cancel ${o.memberFirstName}'s order? Their pass will be returned.`)) return;
+    if (to === "preparing" && o.allergyNote && !window.confirm(`ALLERGY NOTICE: ${o.allergyNote}\n\nOnce you mark this order as preparing it can't be cancelled. Can you make it safely?`)) return;
     setBusy(o.id);
     try {
       const { order } = await api.setOrderStatus(o.id, to);
@@ -121,9 +122,11 @@ export function OrderQueue({ initial }: { initial: Order[] }) {
                     Not picked up
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" disabled={busy === o.id} onClick={() => advance(o, "cancelled")}>
-                  Cancel
-                </Button>
+                {o.status === "received" && (
+                  <Button variant="ghost" size="sm" disabled={busy === o.id} onClick={() => advance(o, "cancelled")}>
+                    Cancel
+                  </Button>
+                )}
               </div>
             </li>
           );

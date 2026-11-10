@@ -1,16 +1,18 @@
 import { dayKey, getTier, RULES } from "@sippy/core";
 import { env } from "@/lib/env";
 import { notifyMemberRenewalReminder } from "@/lib/notify";
-import { cancelOrderRow } from "@/lib/shop";
+import { cancelOrderRow, flagNoShowRow } from "@/lib/shop";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 /**
  * Run once a day, early morning local time.
- * 1. No-shows: a pass is only used when a drink is redeemed, so orders from earlier days that
- *    were never picked up are cancelled. Their passes return (if still in the period) and any
- *    overage hold is released.
+ * 1. Orders from earlier days that were never picked up:
+ *    - the shop had started them (preparing or ready): a no-show. Not refunded; the shop is paid
+ *      and the member and Sippy Brew are told, as when the shop flags it.
+ *    - the shop never started them (received): cancelled. The pass returns (if still in the
+ *      period) and any overage hold is released.
  * 2. Renewal reminders for plans renewing in about 3 days.
  */
 export async function GET(req: Request) {
@@ -20,14 +22,15 @@ export async function GET(req: Request) {
 
   const { data: stale } = await db
     .from("orders")
-    .select("id, member_id, subscription_id, period_start, overage_payment_intent, overage_status")
+    .select("id, status, shop_id, member_id, subscription_id, period_start, pass_covered_amount, overage_amount, overage_payment_intent, overage_status")
     .in("status", ["received", "preparing", "ready"])
     .lt("pass_day", today)
     .limit(1000);
   let closed = 0;
   for (const row of stale ?? []) {
     try {
-      await cancelOrderRow(row);
+      if (row.status === "received") await cancelOrderRow(row);
+      else await flagNoShowRow(row, null);
       closed++;
     } catch (e) {
       console.error("no-show cleanup failed", row.id, e);

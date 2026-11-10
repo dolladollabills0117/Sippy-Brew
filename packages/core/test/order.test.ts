@@ -110,6 +110,10 @@ describe("order status transitions", () => {
     expect(canTransition("picked_up", "received")).toBe(false);
     expect(canTransition("cancelled", "ready")).toBe(false);
     expect(canTransition("received", "picked_up")).toBe(false);
+    // Cancel (pass returned) only before the shop marks it preparing.
+    expect(canTransition("received", "cancelled")).toBe(true);
+    expect(canTransition("preparing", "cancelled")).toBe(false);
+    expect(canTransition("ready", "cancelled")).toBe(false);
   });
 });
 

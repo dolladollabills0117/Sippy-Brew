@@ -64,7 +64,7 @@ export const FAQ: readonly FaqSection[] = [
       },
       {
         q: "What if I can't make it or the shop cancels?",
-        a: "Contact the shop as soon as you can. Only the shop can cancel an order, and if it does, your pass is returned, as long as it's still the same month (or, for a bonus pass, before it expires). If the shop has already made it, it may count as not picked up.",
+        a: "Contact the shop as soon as you can. Only the shop can cancel an order, and only before it marks the order as being prepared. If it does, your pass is returned, as long as it's still the same month (or, for a bonus pass, before it expires). Once the shop has started making it, it can't be cancelled, and if you don't pick it up it counts as not picked up.",
       },
       {
         q: "What happens if I don't pick up my order?",
@@ -154,7 +154,7 @@ export const MERCHANT_FAQ: readonly FaqSection[] = [
       },
       {
         q: "What's the red ALLERGY NOTICE?",
-        a: "The member listed an allergy with their order. Read it before you make the drink, follow your shop's allergen procedures, and talk to the member at pickup if you have any doubt. If you can't make the order safely, cancel it so the member's pass is returned. Your shop is responsible for its ingredients and allergen handling.",
+        a: "The member listed an allergy with their order. Read it before you mark the order as preparing, follow your shop's allergen procedures, and talk to the member at pickup if you have any doubt. If you can't make the order safely, cancel it before you start preparing it, so the member's pass is returned. Your shop is responsible for its ingredients and allergen handling.",
       },
       {
         q: "How do I hand off an order?",
@@ -162,7 +162,7 @@ export const MERCHANT_FAQ: readonly FaqSection[] = [
       },
       {
         q: "Can I cancel an order?",
-        a: "Yes, before it's picked up, for example if you're out of something or can't make it safely. The member's pass is returned. A no-show can't be cancelled.",
+        a: "Yes, but only before you mark it as being prepared, for example if you're out of something or can't make it safely. The member's pass is returned. Once you've marked it preparing it can't be cancelled, so check the order (and any allergy notice) before you start. A no-show can't be cancelled.",
       },
     ],
   },

@@ -299,17 +299,24 @@ export async function createPost(s: Session, body: string) {
  */
 export async function flagNoShow(s: Session, orderId: string) {
   const shop = await getOwnerShopRow(s);
-  const db = supabaseAdmin();
-  const { data: row } = await db.from("orders").select("*").eq("id", orderId).maybeSingle();
+  const { data: row } = await supabaseAdmin().from("orders").select("*").eq("id", orderId).maybeSingle();
   if (!row || row.shop_id !== shop.id) throw notFound("Order");
   const check = canFlagNoShow({ status: row.status, pickupAt: row.pickup_time }, new Date());
   if (!check.ok) throw new AppError(409, "NO_SHOW_NOT_ALLOWED", check.message);
+  return flagNoShowRow(row, s.userId);
+}
 
+/** Shared by the shop's button and the nightly job (staffId null). */
+export async function flagNoShowRow(
+  row: { id: string; shop_id: string; pass_covered_amount: number; overage_amount: number; overage_payment_intent: string | null; overage_status: string },
+  staffId: string | null,
+) {
+  const db = supabaseAdmin();
   const split = splitOrder(row.pass_covered_amount);
   const { error } = await db.rpc("flag_no_show", {
     p_order: row.id,
-    p_shop: shop.id,
-    p_staff: s.userId,
+    p_shop: row.shop_id,
+    p_staff: staffId,
     p_commission: split.commissionCents,
     p_net: split.netCents,
     p_grace_minutes: RULES.noShowGraceMinutes,

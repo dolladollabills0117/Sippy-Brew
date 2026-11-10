@@ -686,7 +686,7 @@
         (canNoShow ? (state.confirmNoShow === o.id
           ? '<div class="confirm"><b>Mark as not picked up?</b><span class="muted small">It isn\'t refunded: the member\'s pass stays used and you\'re paid for it. We\'ll let them and Sippy Brew know.</span><button class="btn" data-a="no-show-yes" data-id="' + o.id + '">Yes, not picked up</button><button class="btn ghost" data-a="no-show-no">Not yet</button></div>'
           : '<button class="btn line" data-a="no-show" data-id="' + o.id + '">Not picked up</button>') : "") +
-        '<button class="btn ghost" data-a="cancel" data-id="' + o.id + '">Cancel order</button></div>';
+        (o.status === "received" ? '<button class="btn ghost" data-a="cancel" data-id="' + o.id + '">Cancel order</button>' : '<span class="muted small">Can\'t be cancelled once you\'ve started preparing it.</span>') + "</div>";
     }).join("");
     var accepting = !isPaused(state.counterShop);
     return counterPicker() +
@@ -1181,7 +1181,7 @@
       }
       case "cancel": {
         var oc = orderById(id);
-        if (oc && OPEN.indexOf(oc.status) >= 0) {
+        if (oc && S.canTransition(oc.status, "cancelled")) {
           oc.status = "cancelled";
           var i = state.passDaysUsed.indexOf(oc.passDay); if (i >= 0) state.passDaysUsed.splice(i, 1);
           var bg = oc.bonusKey && (state.bonus || []).filter(function (g) { return g.key === oc.bonusKey; })[0];

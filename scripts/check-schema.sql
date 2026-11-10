@@ -322,4 +322,20 @@ select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '1
 update menu_items set price = 550 where id = '00000000-0000-0000-0000-0000000000e1';
 do $$ begin assert (select price_changed_at is not null from menu_items where id = '00000000-0000-0000-0000-0000000000e1'); end $$;
 
+-- Cancel only before the shop starts preparing.
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 550, 550, 0, 800, '2026-11-13',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":550}]',
+      now() + interval '10 minutes', null, false, 0) as prep_order \gset
+update orders set status = 'preparing' where id = :'prep_order';
+do $$ begin
+  begin
+    perform cancel_order((select id from orders where pass_day = '2026-11-13'), true);
+    raise exception 'preparing order cancelled';
+  exception when raise_exception then
+    if sqlerrm <> 'INVALID_TRANSITION' then raise; end if;
+  end;
+end $$;
+
 rollback;

@@ -40,6 +40,12 @@ const path = require("path");
   if (!q.includes("Make Sippy Brew orders close to pickup")) fail("prep guidance missing");
   if (await p.locator('[data-a="no-show"]').count()) fail("no-show should wait until 30 min after pickup");
 
+  // Cancel is only possible before the shop marks it preparing.
+  if (!(await p.locator('[data-a="cancel"]').count())) fail("received order should be cancellable");
+  await tap('[data-a="advance"]');
+  if (await p.locator('[data-a="cancel"]').count()) fail("preparing order must not be cancellable");
+  if (!(await txt()).includes("Can't be cancelled once you've started preparing it")) fail("no-cancel hint missing");
+
   // 45 minutes later: flag the no-show.
   await tap('[data-a="skip-ahead"]');
   await tap('[data-a="no-show"]');
