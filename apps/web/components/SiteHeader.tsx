@@ -40,6 +40,7 @@ export async function SiteHeader() {
               <>
                 <NavLink href="/shop/payouts">Payouts</NavLink>
                 <NavLink href="/shop/posts">Board</NavLink>
+                <NavLink href="/shop/faq">FAQ</NavLink>
               </>
             )}
             {role === "admin" && <NavLink href="/admin">Admin</NavLink>}

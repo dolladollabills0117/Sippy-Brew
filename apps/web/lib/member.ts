@@ -18,7 +18,7 @@ import {
   type QrTicket,
   type SavedArea,
   type ShopListItem,
-  type Subscription, clampRadius } from "@sippy/core";
+  type Subscription, clampRadius, cleanOrderNote } from "@sippy/core";
 import type { Session } from "./auth";
 import { authorizeOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPost, mapShop, mapSubscription, ORDER_SELECT } from "./db";
@@ -223,7 +223,15 @@ export async function getShopDetail(id: string, s: Session | null) {
  */
 export async function placeOrder(
   s: Session,
-  input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null; useBonusForOverage?: boolean },
+  input: {
+    shopId: string;
+    items: OrderLineInput[];
+    pickupAt: string;
+    confirmedOverageCents?: number | null;
+    useBonusForOverage?: boolean;
+    note?: string | null;
+    allergy?: string | null;
+  },
 ) {
   if (!input?.shopId || !Array.isArray(input.items)) throw badRequest("BAD_ORDER", "Pick a shop and at least one coffee.");
   const pickupAt = new Date(input.pickupAt);
@@ -253,6 +261,8 @@ export async function placeOrder(
     pickupAt,
     now,
   });
+  const notes = cleanOrderNote({ note: input.note, allergy: input.allergy });
+  if (!notes.ok) throw badRequest("BAD_NOTE", notes.message);
   if (!result.ok) {
     const conflict = ["PASS_USED_TODAY", "NO_PASSES_LEFT", "OVERAGE_CONFIRMATION_REQUIRED", "BONUS_NOT_AVAILABLE"].includes(result.code);
     throw new AppError(conflict ? 409 : 400, result.code, result.message);
@@ -292,6 +302,10 @@ export async function placeOrder(
     throw fromDbError(error);
   }
 
+  // Notes and allergies go on the order before the shop is notified.
+  if (notes.note || notes.allergy) {
+    await db.from("orders").update({ note: notes.note, allergy_note: notes.allergy }).eq("id", orderId as string);
+  }
   const order = await getOrder(orderId as string);
   void notifyShopNewOrder(order).catch((e) => console.error("notify failed", e));
   return order;
@@ -321,7 +335,7 @@ export async function issueQrFor(s: Session, orderId: string): Promise<QrTicket>
   const db = supabaseAdmin();
   const order = await getOrder(orderId);
   if (order.memberId !== s.userId) throw forbidden();
-  if (order.status === "picked_up" || order.status === "cancelled") throw new AppError(409, "ORDER_CLOSED", "This order is already closed.");
+  if (order.status === "picked_up" || order.status === "cancelled" || order.status === "no_show") throw new AppError(409, "ORDER_CLOSED", "This order is already closed.");
 
   const now = new Date();
   await db.from("redemptions").update({ expires_at: now.toISOString() }).eq("order_id", orderId).is("redeemed_at", null).gt("expires_at", now.toISOString());

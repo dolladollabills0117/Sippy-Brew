@@ -37,7 +37,15 @@ const config: ExpoConfig = {
     ],
     [
       "expo-camera",
-      { cameraPermission: "Sippy Brew Shop uses the camera to scan member pickup QR codes.", recordAudioAndroid: false },
+      { cameraPermission: "Sippy Brew Shop uses the camera to scan member pickup QR codes and to photograph your menu.", recordAudioAndroid: false },
+    ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "Sippy Brew Shop uses your photos so you can add your menu from a picture.",
+        cameraPermission: "Sippy Brew Shop uses the camera to photograph your menu.",
+        microphonePermission: false,
+      },
     ],
   ],
   experiments: { typedRoutes: true },

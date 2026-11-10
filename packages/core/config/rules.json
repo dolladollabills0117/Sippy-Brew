@@ -23,5 +23,10 @@
   "grandTourFreeMonths": 2,
   "referralFriendsNeeded": 2,
   "referralBonusPasses": 3,
-  "bonusPassLifetimeDays": 365
+  "bonusPassLifetimeDays": 365,
+  "noShowGraceMinutes": 30,
+  "prepLeadMinutes": 5,
+  "orderNoteMaxChars": 200,
+  "priceUpdatedBadgeDays": 14,
+  "maxScannedMenuItems": 40
 }

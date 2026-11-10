@@ -24,7 +24,7 @@ export default function PickupScreen() {
   const [left, setLeft] = useState(0);
   const [qrError, setQrError] = useState<string | null>(null);
   const status = order.data?.order.status;
-  const open = status !== undefined && status !== "picked_up" && status !== "cancelled";
+  const open = status !== undefined && status !== "picked_up" && status !== "cancelled" && status !== "no_show";
   const fetching = useRef(false);
 
   // Max brightness while this screen is focused; restore afterwards.
@@ -89,9 +89,20 @@ export default function PickupScreen() {
           {o.shopName}
         </Text>
         <Text variant="h1" style={{ textAlign: "center" }} accessibilityRole="header">
-          {o.status === "ready" ? "Ready for pickup!" : o.status === "picked_up" ? "Enjoy!" : o.status === "cancelled" ? "Order cancelled" : "Show this at the counter"}
+          {o.status === "ready" ? "Ready for pickup!" : o.status === "picked_up" ? "Enjoy!" : o.status === "cancelled" ? "Order cancelled" : o.status === "no_show" ? "Not picked up" : "Show this at the counter"}
         </Text>
         <Badge label={ORDER_STATUS_LABELS[o.status]} tone={o.status === "ready" ? "sky" : o.status === "cancelled" ? "danger" : "latte"} />
+        {o.status === "no_show" && (
+          <Text color={colors.pecan} style={{ textAlign: "center" }}>
+            This order wasn&apos;t picked up, so the shop marked it as missed. No-shows aren&apos;t refunded: the pass was used and the shop was paid for the drink.
+            Questions go to {o.shopName}.
+          </Text>
+        )}
+        {o.allergyNote ? (
+          <Text variant="bodyBold" color={colors.danger} style={{ textAlign: "center" }}>
+            Allergy you listed: {o.allergyNote}. Remind the barista at pickup.
+          </Text>
+        ) : null}
 
         {open && (
           <>

@@ -55,7 +55,8 @@
   function withExtras(x) {
     var menu = x.menu.concat((state.extraMenu || {})[x.id] || []).map(function (m) {
       var own = (state.mods || {})[m.id];
-      return Object.assign({}, m, { modifierGroups: own || m.modifierGroups || [] });
+      var price = (state.prices || {})[m.id];
+      return Object.assign({}, m, { modifierGroups: own || m.modifierGroups || [] }, price ? { priceCents: price, priceChangedAt: (state.priceChangedAt || {})[m.id] } : {});
     });
     return Object.assign({}, x, { menu: menu });
   }
@@ -83,7 +84,8 @@
       orders: [], tickets: [], soldOut: {}, customShops: [], extraMenu: {}, paused: {}, shopError: null, shopStatus: {}, spotlight: {}, adminTab: "overview", adminError: null, pickSub: S.DEFAULT_SUB_TIER, upgradeConfirm: false,
       error: null, scan: null, sheet: null, authMode: "signup",
       quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
-      bonus: [], refCode: null, friends: 0, grandTour: false };
+      bonus: [], refCode: null, friends: 0, grandTour: false,
+      minuteOffset: 0, prices: {}, priceChangedAt: {}, notices: [], teamAlerts: [], scanRows: null, scanSkipped: [], scanning: false, orderNote: "", orderAllergy: "" };
   }
   var state = fresh();
   try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved && saved.screen) state = Object.assign(fresh(), saved, { sheet: null, scan: null, error: null }); } catch (e) {}
@@ -100,7 +102,7 @@
   }
 
   // Demo clock: "Start a new day" moves the calendar forward so you can use another pass.
-  function now() { return new Date(Date.now() + state.dayOffset * 864e5); }
+  function now() { return new Date(Date.now() + state.dayOffset * 864e5 + (state.minuteOffset || 0) * 6e4); }
   function money(c) { return S.formatCents(c, { showZeroCents: c % 100 !== 0 }); }
   function money2(c) { return S.formatCents(c, { showZeroCents: true }); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
@@ -182,6 +184,7 @@
     list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
     scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3m8 0h3a1 1 0 0 1 1 1v3m0 8v3a1 1 0 0 1-1 1h-3m-8 0H5a1 1 0 0 1-1-1v-3M7 12h10"/>',
     chart: '<path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/>',
+    help: '<path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/>',
   };
 
   // ---------------------------------------------------------------- QR tickets (30s, single use)
@@ -349,6 +352,16 @@
       '<div class="sticky-cta"><button class="btn" data-a="get-pass-selected" aria-label="Get my pass: ' + esc(t.name) + ", " + money(t.priceCents) + ' a month">Get my pass · ' + money(t.priceCents) + "/mo</button></div>";
   }
 
+  function faqList(sections, footnote, title) {
+    return '<h1 style="font-size:2rem;padding:0 4px">' + title + '</h1><p class="muted" style="padding:0 4px">Tap a question to see the answer.</p>' +
+      sections.map(function (sec) {
+        return '<section class="stack" style="gap:8px"><h2 class="section-title" style="font-size:1.35rem">' + esc(sec.title) + "</h2>" +
+          '<div class="card faq-list">' + sec.items.map(function (it) {
+            return '<details class="faq"><summary>' + esc(it.q) + '</summary><p>' + esc(it.a) + "</p></details>";
+          }).join("") + "</div></section>";
+      }).join("") + '<p class="demo-note">' + esc(footnote) + "</p>";
+  }
+
   function faqScreen() {
     return '<div class="topbar"><button class="back" data-a="faq-back">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">FAQ</h1>' +
@@ -499,6 +512,7 @@
         '<span class="muted small">' + esc(s.story) + "</span></span></button>";
     }).join("");
     return '<div class="row between" style="padding:0 4px"><h1 style="font-size:2rem">Hi, ' + firstName() + "</h1>" + passStatus() + "</div>" +
+      (state.notices || []).map(function (n, i) { return '<div class="card stack notice-card" role="status"><b>☕ Missed your coffee?</b><span class="small">' + esc(n) + '</span><button class="linkbtn" style="align-self:flex-start;min-height:32px;padding:0" data-a="dismiss-notice" data-id="' + i + '">Got it</button></div>'; }).join("") +
       (up && up.suggested ? upgradeCard(up, true) : "") +
       '<div class="card stack" style="gap:8px"><div class="row between"><span class="muted small">Daily Passes left this month</span><b class="num">' + state.passesLeft + " of " + t.passesPerMonth + "</b></div>" +
       '<div class="meter" role="meter" aria-label="Passes left" aria-valuemin="0" aria-valuemax="' + t.passesPerMonth + '" aria-valuenow="' + state.passesLeft + '"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
@@ -536,7 +550,7 @@
     var items = s.menu.map(function (m) {
       var out = !!state.soldOut[m.id], custom = m.modifierGroups.length > 0;
       var inCart = state.cart.filter(function (l) { return l.menuItemId === m.id; }).reduce(function (a, l) { return a + l.quantity; }, 0);
-      return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + "</b>" + (inCart ? ' <span class="badge sky">' + inCart + " in order</span>" : "") + '<div class="muted small">' + m.size + " · " + money2(m.priceCents) + (out ? ' · <span style="color:var(--danger);font-weight:700">Sold out</span>' : custom ? " · Customizable" : "") + "</div></div>" +
+      return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + "</b>" + (inCart ? ' <span class="badge sky">' + inCart + " in order</span>" : "") + '<div class="muted small">' + m.size + " · " + money2(m.priceCents) + (out ? ' · <span style="color:var(--danger);font-weight:700">Sold out</span>' : custom ? " · Customizable" : "") + (S.priceRecentlyUpdated(m.priceChangedAt, now()) ? ' <span class="badge honey">Price updated</span>' : "") + "</div></div>" +
         (out ? "" : '<button class="btn line" style="width:auto;padding:0 16px;min-height:44px;font-size:.95rem" data-a="' + (custom ? "open-customize" : "add-plain") + '" data-id="' + m.id + '">' + (custom ? "Customize" : "Add") + "</button>") + "</div>";
     }).join("");
     var priced = state.cart.length ? S.priceOrder(state.cart, menuForOrder(s), s.id) : null;
@@ -577,6 +591,10 @@
         (upgradeInfo() && S.overageCoveredByUpgrade(t, total) > 0 ? '<span class="small" style="background:var(--cream);border-radius:12px;padding:8px 10px">Tip: on <b>' + S.upgradeTarget(t).name + "</b>, " + money2(S.overageCoveredByUpgrade(t, total)) + ' of this overage would be covered by your pass. <button class="linkbtn" style="min-height:0;padding:0" data-a="goto-upgrade">See upgrade</button></span>' : "") +
         "</div>" : "") +
       '<span class="muted small">' + state.passesLeft + " of " + t.passesPerMonth + " passes left" + (bonusLeft() ? " + " + bonusLeft() + " bonus" : "") + " · one pass per day</span>" +
+      '<label class="field" for="o-allergy" style="gap:4px">Allergies<span class="muted small" style="font-weight:400">Any allergies? Tell the shop here so it shows on your order, and remind the barista at pickup.</span>' +
+      '<input class="input" id="o-allergy" data-a="order-allergy" maxlength="' + S.RULES.orderNoteMaxChars + '" placeholder="e.g. tree nuts, dairy" value="' + esc(state.orderAllergy || "") + '"></label>' +
+      '<label class="field" for="o-note" style="gap:4px">Note for the barista <span class="muted small" style="font-weight:400">(optional)</span>' +
+      '<input class="input" id="o-note" data-a="order-note" maxlength="' + S.RULES.orderNoteMaxChars + '" placeholder="e.g. extra hot, light ice" value="' + esc(state.orderNote || "") + '"></label>' +
       '<b>Pickup time</b><div class="chips">' + chips + "</div>" +
       (!pass.ok && total > 0 ? '<div class="alert" role="alert">' + esc(pass.message) + "</div>" : "") +
       (state.error ? '<div class="alert" role="alert">' + esc(state.error) + "</div>" : "") +
@@ -591,7 +609,7 @@
   function qrDetail(id) {
     var o = orderById(id); if (!o) return shopsTab();
     var open = OPEN.indexOf(o.status) >= 0;
-    var title = o.status === "ready" ? "Ready for pickup!" : o.status === "picked_up" ? "Enjoy!" : o.status === "cancelled" ? "Order cancelled" : "Show this at the counter";
+    var title = o.status === "ready" ? "Ready for pickup!" : o.status === "picked_up" ? "Enjoy!" : o.status === "cancelled" ? "Order cancelled" : o.status === "no_show" ? "Not picked up" : "Show this at the counter";
     var items = o.items.map(function (i) { return "<div>" + i.quantity + "× " + esc(i.name) + ' <span class="muted">(' + i.size + ")</span>" + (i.options && i.options.length ? '<div class="muted small">' + esc(S.describeOptions(i.options)) + "</div>" : "") + "</div>"; }).join("");
     var t = open ? liveTicket(id) : null;
     return '<button class="back" data-a="back">‹ Back</button>' +
@@ -655,12 +673,19 @@
     var list = state.orders.filter(function (o) { return o.shopId === state.counterShop && OPEN.indexOf(o.status) >= 0; });
     var cards = list.map(function (o) {
       var next = S.nextStatus(o.status);
-      return '<div class="card stack"' + (o.status === "ready" ? ' style="box-shadow:0 0 0 3px var(--sky)"' : "") + '><div class="row between"><h2 style="font-size:1.6rem">' + firstName() + '</h2><span class="badge' + (o.status === "ready" ? " sky" : "") + '">' + LABEL[o.status] + "</span></div>" +
-        '<span class="muted"><b>Pickup ' + timeFmt.format(new Date(o.pickupAt)) + "</b></span>" +
+      var canNoShow = S.canFlagNoShow({ status: o.status, pickupAt: o.pickupAt }, now()).ok;
+      return '<div class="card stack' + (o.allergy ? " allergy-card" : "") + '"' + (o.status === "ready" && !o.allergy ? ' style="box-shadow:0 0 0 3px var(--sky)"' : "") + ">" +
+        (o.allergy ? '<div class="allergy-notice" role="alert"><b>⚠️ ALLERGY NOTICE</b><span>' + esc(o.allergy) + "</span></div>" : "") +
+        '<div class="row between"><h2 style="font-size:1.6rem">' + firstName() + '</h2><span class="badge' + (o.status === "ready" ? " sky" : "") + '">' + LABEL[o.status] + "</span></div>" +
+        '<span class="muted"><b>Pickup ' + timeFmt.format(new Date(o.pickupAt)) + '</b> · <b style="color:var(--burnt-ink)">Start at ' + timeFmt.format(S.startMakingAt(o.pickupAt)) + "</b></span>" +
+        (o.note ? '<div class="order-note"><b>Note:</b> ' + esc(o.note) + "</div>" : "") +
         o.items.map(function (i) { return '<div style="font-size:1.2rem">' + i.quantity + "× " + esc(i.name) + ' <span class="muted">(' + i.size + ")</span>" + (i.options && i.options.length ? '<div style="font-size:1rem;font-weight:800;color:var(--burnt-ink)">' + esc(S.describeOptions(i.options)) + "</div>" : "") + "</div>"; }).join("") +
         '<span class="muted small">' + money2(o.totalCents) + " · Daily Pass" + (o.overageCents ? " + " + money2(o.overageCents) + " overage (paid in app, 100% yours)" : "") + "</span>" +
         (next && next !== "picked_up" ? '<button class="btn" data-a="advance" data-id="' + o.id + '">Mark ' + LABEL[next].toLowerCase() + "</button>" : "") +
         (o.status === "ready" ? '<button class="btn" data-a="shop-tab" data-id="scan">Scan to hand off</button>' : "") +
+        (canNoShow ? (state.confirmNoShow === o.id
+          ? '<div class="confirm"><b>Mark as not picked up?</b><span class="muted small">It isn\'t refunded: the member\'s pass stays used and you\'re paid for it. We\'ll let them and Sippy Brew know.</span><button class="btn" data-a="no-show-yes" data-id="' + o.id + '">Yes, not picked up</button><button class="btn ghost" data-a="no-show-no">Not yet</button></div>'
+          : '<button class="btn line" data-a="no-show" data-id="' + o.id + '">Not picked up</button>') : "") +
         '<button class="btn ghost" data-a="cancel" data-id="' + o.id + '">Cancel order</button></div>';
     }).join("");
     var accepting = !isPaused(state.counterShop);
@@ -669,6 +694,8 @@
       (accepting ? "Members can order from you now." : "Members can see your shop but can't order.") + '</span></span>' +
       '<input id="accepting" type="checkbox" data-a="accepting" ' + (accepting ? "checked" : "") + ' style="width:26px;height:26px;accent-color:var(--success)"></label>' +
       '<h1 style="font-size:2rem;padding:0 4px">Live orders</h1>' +
+      '<div class="tip-card"><b>Make Sippy Brew orders close to pickup.</b> Each order shows when to start (' + S.RULES.prepLeadMinutes + " minutes before pickup), so drinks are fresh and fewer are wasted if someone doesn't show.</div>" +
+      (list.length ? '<button class="btn ghost" data-a="skip-ahead">Demo: jump ahead 45 minutes</button>' : "") +
       (cards ? '<div class="stack">' + cards + "</div>" : '<div class="card muted">No orders right now. New pickup orders show up here. (Demo: sign out, log in as a member, and order from this shop.)</div>');
   }
 
@@ -714,12 +741,43 @@
       "</form>";
   }
 
+  // Sample of what reading a menu photo returns (the real app sends the photo to Claude).
+  var SAMPLE_SCAN = [
+    { name: "Honey Oat Latte", size: "12 oz", price: 6.25, category: "specialty" },
+    { name: "Cappuccino", size: "8 oz", price: 4.5, category: "espresso" },
+    { name: "Cold Brew", size: "16 oz", price: 4.75, category: "cold" },
+    { name: "House Drip", size: "12 oz", price: 2.75, category: "brewed" },
+    { name: "Almond Croissant", price: 4.25, category: "food" },
+    { name: "Seasonal Special", price: null },
+  ];
+  function photoImportCard() {
+    var rows = state.scanRows;
+    var head = '<div class="card stack photo-card"><b style="font-family:var(--head);font-weight:400;font-size:1.3rem">📸 Add items from a photo</b>' +
+      '<span class="muted small">Snap your menu board or printed menu. We fill in the coffee drinks and prices for you to check.</span>';
+    if (state.scanning) return head + '<div class="tip-card">Reading your menu…</div></div>';
+    if (!rows) return head + '<label class="pill dark" for="menu-photo" style="align-self:flex-start;cursor:pointer">Take or upload a photo</label>' +
+      '<input id="menu-photo" type="file" accept="image/*" capture="environment" data-a="menu-photo" class="sr-only">' +
+      '<span class="demo-note" style="text-align:left;padding:0">Demo: any photo shows sample results. The real app reads your actual menu.</span></div>';
+    return head + "<b>Check these before adding. Untick anything you don't want.</b>" +
+      rows.map(function (r, i) {
+        return '<div class="scan-row"><label class="row small" style="gap:8px;font-weight:700"><input type="checkbox" data-a="scan-keep" data-i="' + i + '" ' + (r.keep ? "checked" : "") + ' style="width:22px;height:22px;accent-color:var(--burnt)">Add</label>' +
+          '<input class="input" aria-label="Name" data-a="scan-field" data-i="' + i + '" data-k="name" value="' + esc(r.name) + '">' +
+          '<div class="row" style="gap:8px"><input class="input" aria-label="Size" data-a="scan-field" data-i="' + i + '" data-k="size" value="' + esc(r.size) + '">' +
+          '<input class="input" aria-label="Price" inputmode="decimal" data-a="scan-field" data-i="' + i + '" data-k="price" value="' + esc(r.price) + '"></div></div>';
+      }).join("") +
+      (state.scanSkipped.length ? '<span class="muted small">Left out: ' + esc(state.scanSkipped.map(function (x) { return x.name + " (" + x.reason.toLowerCase() + ")"; }).join(", ")) + ".</span>" : "") +
+      '<button class="btn" data-a="scan-add">Add ' + rows.filter(function (r) { return r.keep; }).length + ' items to my menu</button><button class="btn ghost" data-a="scan-discard">Discard</button></div>';
+  }
+
   function shopMenuTab() {
     var s = shopById(state.counterShop);
-    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Menu</h1><div class="card">' +
+    return counterPicker() + '<h1 style="font-size:2rem;padding:0 4px">Menu</h1>' + photoImportCard() +
+      '<div class="tip-card"><b>Changed a price?</b> Update it here right away. Your Sippy Brew menu is how members are told, and they see the price before they order.</div>' +
+      '<div class="card">' +
       s.menu.map(function (m) {
         var out = !!state.soldOut[m.id];
-        return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + '</b><div class="muted small">' + m.size + " · " + money2(m.priceCents) + "</div></div>" +
+        return '<div class="menu-item"><div class="grow"><b>' + esc(m.name) + '</b><div class="muted small">' + m.size + " · " + money2(m.priceCents) + (S.priceRecentlyUpdated(m.priceChangedAt, now()) ? ' <span class="badge honey">Price updated</span>' : "") + "</div>" +
+          '<form class="row price-form" data-form="price" data-id="' + m.id + '" style="gap:6px;margin-top:6px"><input class="input" name="price" inputmode="decimal" aria-label="New price for ' + esc(m.name) + '" value="' + (m.priceCents / 100).toFixed(2) + '" style="min-height:40px;max-width:96px;padding:6px 10px"><button class="btn small" type="submit" style="width:auto;min-height:40px;padding:0 14px">Update price</button></form></div>' +
           '<div class="stack" style="gap:4px;align-items:flex-end"><label class="row small" style="font-weight:700;min-height:44px"><input type="checkbox" data-a="sold-out" data-id="' + m.id + '" ' + (out ? "checked" : "") + ' style="width:22px;height:22px;accent-color:var(--burnt)">Sold out today</label>' +
           '<button class="linkbtn" style="min-height:36px;padding:0" data-a="edit-mods" data-id="' + m.id + '" aria-expanded="' + (state.editMods === m.id) + '">Customizations' + (m.modifierGroups.length ? " (" + m.modifierGroups.length + ")" : "") + "</button></div></div>" +
           (state.editMods === m.id ? modsEditor(m) : (m.modifierGroups.length ? '<p class="muted small" style="margin:-4px 0 8px">' + esc(m.modifierGroups.map(function (g) { return g.name + ": " + g.options.map(function (o) { return o.name + (o.priceCents ? " +" + money2(o.priceCents) : ""); }).join(", "); }).join(" · ")) + "</p>" : ""));
@@ -750,7 +808,8 @@
 
   function payoutCard() {
     var week = S.weekBounds(now(), TZ);
-    var done = state.orders.filter(function (o) { return o.shopId === state.counterShop && o.status === "picked_up" && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), week); });
+    // No-shows are paid like pickups.
+    var done = state.orders.filter(function (o) { return o.shopId === state.counterShop && (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), week); });
     var p = S.summarizePayout(done.map(function (o) { return { passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }; }));
     var line = function (l, v, cls) { return '<div class="row between"><span class="muted">' + l + '</span><span class="num' + (cls || "") + '">' + v + "</span></div>"; };
     return '<div class="card stack"><div class="row between"><b>This week\'s payout</b><span class="badge">Pays Monday</span></div><div class="lines">' +
@@ -775,7 +834,7 @@
   function tabs() {
     var member = state.session === "member", admin = state.session === "admin";
     var items = admin ? [["overview", "Overview", "chart"], ["shops", "Shops", "list"], ["members", "Members", "user"]]
-      : member ? [["shops", "Shops", "map"], ["orders", "Order", "cup"], ["account", "Account", "user"]] : [["orders", "Orders", "list"], ["scan", "Scan", "scan"], ["menu", "Menu", "cup"], ["dashboard", "Dashboard", "chart"]];
+      : member ? [["shops", "Shops", "map"], ["orders", "Order", "cup"], ["account", "Account", "user"]] : [["orders", "Orders", "list"], ["scan", "Scan", "scan"], ["menu", "Menu", "cup"], ["dashboard", "Dashboard", "chart"], ["faq", "FAQ", "help"]];
     var cur = admin ? state.adminTab : member ? state.tab : state.shopTab;
     var actName = admin ? "admin-tab" : member ? "tab" : "shop-tab";
     return '<nav class="tabs" aria-label="Tabs"><div class="inner">' + items.map(function (it) {
@@ -807,7 +866,7 @@
     var t = tier();
     var members = state.tierId ? 1 : 0;
     var month = S.monthBounds(now(), TZ);
-    var redeemed = state.orders.filter(function (o) { return o.status === "picked_up" && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), month); });
+    var redeemed = state.orders.filter(function (o) { return (o.status === "picked_up" || o.status === "no_show") && o.redeemedAt && S.isWithin(new Date(o.redeemedAt), month); });
     var sum = S.summarizePayout(redeemed.map(function (o) { return { passCoveredCents: o.passCoveredCents, overageCents: o.overageCents }; }));
     var pending = allShops().filter(function (x) { return shopStatus(x.id) === "pending"; });
     return '<h1 style="font-size:2rem;padding:0 4px">Overview</h1><div class="stats">' +
@@ -815,6 +874,8 @@
       '<div class="stat"><span class="muted small">Monthly revenue</span><b>' + money(t ? t.priceCents : 0) + "</b></div>" +
       '<div class="stat"><span class="muted small">Commission this month</span><b>' + money2(sum.commissionCents) + '</b><span class="muted small">' + sum.orderCount + " redemptions</span></div>" +
       '<div class="stat"><span class="muted small">Failed payments</span><b>0</b></div></div>' +
+      ((state.teamAlerts || []).length ? '<div class="card stack" style="border:2px solid var(--honey)"><div class="row between"><b>No-shows</b><span class="badge honey">' + state.teamAlerts.length + "</span></div>" +
+        state.teamAlerts.slice(0, 6).map(function (a) { return '<div class="small" style="border-top:1px solid var(--latte);padding-top:8px"><b>' + esc(a.shop) + "</b> marked " + esc(a.member) + "'s order as not picked up · " + dateFmt.format(new Date(a.at)) + "</div>"; }).join("") + "</div>" : "") +
       '<div class="card stack"><div class="row between"><b>Shops waiting for approval</b><span class="badge ' + (pending.length ? "honey" : "") + '">' + pending.length + "</span></div>" +
       (pending.length ? pending.map(function (x) {
         return '<div class="row between" style="border-top:1px solid var(--latte);padding-top:10px"><div class="grow"><b>' + esc(x.name) + '</b><div class="muted small">' + esc(x.address) + '</div></div><button class="btn small" style="width:auto;padding:0 18px" data-a="admin-approve" data-id="' + x.id + '">Approve</button></div>';
@@ -873,7 +934,7 @@
         else if (state.detail && state.detail.type === "qr") html += qrDetail(state.detail.id);
         else html += state.tab === "orders" ? ordersTab() : state.tab === "account" ? accountTab() : shopsTab();
       } else {
-        html += state.shopTab === "scan" ? shopScanTab() : state.shopTab === "menu" ? shopMenuTab() : state.shopTab === "dashboard" ? shopDashTab() : shopOrdersTab();
+        html += state.shopTab === "scan" ? shopScanTab() : state.shopTab === "menu" ? shopMenuTab() : state.shopTab === "dashboard" ? shopDashTab() : state.shopTab === "faq" ? faqList(S.MERCHANT_FAQ, S.MERCHANT_FAQ_FOOTNOTE, "Shop FAQ") : shopOrdersTab();
       }
       html += tabs();
     }
@@ -931,7 +992,9 @@
     if (!r.ok) { state.error = r.message; return render(); }
     var sizes = {}; s.menu.forEach(function (m) { sizes[m.id] = m.size; });
     var id = "o" + Date.now().toString(36);
-    state.orders.unshift({ id: id, shopId: s.id, status: "received", totalCents: r.totalCents, passCoveredCents: r.passCoveredCents, overageCents: r.overageCents,
+    var notes = S.cleanOrderNote({ note: state.orderNote, allergy: state.orderAllergy });
+    if (!notes.ok) { state.error = notes.message; return render(); }
+    state.orders.unshift({ id: id, shopId: s.id, status: "received", note: notes.note, allergy: notes.allergy, totalCents: r.totalCents, passCoveredCents: r.passCoveredCents, overageCents: r.overageCents,
       passDay: r.passDay, pickupAt: pickupAt.toISOString(), createdAt: n.toISOString(), redeemedAt: null,
       items: r.lines.map(function (l) { return { name: l.name, size: sizes[l.menuItemId], quantity: l.quantity, options: l.options }; }) });
     // This month's passes first (they expire sooner), then the bonus pass that expires soonest.
@@ -940,7 +1003,7 @@
     else state.passesLeft -= 1;
     state.orders[0].bonusKey = bonusKey;
     if (r.bonusCoveredCents > 0) { var g2 = S.nextBonusToUse(state.bonus, n); g2.used += 1; state.orders[0].overageBonusKey = g2.key; state.orders[0].bonusCoveredCents = r.bonusCoveredCents; }
-    state.useBonus = false;
+    state.useBonus = false; state.orderNote = ""; state.orderAllergy = "";
     state.passDaysUsed.push(r.passDay);
     state.cart = []; state.confirmedOverage = null; state.error = null; state.counterShop = s.id;
     state.detail = { type: "qr", id: id };
@@ -1130,6 +1193,34 @@
         break;
       }
       case "scan-phone": return redeem({ orderId: id });
+      case "skip-ahead": state.minuteOffset = (state.minuteOffset || 0) + 45; render(); return toast("It's now " + timeFmt.format(now()) + ".");
+      case "no-show": state.confirmNoShow = id; break;
+      case "no-show-no": state.confirmNoShow = null; break;
+      case "no-show-yes": {
+        var ns = orderById(id);
+        if (!ns || !S.canFlagNoShow({ status: ns.status, pickupAt: ns.pickupAt }, now()).ok) break;
+        // Not refunded: the pass stays used; the shop is paid like a pickup. Nudge the member and Sippy Brew.
+        ns.status = "no_show"; ns.redeemedAt = now().toISOString(); ns.noShowAt = ns.redeemedAt; state.confirmNoShow = null;
+        var tkn = latestTicket(id); if (tkn) tkn.expiresAt = Math.min(tkn.expiresAt, Date.now());
+        state.notices.push("Your order at " + shopById(ns.shopId).name + " wasn't picked up, so the shop marked it as missed. No-shows aren't refunded: today's pass was used and the shop was paid for the drink it made.");
+        state.teamAlerts.unshift({ shop: shopById(ns.shopId).name, member: firstName(), at: now().toISOString() });
+        render(); return toast("Marked as not picked up. We let the member and Sippy Brew know.");
+      }
+      case "dismiss-notice": state.notices.splice(Number(id), 1); break;
+      case "scan-add": {
+        var add = (state.scanRows || []).filter(function (r) { return r.keep; });
+        var built = [];
+        for (var si = 0; si < add.length; si++) {
+          var it = { name: add[si].name.trim(), size: add[si].size.trim(), priceCents: Math.round(Number(add[si].price) * 100), category: add[si].category };
+          var ok2 = S.validateMenuItem(it);
+          if (!ok2.ok) { render(); return toast((it.name || "An item") + ": " + ok2.message); }
+          built.push({ id: "x" + Date.now().toString(36) + si, shopId: state.counterShop, name: it.name, size: it.size, priceCents: it.priceCents, category: it.category });
+        }
+        state.extraMenu[state.counterShop] = (state.extraMenu[state.counterShop] || []).concat(built);
+        state.scanRows = null; state.scanSkipped = [];
+        render(); return toast(built.length + " items added to your menu.");
+      }
+      case "scan-discard": state.scanRows = null; state.scanSkipped = []; break;
       case "demo-pickup": {
         var od = orderById(id); if (!od || OPEN.indexOf(od.status) < 0) break;
         var tk = latestTicket(id); if (tk) tk.redeemedAt = Date.now();
@@ -1165,6 +1256,15 @@
       var el = ev.target, a = el.getAttribute && el.getAttribute("data-a");
       if (a === "confirm-overage") { state.confirmedOverage = el.checked ? Number(el.getAttribute("data-amount")) : null; render(); }
       else if (a === "use-bonus") { state.useBonus = el.checked; state.confirmedOverage = null; render(); }
+      else if (a === "scan-keep") { state.scanRows[Number(el.getAttribute("data-i"))].keep = el.checked; render(); }
+      else if (a === "menu-photo" && el.files && el.files[0]) {
+        state.scanning = true; render();
+        setTimeout(function () {
+          var res = S.cleanScannedMenu(SAMPLE_SCAN);
+          state.scanRows = res.items.map(function (x) { return { name: x.name, size: x.size, price: (x.priceCents / 100).toFixed(2), category: x.category, keep: true }; });
+          state.scanSkipped = res.skipped; state.scanning = false; render();
+        }, 1200);
+      }
       else if (a === "accepting") { state.paused[state.counterShop] = !el.checked; if (el.checked) delete state.paused[state.counterShop]; render(); toast(el.checked ? "You're accepting orders." : "Orders paused. Members can't order until you turn this back on."); }
       else if (a === "sold-out") { state.soldOut[el.getAttribute("data-id")] = el.checked; if (!el.checked) delete state.soldOut[el.getAttribute("data-id")]; save(); toast(el.checked ? "Marked sold out for today." : "Back on the menu."); }
     });
@@ -1205,6 +1305,13 @@
         state.session = "shop"; state.counterShop = id; state.shopTab = "dashboard"; state.screen = "app"; state.shopError = null; state.detail = null;
         render(); window.scrollTo(0, 0);
         toast("Your shop is listed! An admin reviews new shops before members can see them.");
+      } else if (kind === "price") {
+        var pid = f.getAttribute("data-id"), cents = Math.round(Number(f.elements.price.value) * 100);
+        if (!Number.isFinite(cents) || cents < 50 || cents > 5000) { toast("Enter a price between $0.50 and $50."); return; }
+        var cur = shopById(state.counterShop).menu.filter(function (x) { return x.id === pid; })[0];
+        if (cur && cur.priceCents === cents) { toast("That's already the price."); return; }
+        state.prices[pid] = cents; state.priceChangedAt[pid] = now().toISOString();
+        render(); toast("Price updated. Members see the new price, marked \"price updated\".");
       } else if (kind === "menu-add") {
         var item2 = { name: f.elements.name.value.trim(), size: f.elements.size.value.trim(), priceCents: Math.round(Number(f.elements.price.value) * 100), category: f.elements.category.value };
         var res = S.validateMenuItem(item2);
@@ -1240,6 +1347,13 @@
       if (location.hash === "#admin" && state.session !== "admin") { state.screen = "admin-login"; state.session = null; state.adminError = null; render(); window.scrollTo(0, 0); }
     };
     window.addEventListener("hashchange", openAdmin);
+    // Typing in fields that shouldn't re-render on every key.
+    document.addEventListener("input", function (ev) {
+      var a = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-a");
+      if (a === "order-note") state.orderNote = ev.target.value;
+      else if (a === "order-allergy") state.orderAllergy = ev.target.value;
+      else if (a === "scan-field") state.scanRows[Number(ev.target.getAttribute("data-i"))][ev.target.getAttribute("data-k")] = ev.target.value;
+    });
     // Radius slider: update the label while dragging, re-draw the map when released.
     document.addEventListener("input", function (ev) {
       if (ev.target && ev.target.id === "radius") { var o = document.getElementById("radius-out"); if (o) o.textContent = ev.target.value + " mi"; }

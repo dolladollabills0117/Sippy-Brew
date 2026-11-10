@@ -15,13 +15,15 @@ export default async function AdminPage() {
   if (s.profile.role !== "admin") redirect("/");
   const db = supabaseAdmin();
   const month = monthBounds(new Date(), RULES.timeZone);
-  const [{ data: shops }, { data: subs }, { data: members }, { data: monthOrders }, { data: failures }] = await Promise.all([
+  const [{ data: shops }, { data: subs }, { data: members }, { data: monthOrders }, { data: failures }, { data: alerts }] = await Promise.all([
     db.from("shops").select("id, name, address, status, spotlight, payouts_enabled, created_at, profiles:owner_id(email)").order("created_at", { ascending: false }),
     db.from("subscriptions").select("tier, status, member_id"),
     db.from("profiles").select("id, name, email, created_at").eq("role", "member").order("created_at", { ascending: false }).limit(200),
-    db.from("orders").select("commission, total").eq("status", "picked_up").gte("redeemed_at", month.start.toISOString()),
+    db.from("orders").select("commission, total").in("status", ["picked_up", "no_show"]).gte("redeemed_at", month.start.toISOString()),
     db.from("payment_failures").select("id, amount, reason, created_at, profiles:member_id(email)").order("created_at", { ascending: false }).limit(25),
+    db.from("platform_alerts").select("id, kind, message, created_at, order_id, shops:shop_id(name), profiles:member_id(name, email)").is("resolved_at", null).order("created_at", { ascending: false }).limit(25),
   ]);
+  type AlertRow = { id: string; message: string; created_at: string; order_id: string | null; shops: { name: string } | null; profiles: { name: string; email: string } | null };
 
   const live = (subs ?? []).filter((x) => x.status === "active" || x.status === "trialing");
   const tierCounts = TIERS.map((t) => `${t.name} ${live.filter((x) => x.tier === t.id).length}`).join(" · ");
@@ -38,6 +40,22 @@ export default async function AdminPage() {
         <Stat label="Commission this month" value={formatCents(commission, { showZeroCents: true })} sub={`${monthOrders?.length ?? 0} redemptions`} />
         <Stat label="Failed payments" value={failures?.length ?? 0} sub="Most recent 25" />
       </div>
+
+      {(alerts ?? []).length > 0 && (
+        <section aria-labelledby="alerts-title" className="mt-6">
+          <h2 id="alerts-title" className="mb-2 text-2xl text-espresso">No-shows</h2>
+          <ul className="flex flex-col gap-2">
+            {((alerts ?? []) as unknown as AlertRow[]).map((a) => (
+              <li key={a.id} className="card flex flex-wrap items-center justify-between gap-2 p-4 text-espresso">
+                <span>
+                  <strong>{a.shops?.name ?? "A shop"}</strong> marked {a.profiles?.name || a.profiles?.email || "a member"}&apos;s order as not picked up
+                </span>
+                <span className="text-sm text-pecan">{new Date(a.created_at).toLocaleString("en-US", { timeZone: RULES.timeZone })}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <SectionTitle>Shops</SectionTitle>
       {!shops?.length ? (

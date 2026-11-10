@@ -60,11 +60,19 @@ export const FAQ: readonly FaqSection[] = [
       },
       {
         q: "I have an allergy or dietary need. Is my drink safe?",
-        a: "Tell the shop directly, every time, before you drink anything. Menus, ingredients and allergen information come from the shops and can change. Sippy Brew doesn't prepare food or drinks and can't check ingredients or guarantee that a drink is free of any allergen.",
+        a: "Add it in the Allergies box when you order, so the shop sees an allergy notice with your order, and tell the barista at pickup too, every time, before you drink anything. Menus, ingredients and allergen information come from the shops and can change. Sippy Brew doesn't prepare food or drinks and can't check ingredients or guarantee that a drink is free of any allergen.",
       },
       {
         q: "What if I can't make it or the shop cancels?",
-        a: "Cancel the order in the app before the shop marks it picked up. If an order is cancelled, your pass is returned, as long as it's still the same month (or, for a bonus pass, before it expires).",
+        a: "Contact the shop as soon as you can. Only the shop can cancel an order, and if it does, your pass is returned, as long as it's still the same month (or, for a bonus pass, before it expires). If the shop has already made it, it may count as not picked up.",
+      },
+      {
+        q: "What happens if I don't pick up my order?",
+        a: `If you don't pick up your order, the shop can mark it as not picked up starting ${RULES.noShowGraceMinutes} minutes after your pickup time. It isn't refunded: the pass stays used, any overage you confirmed is charged, and the shop is paid for the drink it made. We'll send you a reminder when that happens.`,
+      },
+      {
+        q: "Can shops change their prices?",
+        a: "Yes. Prices are set by each shop and can change at any time. Shops must update their Sippy Brew menu when their prices change; that's how you're told. The app always shows the shop's current price before you order, and recently changed items are marked \"price updated\".",
       },
       {
         q: "Can I still earn the shop's own rewards points?",
@@ -130,3 +138,85 @@ export const FAQ: readonly FaqSection[] = [
 ];
 
 export const FAQ_FOOTNOTE = "This FAQ is a summary. If anything here differs from our Terms of Service, the Terms apply.";
+
+/** Merchant FAQ, shown on the shop side (demo, web /shop/faq, shop app). The merchant agreement controls. */
+export const MERCHANT_FAQ: readonly FaqSection[] = [
+  {
+    title: "Orders",
+    items: [
+      {
+        q: "When should I make a Sippy Brew order?",
+        a: `Close to the pickup time. Each order shows "Start at" ${RULES.prepLeadMinutes} minutes before pickup. Making drinks then keeps them fresh and means fewer drinks wasted if a member doesn't show.`,
+      },
+      {
+        q: "What if a member doesn't pick up their order?",
+        a: `Mark it "Not picked up" starting ${RULES.noShowGraceMinutes} minutes after the pickup time. The member gets a reminder and Sippy Brew is notified. No-shows aren't refunded: you're paid for the pass just like a pickup, and any overage the member confirmed is charged to them and paid to you.`,
+      },
+      {
+        q: "What's the red ALLERGY NOTICE?",
+        a: "The member listed an allergy with their order. Read it before you make the drink, follow your shop's allergen procedures, and talk to the member at pickup if you have any doubt. If you can't make the order safely, cancel it so the member's pass is returned. Your shop is responsible for its ingredients and allergen handling.",
+      },
+      {
+        q: "How do I hand off an order?",
+        a: "Scan the member's QR code (or type their 6-character code) at pickup. Codes refresh every 30 seconds and work once, so a screenshot won't work.",
+      },
+      {
+        q: "Can I cancel an order?",
+        a: "Yes, before it's picked up, for example if you're out of something or can't make it safely. The member's pass is returned. A no-show can't be cancelled.",
+      },
+    ],
+  },
+  {
+    title: "Menu and prices",
+    items: [
+      {
+        q: "Can I change my prices?",
+        a: "Yes, any time. When your prices change you must update your Sippy Brew menu right away: that's how members are told. Members always see your current Sippy Brew menu price before they order, and changed items are marked \"price updated\". Orders already placed keep the price they were placed at.",
+      },
+      {
+        q: "What's the fastest way to add my menu?",
+        a: "Take a photo of your menu board or printed menu. We read the coffee items and prices for you and fill them in; check each one, fix anything that's off, and save. Nothing is added until you confirm it. Food is skipped automatically, since only coffee can be sold through Sippy Brew.",
+      },
+      {
+        q: "Can I sell food?",
+        a: "Not through Sippy Brew. Passes cover coffee drinks only. Members can still buy food from you directly.",
+      },
+      {
+        q: "Can I offer customizations like oat milk or an extra shot?",
+        a: "Yes. Add them to any drink in your menu with your prices. If they push an order over the member's pass, the member confirms and pays the difference, and it goes to you.",
+      },
+    ],
+  },
+  {
+    title: "Getting paid",
+    items: [
+      {
+        q: "How much do I get paid?",
+        a: `You keep ${100 - RULES.commissionBps / 100}% of what each pass covers, including no-shows and bonus passes, plus 100% of overages less card processing. Payouts go to your bank every Monday through Stripe.`,
+      },
+      {
+        q: "Do I pay for card processing?",
+        a: "Only on overages, which are charged on your behalf. Sippy Brew covers processing on members' monthly payments.",
+      },
+    ],
+  },
+  {
+    title: "Your shop",
+    items: [
+      {
+        q: "Who is responsible for the drinks and service?",
+        a: "Your shop is. You're an independent business: you make, price and serve your drinks, and you're responsible for ingredients, allergens, food safety, your staff and your premises. Sippy Brew runs the membership, sends you orders and pays you.",
+      },
+      {
+        q: "Can members still earn my loyalty points?",
+        a: "Yes. If you have a rewards program, let members give their number or card at pickup like any other customer.",
+      },
+      {
+        q: "How do I pause orders?",
+        a: "Turn off \"Accepting orders\" on your Orders screen. Members can still see your shop but can't order until you turn it back on.",
+      },
+    ],
+  },
+];
+
+export const MERCHANT_FAQ_FOOTNOTE = "This FAQ is a summary. If anything here differs from your Sippy Brew merchant agreement, the agreement applies.";

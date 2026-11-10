@@ -13,6 +13,7 @@ import {
   priceOrder,
   bonusForOverageAvailable,
   bonusOverageCover,
+  priceRecentlyUpdated,
   type MemberSummary,
   type MenuItem,
   type Shop,
@@ -49,6 +50,9 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
   const [confirmedOverage, setConfirmedOverage] = useState<number | null>(null);
   // The member's choice to put a bonus pass toward the overage.
   const [useBonus, setUseBonus] = useState(false);
+  // Note for the barista, and allergies the shop must see (shown to them as an ALLERGY NOTICE).
+  const [note, setNote] = useState("");
+  const [allergy, setAllergy] = useState("");
 
   const available = menu.filter((m) => m.available && !m.soldOutToday);
   // Price the cart with the same rules the server uses (drink + customizations).
@@ -97,6 +101,8 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
         pickupAt: pickup,
         confirmedOverageCents: hasOverage ? confirmedOverage : null,
         useBonusForOverage: bonusCover > 0,
+        note: note.trim() || null,
+        allergy: allergy.trim() || null,
       });
       router.push(`/orders/${order.id}`);
     } catch (e) {
@@ -145,6 +151,9 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
                     <p className="text-sm text-pecan">
                       {m.size} · <Money cents={m.priceCents} />
                       {customizable && " · Customizable"}
+                      {priceRecentlyUpdated(m.priceChangedAt, new Date()) && (
+                        <span className="ml-2 rounded-full bg-honey px-2 text-xs font-extrabold text-espresso">Price updated</span>
+                      )}
                     </p>
                   </div>
                   <Button
@@ -280,6 +289,33 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
           <p className="mt-3 text-sm text-pecan">
             {summary.passesLeft} of {summary.passesPerMonth} passes left this month · one pass per day
           </p>
+
+          <label htmlFor="allergy" className="mt-5 block font-bold text-espresso">
+            Allergies
+          </label>
+          <p id="allergy-help" className="text-sm text-pecan">
+            Any allergies? Tell the shop here so it shows on your order, and remind the barista at pickup.
+          </p>
+          <input
+            id="allergy"
+            aria-describedby="allergy-help"
+            maxLength={RULES.orderNoteMaxChars}
+            placeholder="e.g. tree nuts, dairy"
+            className="mt-1.5 min-h-12 w-full rounded-[12px] border-2 border-pecan/70 bg-cream-swirl px-3 text-espresso"
+            value={allergy}
+            onChange={(e) => setAllergy(e.target.value)}
+          />
+          <label htmlFor="note" className="mt-4 block font-bold text-espresso">
+            Note for the barista <span className="font-normal text-pecan">(optional)</span>
+          </label>
+          <input
+            id="note"
+            maxLength={RULES.orderNoteMaxChars}
+            placeholder="e.g. extra hot, light ice"
+            className="mt-1.5 min-h-12 w-full rounded-[12px] border-2 border-pecan/70 bg-cream-swirl px-3 text-espresso"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
 
           <label htmlFor="pickup" className="mt-5 block font-bold text-espresso">
             Pickup time

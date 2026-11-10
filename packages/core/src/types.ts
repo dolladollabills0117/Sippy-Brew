@@ -64,6 +64,8 @@ export interface MenuItem {
   soldOutToday: boolean;
   /** Customizations the shop offers on this drink (milk, shots, syrups), with its prices. */
   modifierGroups: ModifierGroup[];
+  /** When the shop last changed the price (members see "price updated" for a while). */
+  priceChangedAt?: string | null;
 }
 
 export interface Post {
@@ -103,8 +105,15 @@ export interface Order {
   passDay: string;
   createdAt: string;
   pickupTime: string;
+  /** Picked up, or (for a no-show) when the shop flagged it. */
   redeemedAt: string | null;
   items: OrderItem[];
+  /** The member's note for the barista. */
+  note?: string | null;
+  /** Allergies the member listed. Shown to the shop as a big red ALLERGY NOTICE. */
+  allergyNote?: string | null;
+  /** When the shop flagged it as not picked up. */
+  noShowAt?: string | null;
 }
 
 /** Neighborhood Passport, Grand Tour and referral progress (rules/rewards.ts). */

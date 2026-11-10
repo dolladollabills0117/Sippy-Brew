@@ -22,7 +22,7 @@ export async function runWeeklyPayouts(now = new Date()) {
       .from("orders")
       .select("id, pass_covered_amount, overage_amount, overage_fee")
       .eq("shop_id", shop.id)
-      .eq("status", "picked_up")
+      .in("status", ["picked_up", "no_show"]) // no-shows are paid like pickups
       .is("payout_id", null)
       .gte("redeemed_at", start.toISOString())
       .lt("redeemed_at", end.toISOString());

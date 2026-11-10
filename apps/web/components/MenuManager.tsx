@@ -2,6 +2,7 @@
 import { CATEGORY_LABELS, COFFEE_CATEGORIES, validateMenuItem, type CoffeeCategory, type MenuItem } from "@sippy/core";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { MenuPhotoImport } from "./MenuPhotoImport";
 import { ModifierEditor } from "./ModifierEditor";
 import { Alert, Button, Card, EmptyState, Field, Money, inputClass } from "./ui";
 
@@ -59,6 +60,11 @@ export function MenuManager({ initial }: { initial: MenuItem[] }) {
   }
 
   return (
+    <div className="flex flex-col gap-6">
+    <MenuPhotoImport onAdded={(added) => setItems((l) => [...l, ...added])} />
+    <p className="rounded-xl bg-cream-swirl px-4 py-3 text-sm text-espresso">
+      <strong>Changed a price?</strong> Update it here right away. Your Sippy Brew menu is how members find out, and they see the price here before they order.
+    </p>
     <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
       <div className="flex flex-col gap-3">
         {error && <Alert tone="error">{error}</Alert>}
@@ -141,6 +147,7 @@ export function MenuManager({ initial }: { initial: MenuItem[] }) {
           </Button>
         </form>
       </Card>
+    </div>
     </div>
   );
 }

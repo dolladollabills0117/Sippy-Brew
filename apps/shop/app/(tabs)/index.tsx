@@ -1,4 +1,4 @@
-import { describeOptions, formatCents, nextStatus, ORDER_STATUS_LABELS, RULES, type Order } from "@sippy/core";
+import { canFlagNoShow, describeOptions, formatCents, nextStatus, ORDER_STATUS_LABELS, RULES, startMakingAt, type Order } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
@@ -7,7 +7,11 @@ import { Alert, RefreshControl, View } from "react-native";
 
 const timeFmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: RULES.timeZone });
 
-/** Live pickup queue. Polls every 8 seconds; one big button per order moves it along. */
+/**
+ * Live pickup queue. Polls every 8 seconds; one big button per order moves it along. Each order
+ * shows when to start it (just before pickup), a red ALLERGY NOTICE when the member listed one,
+ * and "Not picked up" once the pickup time is 30 minutes past.
+ */
 export default function OrdersScreen() {
   const q = useLoad(() => api.shopOrders("active"), [], 8000);
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,12 +46,42 @@ export default function OrdersScreen() {
     ]);
   }
 
+  function noShow(o: Order) {
+    Alert.alert(
+      `Mark ${o.memberFirstName}'s order as not picked up?`,
+      "It isn't refunded: their pass stays used and you're paid for it. We'll let them and Sippy Brew know.",
+      [
+        { text: "Not yet", style: "cancel" },
+        {
+          text: "Not picked up",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(o.id);
+            setError(null);
+            try {
+              await api.flagNoShow(o.id);
+              q.reload();
+            } catch (e) {
+              setError(errorMessage(e));
+            } finally {
+              setBusy(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <Screen refreshControl={<RefreshControl refreshing={q.refreshing} onRefresh={q.refresh} tintColor={colors.burntSugar} />}>
       <Text variant="display" accessibilityRole="header">
         Orders
       </Text>
       {error && <ErrorNote message={error} />}
+      <Text variant="small" color={colors.espresso}>
+        Make Sippy Brew orders close to pickup: each one shows when to start ({RULES.prepLeadMinutes} minutes before), so drinks are fresh and fewer are wasted on
+        no-shows.
+      </Text>
       {q.loading ? (
         <Loading label="Loading orders" />
       ) : q.error && !q.data ? (
@@ -59,7 +93,17 @@ export default function OrdersScreen() {
           {orders.map((o) => {
             const next = nextStatus(o.status);
             return (
-              <Card key={o.id} accent={o.status === "ready"} style={{ gap: spacing.sm }}>
+              <Card key={o.id} accent={o.status === "ready"} style={[{ gap: spacing.sm }, o.allergyNote ? { borderWidth: 4, borderColor: colors.danger } : null]}>
+                {o.allergyNote && (
+                  <View accessibilityRole="alert" style={{ backgroundColor: colors.danger, borderRadius: 12, padding: spacing.md }}>
+                    <Text variant="h2" color={colors.creamSwirl}>
+                      ⚠️ ALLERGY NOTICE
+                    </Text>
+                    <Text variant="bodyBold" color={colors.creamSwirl} style={{ fontSize: 20, lineHeight: 26 }}>
+                      {o.allergyNote}
+                    </Text>
+                  </View>
+                )}
                 <Row style={{ justifyContent: "space-between" }}>
                   <Text variant="h1" style={{ flex: 1 }}>
                     {o.memberFirstName}
@@ -67,8 +111,14 @@ export default function OrdersScreen() {
                   <Badge label={ORDER_STATUS_LABELS[o.status]} tone={o.status === "ready" ? "sky" : "latte"} />
                 </Row>
                 <Text variant="bodyBold" color={colors.pecan}>
-                  Pickup {timeFmt.format(new Date(o.pickupTime))}
+                  Pickup {timeFmt.format(new Date(o.pickupTime))} · <Text variant="bodyBold" color={colors.burntSugarInk}>Start at {timeFmt.format(startMakingAt(o.pickupTime))}</Text>
                 </Text>
+                {o.note ? (
+                  <Text style={{ backgroundColor: colors.vanillaBean, borderRadius: 10, padding: spacing.sm }}>
+                    <Text variant="bodyBold">Note: </Text>
+                    {o.note}
+                  </Text>
+                ) : null}
                 {o.items.map((i) => (
                   <View key={i.id}>
                     <Text style={{ fontSize: 20, lineHeight: 26 }}>
@@ -89,6 +139,9 @@ export default function OrdersScreen() {
                   <Button big label={`Mark ${ORDER_STATUS_LABELS[next].toLowerCase()}`} loading={busy === o.id} onPress={() => move(o, next)} />
                 )}
                 {o.status === "ready" && <Button big label="Scan to hand off" onPress={() => router.push("/scan")} />}
+                {canFlagNoShow({ status: o.status, pickupAt: o.pickupTime }, new Date()).ok && (
+                  <Button variant="secondary" label="Not picked up" onPress={() => noShow(o)} disabled={busy === o.id} />
+                )}
                 <Button variant="ghost" label="Cancel order" onPress={() => cancel(o)} disabled={busy === o.id} />
               </Card>
             );

@@ -90,6 +90,15 @@ export interface Rules {
   referralBonusPasses: number;
   /** Bonus passes (passport, referral) roll over and expire this many days after they're earned. */
   bonusPassLifetimeDays: number;
+  /** A shop can flag an order as not picked up this long after its pickup time. */
+  noShowGraceMinutes: number;
+  /** Shops are told to start a Sippy Brew order this many minutes before pickup. */
+  prepLeadMinutes: number;
+  orderNoteMaxChars: number;
+  /** Members see "price updated" on a menu item for this many days after the shop changes it. */
+  priceUpdatedBadgeDays: number;
+  /** Most items accepted from one menu photo. */
+  maxScannedMenuItems: number;
 }
 
 export const SUB_TIERS: readonly SubTier[] = tiersJson.subTiers as SubTier[];

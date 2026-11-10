@@ -288,4 +288,38 @@ do $$ begin
   assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 0, 'day bonus returned';
 end $$;
 
+-- No-show: too early is refused; after the grace period the shop flags it, the pass is not
+-- returned, the Sippy Brew team gets an alert, and the order is payable to the shop.
+select place_order(
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000d1',
+      '2026-11-01T00:00Z', 500, 500, 0, 800, '2026-11-12',
+      '[{"menu_item_id":"00000000-0000-0000-0000-0000000000e1","name":"Latte","size":"12 oz","quantity":1,"unit_price":500}]',
+      now() + interval '10 minutes', null, false, 0) as ns_order \gset
+do $$ begin
+  begin
+    perform flag_no_show((select id from orders where pass_day = '2026-11-12'), '00000000-0000-0000-0000-00000000005a', null, 60, 440, 30);
+    raise exception 'no-show flagged before pickup';
+  exception when raise_exception then
+    if sqlerrm <> 'TOO_EARLY' then raise; end if;
+  end;
+end $$;
+update orders set pickup_time = now() - interval '45 minutes' where pass_day = '2026-11-12';
+select flag_no_show(:'ns_order', '00000000-0000-0000-0000-00000000005a', '00000000-0000-0000-0000-0000000000b1', 60, 440, 30);
+do $$ begin
+  assert (select status from orders where pass_day = '2026-11-12') = 'no_show';
+  assert (select count(*) from platform_alerts where kind = 'no_show') = 1, 'Sippy Brew alerted';
+  assert (select used from bonus_passes where id = '00000000-0000-0000-0000-0000000000bb') = 1, 'pass not returned';
+  begin
+    perform cancel_order((select id from orders where pass_day = '2026-11-12'), true);
+    raise exception 'no-show cancelled';
+  exception when raise_exception then
+    if sqlerrm <> 'INVALID_TRANSITION' then raise; end if;
+  end;
+end $$;
+select create_payout('00000000-0000-0000-0000-00000000005a', now() - interval '14 days', now() - interval '7 days', array[:'ns_order']::uuid[], 500, 60, 440, 0, 0);
+
+-- Menu price changes are dated.
+update menu_items set price = 550 where id = '00000000-0000-0000-0000-0000000000e1';
+do $$ begin assert (select price_changed_at is not null from menu_items where id = '00000000-0000-0000-0000-0000000000e1'); end $$;
+
 rollback;

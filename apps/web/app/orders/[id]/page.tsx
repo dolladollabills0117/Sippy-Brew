@@ -16,7 +16,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const s = await requirePageSession("member", `/orders/${id}`);
   const order = await getOrder(id).catch(() => null);
   if (!order || order.memberId !== s.userId) notFound();
-  const open = order.status !== "picked_up" && order.status !== "cancelled";
+  const open = order.status !== "picked_up" && order.status !== "cancelled" && order.status !== "no_show";
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 pt-6">
@@ -24,7 +24,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       <div className="text-center">
         <p className="text-sm font-extrabold uppercase tracking-widest text-pecan">{order.shopName}</p>
         <h1 className="glow mt-1 inline-block text-4xl text-espresso">
-          {order.status === "ready" ? "Ready for pickup!" : order.status === "picked_up" ? "Enjoy!" : order.status === "cancelled" ? "Order cancelled" : "Show this at the counter"}
+          {order.status === "ready" ? "Ready for pickup!" : order.status === "picked_up" ? "Enjoy!" : order.status === "cancelled" ? "Order cancelled" : order.status === "no_show" ? "Not picked up" : "Show this at the counter"}
         </h1>
         <p className="mt-2">
           <Badge tone={order.status === "ready" ? "sky" : order.status === "cancelled" ? "danger" : "latte"}>{ORDER_STATUS_LABELS[order.status]}</Badge>
@@ -63,6 +63,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </div>
         </dl>
         {order.status === "cancelled" && <p className="mt-2 text-sm text-pecan">Your pass was returned and any overage hold released.</p>}
+        {order.status === "no_show" && (
+          <p className="mt-2 text-sm text-pecan">
+            This order wasn&apos;t picked up, so the shop marked it as missed. No-shows aren&apos;t refunded: the pass was used and the shop was paid for the drink.
+            Questions go to {order.shopName}.
+          </p>
+        )}
+        {order.allergyNote && <p className="mt-2 text-sm font-bold text-danger">Allergy you listed: {order.allergyNote}. Remind the barista at pickup.</p>}
       </Card>
       <ButtonLink href="/shops" variant="secondary">
         Back to shops

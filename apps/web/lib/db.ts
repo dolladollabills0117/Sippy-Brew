@@ -55,6 +55,7 @@ export const mapMenuItem = (r: Row, now = new Date()): MenuItem => ({
   available: Boolean(r.available),
   soldOutToday: r.sold_out_on === dayKey(now, RULES.timeZone),
   modifierGroups: Array.isArray(r.modifier_groups) ? r.modifier_groups : [],
+  priceChangedAt: r.price_changed_at ?? null,
 });
 
 export const ORDER_SELECT = "*, order_items(*), profiles:member_id(name), shops:shop_id(name)";
@@ -74,6 +75,9 @@ export const mapOrder = (r: Row): Order => ({
   createdAt: r.created_at,
   pickupTime: r.pickup_time,
   redeemedAt: r.redeemed_at ?? null,
+  note: r.note ?? null,
+  allergyNote: r.allergy_note ?? null,
+  noShowAt: r.no_show_at ?? null,
   items: (r.order_items ?? []).map((i: Row) => ({
     id: i.id,
     menuItemId: i.menu_item_id,

@@ -28,6 +28,7 @@ const DB_ERRORS: Record<string, [number, string]> = {
   WRONG_SHOP: [403, "This order belongs to a different shop."],
   ORDER_CANCELLED: [409, "This order was cancelled."],
   INVALID_TRANSITION: [409, "That status change isn't allowed."],
+  TOO_EARLY: [409, "You can mark an order as not picked up 30 minutes after its pickup time."],
   NOT_FOUND: [404, "Not found."],
 };
 

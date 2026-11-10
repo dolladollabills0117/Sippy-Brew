@@ -83,7 +83,7 @@ export function createApiClient(opts: ApiClientOptions) {
     listShops: (params: { near?: "home" | "work"; lat?: number; lng?: number } = {}) =>
       request<{ shops: ShopListItem[]; spotlights: ShopListItem[]; posts: Post[] }>("GET", `/api/shops${q(params)}`),
     getShop: (id: string) => request<{ shop: Shop; menu: MenuItem[]; post: Post | null; saved: boolean }>("GET", `/api/shops/${id}`),
-    placeOrder: (input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null; useBonusForOverage?: boolean }) => request<{ order: Order }>("POST", "/api/orders", input),
+    placeOrder: (input: { shopId: string; items: OrderLineInput[]; pickupAt: string; confirmedOverageCents?: number | null; useBonusForOverage?: boolean; note?: string | null; allergy?: string | null }) => request<{ order: Order }>("POST", "/api/orders", input),
     myOrders: () => request<{ orders: Order[] }>("GET", "/api/orders"),
     getOrder: (id: string) => request<{ order: Order }>("GET", `/api/orders/${id}`),
     issueQr: (orderId: string) => request<QrTicket>("POST", `/api/orders/${orderId}/qr`),
@@ -93,6 +93,11 @@ export function createApiClient(opts: ApiClientOptions) {
     // ---- Shops ----
     shopOrders: (scope: "active" | "today" = "active") => request<{ orders: Order[] }>("GET", `/api/shop/orders${q({ scope })}`),
     setOrderStatus: (orderId: string, status: OrderStatus) => request<{ order: Order }>("PATCH", `/api/shop/orders/${orderId}`, { status }),
+    /** The member didn't pick up (from 30 minutes after pickup time). Not refunded; the shop is paid. */
+    flagNoShow: (orderId: string) => request<{ order: Order }>("POST", `/api/shop/orders/${orderId}/no-show`),
+    /** Read a photo of the menu. Returns items for the shop to review; nothing is saved. */
+    scanMenu: (image: string, mediaType: string) =>
+      request<{ items: MenuItemInput[]; skipped: { name: string; reason: string }[] }>("POST", "/api/shop/menu/scan", { image, mediaType }),
     redeem: (input: { qr?: string; shortCode?: string }) => request<{ order: Order }>("POST", "/api/shop/redeem", input),
     shopMenu: () => request<{ items: MenuItem[] }>("GET", "/api/shop/menu"),
     addMenuItem: (item: MenuItemInput) => request<{ item: MenuItem }>("POST", "/api/shop/menu", item),

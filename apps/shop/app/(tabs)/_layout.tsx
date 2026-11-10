@@ -32,6 +32,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="scan" options={{ title: "Scan", tabBarIcon: ({ focused }) => <TabIcon name="qr-code" focused={focused} /> }} />
       <Tabs.Screen name="menu" options={{ title: "Menu", tabBarIcon: ({ focused }) => <TabIcon name="cafe" focused={focused} /> }} />
       <Tabs.Screen name="dashboard" options={{ title: "Dashboard", tabBarIcon: ({ focused }) => <TabIcon name="stats-chart" focused={focused} /> }} />
+      <Tabs.Screen name="faq" options={{ title: "FAQ", tabBarIcon: ({ focused }) => <TabIcon name="help-circle" focused={focused} /> }} />
     </Tabs>
   );
 }

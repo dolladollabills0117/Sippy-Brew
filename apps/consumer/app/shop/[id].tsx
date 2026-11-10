@@ -14,13 +14,14 @@ import {
   priceOrder,
   bonusForOverageAvailable,
   bonusOverageCover,
+  priceRecentlyUpdated,
   type MenuItem,
 } from "@sippy/core";
 import { api, Badge, Button, Card, colors, EmptyState, ErrorNote, errorMessage, Loading, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import * as Haptics from "expo-haptics";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Switch, View } from "react-native";
+import { Pressable, ScrollView, Switch, TextInput, View } from "react-native";
 import { CustomizeSheet } from "../../components/CustomizeSheet";
 
 interface CartLine {
@@ -50,6 +51,9 @@ export default function ShopScreen() {
   const [confirmedOverage, setConfirmedOverage] = useState<number | null>(null);
   // The member's choice to put a bonus pass toward the overage.
   const [useBonus, setUseBonus] = useState(false);
+  // Note for the barista, and allergies the shop must see (shown to them as an ALLERGY NOTICE).
+  const [note, setNote] = useState("");
+  const [allergy, setAllergy] = useState("");
 
   const shop = detail.data?.shop;
   const slots = useMemo(() => (shop ? pickupSlots(new Date(), shop.hours) : []), [shop]);
@@ -102,6 +106,8 @@ export default function ShopScreen() {
         pickupAt: slots[slot]!.toISOString(),
         confirmedOverageCents: hasOverage ? confirmedOverage : null,
         useBonusForOverage: bonusCover > 0,
+        note: note.trim() || null,
+        allergy: allergy.trim() || null,
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/order/${order.id}`);
@@ -165,6 +171,7 @@ export default function ShopScreen() {
                         <Text variant="bodyBold">{m.name}</Text>
                         <Text variant="small" color={out ? colors.danger : colors.pecan}>
                           {m.size} · {formatCents(m.priceCents, { showZeroCents: true })}
+                          {priceRecentlyUpdated(m.priceChangedAt, new Date()) ? " · Price updated" : ""}
                           {out ? " · Sold out" : m.modifierGroups.length ? " · Customizable" : ""}
                         </Text>
                       </View>
@@ -303,6 +310,33 @@ export default function ShopScreen() {
               {summary!.passesLeft} of {summary!.passesPerMonth} passes left · one pass per day
             </Text>
 
+            <Text variant="bodyBold" nativeID="allergy-label">
+              Allergies
+            </Text>
+            <Text variant="small" color={colors.pecan}>
+              Any allergies? Tell the shop here so it shows on your order, and remind the barista at pickup.
+            </Text>
+            <TextInput
+              accessibilityLabelledBy="allergy-label"
+              placeholder="e.g. tree nuts, dairy"
+              placeholderTextColor={colors.pecan}
+              maxLength={RULES.orderNoteMaxChars}
+              value={allergy}
+              onChangeText={setAllergy}
+              style={{ borderWidth: 2, borderColor: colors.pecan, borderRadius: 12, minHeight: 48, paddingHorizontal: 12, color: colors.espresso, backgroundColor: colors.creamSwirl }}
+            />
+            <Text variant="bodyBold" nativeID="note-label">
+              Note for the barista (optional)
+            </Text>
+            <TextInput
+              accessibilityLabelledBy="note-label"
+              placeholder="e.g. extra hot, light ice"
+              placeholderTextColor={colors.pecan}
+              maxLength={RULES.orderNoteMaxChars}
+              value={note}
+              onChangeText={setNote}
+              style={{ borderWidth: 2, borderColor: colors.pecan, borderRadius: 12, minHeight: 48, paddingHorizontal: 12, color: colors.espresso, backgroundColor: colors.creamSwirl }}
+            />
             <Text variant="bodyBold">Pickup time</Text>
             {slots.length === 0 ? (
               <Text color={colors.pecan}>Not open for pickup in the next two hours.</Text>

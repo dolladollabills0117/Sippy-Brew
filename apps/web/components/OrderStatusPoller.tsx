@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 export function OrderStatusPoller({ orderId, status }: { orderId: string; status: string }) {
   const router = useRouter();
   useEffect(() => {
-    if (status === "picked_up" || status === "cancelled") return;
+    if (status === "picked_up" || status === "cancelled" || status === "no_show") return;
     const id = setInterval(async () => {
       try {
         const { order } = await api.getOrder(orderId);

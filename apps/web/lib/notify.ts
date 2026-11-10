@@ -73,9 +73,12 @@ export async function notifyMemberRenewalReminder(memberId: string, tierName: st
 export async function notifyShopNewOrder(order: Order) {
   const { data: shop } = await supabaseAdmin().from("shops").select("owner_id").eq("id", order.shopId).maybeSingle();
   if (!shop) return;
-  const items = order.items.map((i) => `${i.quantity}× ${i.name}${i.options.length ? ` (${describeOptions(i.options)})` : ""}`).join(", ");
+  const items =
+    (order.allergyNote ? `⚠️ ALLERGY NOTICE: ${order.allergyNote}. ` : "") +
+    order.items.map((i) => `${i.quantity}× ${i.name}${i.options.length ? ` (${describeOptions(i.options)})` : ""}`).join(", ") +
+    (order.note ? `. Note: ${order.note}` : "");
   await Promise.all([
-    sendPush([shop.owner_id], "shop", `New order from ${order.memberFirstName}`, items, { orderId: order.id }),
+    sendPush([shop.owner_id], "shop", `${order.allergyNote ? "⚠️ ALLERGY · " : ""}New order from ${order.memberFirstName}`, items, { orderId: order.id }),
     sendEmail(await emailOf(shop.owner_id), `New pickup order: ${order.memberFirstName}`, `${items}\nPickup at ${new Date(order.pickupTime).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" })}`),
   ]);
 }
@@ -109,4 +112,20 @@ export async function notifyShopStatus(shopId: string, status: string) {
   if (!shop) return;
   const msg = status === "active" ? `${shop.name} is approved and live on Sippy Brew. Members can now order from you.` : `${shop.name} is paused and hidden from members. Reply to this email with any questions.`;
   await sendEmail(await emailOf(shop.owner_id), status === "active" ? "You're live on Sippy Brew" : "Your shop is paused", msg);
+}
+
+export async function notifyMemberNoShow(order: Order) {
+  const body = `Your order at ${order.shopName} wasn't picked up, so the shop marked it as missed. No-shows aren't refunded: today's pass was used and the shop was paid for the drink it made.`;
+  await Promise.all([
+    sendPush([order.memberId], "consumer", "Missed your coffee? ☕", body, { orderId: order.id }),
+    sendEmail(await emailOf(order.memberId), "Your order wasn't picked up", `${body}\n\nNext time, order closer to when you'll arrive. Questions about this order go to ${order.shopName}.\n\n${env.siteUrl()}/orders/${order.id}`),
+  ]);
+}
+
+/** Lets the Sippy Brew team know (admins, plus SUPPORT_EMAIL if set). Also recorded in platform_alerts. */
+export async function notifyTeamNoShow(order: Order) {
+  const { data: admins } = await supabaseAdmin().from("profiles").select("id, email").eq("role", "admin");
+  const to = new Set([...(admins ?? []).map((a) => a.email as string), process.env.SUPPORT_EMAIL ?? ""].filter(Boolean));
+  const text = `${order.shopName} marked ${order.memberFirstName}'s order (${order.id}) as not picked up. Pickup was ${new Date(order.pickupTime).toLocaleString("en-US", { timeZone: "America/New_York" })}.`;
+  await Promise.all([...to].map((email) => sendEmail(email, `No-show at ${order.shopName}`, text)));
 }

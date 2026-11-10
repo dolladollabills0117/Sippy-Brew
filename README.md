@@ -37,6 +37,14 @@ A pass has two parts, named so people can tell them apart: **what you drink** (t
 - *Referrals:* every 2 friends who join with your link and pay their first month earn you 3 bonus passes.
 - *Bonus passes* cover up to your daily max ($4 House, $8 Specialty) and roll over: each expires a year after it's earned, not at renewal. Orders use this month's passes first, then the bonus pass that expires soonest. Shops are paid for a bonus pass like any pass; the platform funds it. A visit counts when the shop scans the pickup code. At checkout, a member with a spare bonus pass can choose to put it toward an overage: it covers up to their daily max of the overage and they confirm and pay only the rest.
 
+**Merchant tools:**
+- *No-shows:* 30 minutes after the pickup time, a shop can mark an order "Not picked up". It isn't refunded: the pass stays used, a confirmed overage is charged, and the shop is paid as for a pickup. The member gets a push and email, and the Sippy Brew team gets an email plus an alert on the admin page (`platform_alerts`).
+- *Make it close to pickup:* every order in the queue shows "Start at" (5 minutes before pickup), with a reminder to make Sippy Brew orders just in time.
+- *Allergies:* members can add an allergy (and a note) to an order; the shop sees a big red ALLERGY NOTICE, including in the new-order push.
+- *Prices:* shops can change prices any time and must update their Sippy Brew menu; members see "Price updated" for 14 days.
+- *Menu from a photo:* shops photograph their menu; Claude reads the drinks and prices, food is skipped, and the shop reviews every item before it's added.
+- *Merchant FAQ:* `/shop/faq`, a FAQ tab in the shop app and demo (`packages/core/src/faq.ts`).
+
 **Our role (Terms):** Sippy Brew isn't the coffee shop. Shops are independent and responsible for their drinks and service; order issues go to the shop. The plain-language text is in `packages/core/src/legal.ts` and shows on `/terms`, at sign-up and checkout, and in the demo.
 
 Each tier (how many Daily Passes) comes in two sub-tiers (how much one pass covers): **House** covers up to $4.00 a day ("Your go-to cup: drip, cold brew or tea, black or your way."); **Specialty** covers up to $8.00 ("Lattes, cappuccinos and every new seasonal pour."). The sub-tier is a price cap, not a drink restriction: a House member can order a latte and confirm the overage.
@@ -100,6 +108,8 @@ pnpm dev:web                            # http://localhost:3000
 | `NEXT_PUBLIC_SITE_URL` | Used for email links and Stripe return URLs. |
 | `CRON_SECRET` | Bearer token for `/api/cron/*`. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Optional. Without a key, emails are printed to the server log. |
+| `ANTHROPIC_API_KEY` | Server only. Lets shops add menu items from a photo (`/api/shop/menu/scan`, Claude reads the photo). Without it, shops add items by hand. |
+| `SUPPORT_EMAIL` | Optional. Also gets the "no-show" email sent to admins. |
 
 ### Demo accounts (after `pnpm seed`)
 

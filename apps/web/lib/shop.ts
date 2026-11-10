@@ -19,14 +19,13 @@ import {
   type MenuItemInput,
   type ModifierGroup,
   type OrderStatus,
-  type ShopHours,
-} from "@sippy/core";
+  type ShopHours, canFlagNoShow } from "@sippy/core";
 import type { Session } from "./auth";
 import { captureOverage, voidOverage } from "./billing";
 import { mapMenuItem, mapOrder, mapPayout, mapPost, mapShop, ORDER_SELECT } from "./db";
 import { AppError, badRequest, forbidden, fromDbError, notFound } from "./http";
 import { getLiveSubscription, getOrder } from "./member";
-import { notifyFollowersOfPost, notifyMemberOrderStatus } from "./notify";
+import { notifyFollowersOfPost, notifyMemberNoShow, notifyMemberOrderStatus, notifyTeamNoShow } from "./notify";
 import { awardVisitRewards } from "./rewards";
 import { supabaseAdmin } from "./supabase/server";
 
@@ -289,4 +288,42 @@ export async function createPost(s: Session, body: string) {
   const post = mapPost({ ...data, shops: { name: shop.name } });
   void notifyFollowersOfPost(shop.id, shop.name, post.body).catch((e) => console.error("notify failed", e));
   return post;
+}
+
+// ---- No-shows ----
+
+/**
+ * The member didn't pick up. Allowed from 30 minutes after the pickup time. Not refunded: the
+ * pass stays used, a confirmed overage is charged, and the shop is paid as for a pickup. The
+ * member gets a nudge, and the Sippy Brew team gets an alert.
+ */
+export async function flagNoShow(s: Session, orderId: string) {
+  const shop = await getOwnerShopRow(s);
+  const db = supabaseAdmin();
+  const { data: row } = await db.from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (!row || row.shop_id !== shop.id) throw notFound("Order");
+  const check = canFlagNoShow({ status: row.status, pickupAt: row.pickup_time }, new Date());
+  if (!check.ok) throw new AppError(409, "NO_SHOW_NOT_ALLOWED", check.message);
+
+  const split = splitOrder(row.pass_covered_amount);
+  const { error } = await db.rpc("flag_no_show", {
+    p_order: row.id,
+    p_shop: shop.id,
+    p_staff: s.userId,
+    p_commission: split.commissionCents,
+    p_net: split.netCents,
+    p_grace_minutes: RULES.noShowGraceMinutes,
+  });
+  if (error) throw fromDbError(error);
+
+  // The drink was made: collect the overage the member confirmed, as at a pickup.
+  if (row.overage_payment_intent && row.overage_status === "authorized") {
+    const res = await captureOverage(row.overage_payment_intent);
+    const fee = res.ok ? Math.min(row.overage_amount, res.feeCents ?? overageProcessingFee(row.overage_amount)) : 0;
+    await db.from("orders").update({ overage_status: res.ok ? "captured" : "failed", overage_fee: fee }).eq("id", row.id);
+  }
+
+  const order = await getOrder(row.id);
+  await Promise.all([notifyMemberNoShow(order), notifyTeamNoShow(order)]).catch((e) => console.error("no-show notify", e));
+  return order;
 }

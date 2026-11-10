@@ -198,7 +198,7 @@ export function checkOverageConfirmed(
 }
 
 /** Order statuses the shop moves through. "cancelled" returns the pass and releases any overage hold. */
-export const ORDER_STATUSES = ["received", "preparing", "ready", "picked_up", "cancelled"] as const;
+export const ORDER_STATUSES = ["received", "preparing", "ready", "picked_up", "no_show", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
@@ -206,6 +206,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   preparing: "Preparing",
   ready: "Ready",
   picked_up: "Picked up",
+  no_show: "Not picked up",
   cancelled: "Cancelled",
 };
 
@@ -214,6 +215,8 @@ const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   preparing: ["ready", "cancelled"],
   ready: ["picked_up", "cancelled"],
   picked_up: [],
+  // Set by the shop's "Not picked up" flag (rules/merchant.ts canFlagNoShow), never a status button.
+  no_show: [],
   cancelled: [],
 };
 
