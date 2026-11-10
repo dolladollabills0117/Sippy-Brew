@@ -1,10 +1,10 @@
-import { formatCents, getTier, RULES } from "@sippy/core";
+import { formatCents, getTier, RULES, SITE } from "@sippy/core";
 import { api, API_URL, Badge, Button, Card, colors, ErrorNote, errorMessage, Loading, Meter, Row, Screen, spacing, supabase, Text, UpgradeCard, useLoad } from "@sippy/mobile-ui";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { RefreshControl, Share, View } from "react-native";
+import { Linking, RefreshControl, Share, View } from "react-native";
 
 const dateFmt = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: RULES.timeZone });
 
@@ -132,6 +132,12 @@ export default function AccountTab() {
           </Card>
         </>
       )}
+
+      <Card style={{ gap: spacing.sm }}>
+        <Text variant="h2">Questions?</Text>
+        <Text color={colors.pecan}>About an order? The shop that made it can fix it fastest. For your pass or billing, email us.</Text>
+        <Button label={`Email ${SITE.supportEmail}`} variant="secondary" onPress={() => Linking.openURL(`mailto:${SITE.supportEmail}`)} />
+      </Card>
 
       {s.upgrade && <UpgradeCard upgrade={s.upgrade} passesLeft={s.passesLeft} nudge={s.upgrade.suggested} onDone={me.reload} />}
 

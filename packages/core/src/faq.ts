@@ -1,4 +1,4 @@
-import { RULES, SUB_TIERS } from "./config";
+import { RULES, SITE, SUB_TIERS } from "./config";
 
 /**
  * Member FAQ, shown in the demo and on /faq. Plain-language summary; the Terms of Service
@@ -137,7 +137,7 @@ export const FAQ: readonly FaqSection[] = [
   },
 ];
 
-export const FAQ_FOOTNOTE = "This FAQ is a summary. If anything here differs from our Terms of Service, the Terms apply.";
+export const FAQ_FOOTNOTE = `This FAQ is a summary. If anything here differs from our Terms of Service, the Terms apply. Still have a question? Email ${SITE.supportEmail}.`;
 
 /** Merchant FAQ, shown on the shop side (demo, web /shop/faq, shop app). The merchant agreement controls. */
 export const MERCHANT_FAQ: readonly FaqSection[] = [
@@ -227,4 +227,4 @@ export const MERCHANT_FAQ: readonly FaqSection[] = [
   },
 ];
 
-export const MERCHANT_FAQ_FOOTNOTE = "This FAQ is a summary. If anything here differs from your Sippy Brew merchant agreement, the agreement applies.";
+export const MERCHANT_FAQ_FOOTNOTE = `This FAQ is a summary. If anything here differs from your Sippy Brew merchant agreement, the agreement applies. Still have a question? Email ${SITE.supportEmail}.`;

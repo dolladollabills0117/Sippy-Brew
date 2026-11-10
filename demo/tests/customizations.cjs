@@ -19,7 +19,7 @@ const fs = require('fs');
   await tap('[data-a="pick-sub"][data-id="decaf"]');
   await tap('[data-a="pick-tier"][data-id="affogato_decaf"]');
   await tap('form[data-form="signup"] button[type="submit"]');
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
 
   // Day 1: customized latte.
   await tap('[data-a="open-shop"][data-id="main"]');

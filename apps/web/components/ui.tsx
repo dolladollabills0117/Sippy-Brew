@@ -196,3 +196,14 @@ export function CupIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** Cart icon: a line drawing in the current text color. */
+export function CartIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d="M2.5 4h2.2l2.3 10.1a1.6 1.6 0 0 0 1.6 1.2h8.7a1.6 1.6 0 0 0 1.5-1.1L21 7.6H6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9.6" cy="19.6" r="1.7" fill="currentColor" />
+      <circle cx="17.2" cy="19.6" r="1.7" fill="currentColor" />
+    </svg>
+  );
+}

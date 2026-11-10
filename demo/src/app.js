@@ -85,7 +85,7 @@
       error: null, scan: null, sheet: null, authMode: "signup",
       quizStep: 0, quiz: {}, loc: null, locAsked: false, radius: S.RULES.defaultRadiusMiles, showBeyond: false, periodStart: 0, pendingTier: null,
       bonus: [], refCode: null, friends: 0, grandTour: false,
-      removed: {}, appeals: {}, cartShop: null, editLine: null, customizeShop: null,
+      removed: {}, appeals: {}, agreed: false, lastEmail: null, contactSent: false, cartShop: null, editLine: null, customizeShop: null,
       minuteOffset: 0, prices: {}, priceChangedAt: {}, notices: [], teamAlerts: [], scanRows: null, scanSkipped: [], scanning: false, orderNote: "", orderAllergy: "" };
   }
   var state = fresh();
@@ -182,6 +182,8 @@
   var dateFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: TZ });
 
   var LOGO = S.LOGO_SVG;
+  // Cart icon: a simple line drawing that takes the text color (Burnt Sugar in the top bar).
+  var CART = '<svg class="cart-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 4h2.2l2.3 10.1a1.6 1.6 0 0 0 1.6 1.2h8.7a1.6 1.6 0 0 0 1.5-1.1L21 7.6H6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.6" cy="19.6" r="1.7" fill="currentColor"/><circle cx="17.2" cy="19.6" r="1.7" fill="currentColor"/></svg>';
   var BEANS = '<svg class="hero-beans" viewBox="0 0 120 80" aria-hidden="true">' +
     '<g class="drop" style="--d:0s"><g class="dance"><ellipse cx="30" cy="40" rx="14" ry="9" fill="#A8642F"/><path d="M22 40 Q30 36 38 40" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round"/></g></g>' +
     '<g class="drop" style="--d:0.15s"><g class="dance"><ellipse cx="60" cy="30" rx="14" ry="9" fill="#6B4F3A"/><path d="M52 30 Q60 26 68 30" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round"/></g></g>' +
@@ -253,7 +255,7 @@
       tiers +
       '<h2 class="section-title">How it works</h2><ol class="steps"><li><span class="dot">1</span>Pick a pass</li><li><span class="dot">2</span>Order ahead from a shop near you</li><li><span class="dot">3</span>Scan at the counter. Sip.</li></ol>' +
       '<p class="demo-note">Own a coffee shop? <button class="linkbtn" data-a="shop-signup">List your shop</button> · <button class="linkbtn" data-a="shop-login">Shop log in</button></p>' +
-      '<p class="demo-note">This is a working demo with sample shops. No real payments are made. <button class="linkbtn" data-a="terms">Terms</button></p>';
+      '<p class="demo-note">This is a working demo with sample shops. No real payments are made. <button class="linkbtn" data-a="terms">Terms</button> · <button class="linkbtn" data-a="contact">Contact</button></p>';
   }
 
   // ---- "Get matched" quiz: one question per card; the card swipes away when you answer.
@@ -371,6 +373,20 @@
       }).join("") + '<p class="demo-note">' + esc(footnote) + "</p>";
   }
 
+  function contactScreen() {
+    var shop = state.session === "shop";
+    return '<div class="topbar"><button class="back" data-a="contact-back">‹ Back</button>' + logoHome() + "</div>" +
+      '<h1 style="font-size:2rem;padding:0 4px">Contact us</h1><p class="muted" style="padding:0 4px">Members and coffee shops: we read every message.</p>' +
+      '<div class="card stack" style="gap:6px"><b>Email us directly</b><a href="mailto:' + S.SITE.supportEmail + '" style="font-size:1.2rem;font-weight:800;color:var(--burnt-ink)">' + S.SITE.supportEmail + "</a>" +
+      '<span class="muted small">About an order (a drink, a mistake, a wait)? The shop that made it can fix it fastest. For your pass, billing, your shop listing or payouts, write to us.</span></div>' +
+      (state.contactSent ? '<div class="alert ok" role="status">Thanks! We got your message and will reply soon.</div>' :
+        '<form class="card stack" data-form="contact"><label class="field" for="ct-name">Your name<input class="input" id="ct-name" name="name" value="' + esc(shop ? "Jordan Reyes" : (state.user && state.user.name) || "") + '"></label>' +
+        '<label class="field" for="ct-email">Email we can reply to<input class="input" id="ct-email" name="email" type="email" value="' + esc(shop ? "owner@shop.example" : (state.user && state.user.email) || "") + '"></label>' +
+        '<label class="field" for="ct-topic">I\'m a…<select class="input" id="ct-topic" name="topic"><option value="member"' + (shop ? "" : " selected") + '>Member (coffee drinker)</option><option value="shop"' + (shop ? " selected" : "") + '>Coffee shop</option><option value="other">Something else</option></select></label>' +
+        '<label class="field" for="ct-msg">Message<textarea class="input" id="ct-msg" name="message" rows="4"></textarea></label>' +
+        '<button class="btn" type="submit">Send message</button><span class="demo-note" style="text-align:left;padding:0">Demo: nothing is sent. In the real app this goes to ' + S.SITE.supportEmail + ".</span></form>");
+  }
+
   function faqScreen() {
     return '<div class="topbar"><button class="back" data-a="faq-back">‹ Back</button>' + logoHome() + "</div>" +
       '<h1 style="font-size:2rem;padding:0 4px">FAQ</h1>' +
@@ -462,14 +478,21 @@
       '<button class="btn" data-a="checkout"' + (state.tierId === t.id ? " disabled" : "") + ">" + (state.tierId === t.id ? "This is your current plan" : state.tierId ? "Switch from " + dateFmt.format(periodEndDate()) : "Continue · " + money(t.priceCents) + "/month") + "</button></div>";
   }
 
+  /** Before paying: price, renewal, expiry, refunds, cancellation, and a required "I agree". */
+  function purchaseSummaryHtml(t) {
+    var sm = S.purchaseSummary(t), parts = S.CONSENT_LABEL.split("Terms of Service");
+    return '<div class="summary-box"><b>' + esc(sm.title) + '</b><ul>' + sm.lines.map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul>" +
+      '<label for="agree" class="agree"><input id="agree" type="checkbox" data-a="agree" ' + (state.agreed ? "checked" : "") + '><span>' + esc(parts[0]) +
+      '<button class="linkbtn" style="min-height:0;padding:0" data-a="terms">Terms of Service</button>' + esc(parts[1]) + "</span></label></div>";
+  }
+
   function checkoutSheet() {
     var t = S.getTier(state.selectedTier);
     return '<div class="sheet-back" data-a="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="Checkout" data-stop>' +
       '<p class="badge">Demo checkout</p><h2 style="font-size:1.6rem">' + t.name + " · " + money(t.priceCents) + "/month</h2>" +
-      (state.tierId ? '<p class="muted">No charge today. Your new pass starts ' + dateFmt.format(periodEndDate()) + ", when your next month begins.</p>" : "") +
-      '<p class="muted small">By continuing you agree to the <button class="linkbtn" style="min-height:0;padding:0" data-a="terms">Terms</button>. Shops make and serve your coffee; Sippy Brew runs the pass.</p>' +
-      '<p class="muted">In the real app this opens Stripe Checkout, so card numbers never touch Sippy Brew. Nothing is charged here.</p>' +
-      '<button class="btn" data-a="pay">' + (state.tierId ? "Confirm the switch (demo)" : "Pay " + money(t.priceCents) + " (demo)") + "</button>" +
+      (state.tierId ? '<p class="muted">No charge today. Your new pass starts ' + dateFmt.format(periodEndDate()) + ", when your next month begins.</p>" : purchaseSummaryHtml(t)) +
+      '<p class="muted small">In the real app this opens Stripe Checkout, so card numbers never touch Sippy Brew. Nothing is charged here.</p>' +
+      '<button class="btn" data-a="pay"' + (!state.tierId && !state.agreed ? " disabled" : "") + ">" + (state.tierId ? "Confirm the switch (demo)" : "Pay " + money(t.priceCents) + " (demo)") + "</button>" +
       '<button class="btn ghost" data-a="close-sheet">Cancel</button></div></div>';
   }
 
@@ -483,7 +506,7 @@
         '<button class="pill dark" data-a="sign-out">Sign out</button></div>';
     }
     var n = state.session === "member" ? cartCount() : 0;
-    return '<div class="topbar">' + logoHome() + (state.session === "member" ? '<button class="cart-btn" data-a="view-cart" aria-label="Cart, ' + n + ' item' + (n === 1 ? "" : "s") + '">🛒' + (n ? '<span class="cart-count">' + n + "</span>" : "") + "</button>" : "") + "</div>";
+    return '<div class="topbar">' + logoHome() + (state.session === "member" ? '<button class="cart-btn" data-a="view-cart" aria-label="Cart, ' + n + ' item' + (n === 1 ? "" : "s") + '">' + CART + (n ? '<span class="cart-count">' + n + "</span>" : "") + "</button>" : "") + "</div>";
   }
 
   // ---- Member app
@@ -566,7 +589,7 @@
   /** "View cart" bar, shown wherever there's something in the cart. */
   function cartBar() {
     var n = cartCount(); if (!n) return "";
-    return '<div class="sticky-cta cart-bar"><button class="btn" data-a="view-cart"><span>🛒 View cart · ' + n + " item" + (n === 1 ? "" : "s") + "</span><span class=\"num\">" + money2(cartTotal()) + "</span></button></div>";
+    return '<div class="sticky-cta cart-bar"><button class="btn" data-a="view-cart"><span class="row" style="gap:8px">' + CART + "View cart · " + n + " item" + (n === 1 ? "" : "s") + "</span><span class=\"num\">" + money2(cartTotal()) + "</span></button></div>";
   }
 
   function shopDetail(id) {
@@ -620,7 +643,7 @@
     var label = hasOver ? "Use pass + pay " + money2(split.overageCents) + " overage" : "Use today's pass";
     if (!state.cart.length) {
       return '<button class="back" data-a="back">‹ Back</button><h1 style="font-size:2rem;padding:0 4px">Your cart</h1>' +
-        '<div class="card stack" style="align-items:center;text-align:center"><span style="font-size:2.4rem" aria-hidden="true">🛒</span><b>Your cart is empty</b><span class="muted small">Pick a shop and add a coffee.</span>' +
+        '<div class="card stack" style="align-items:center;text-align:center"><span class="cart-empty-ico">' + CART + '</span><b>Your cart is empty</b><span class="muted small">Pick a shop and add a coffee.</span>' +
         '<button class="btn" data-a="tab" data-id="shops">Find a shop</button></div>';
     }
     return '<button class="back" data-a="cart-back">‹ ' + esc(s.name) + "</button>" +
@@ -701,6 +724,8 @@
       '<div class="meter"><span style="width:' + Math.round((100 * state.passesLeft) / t.passesPerMonth) + '%"></span></div>' +
       '<span class="muted small">Unused monthly passes expire at renewal. Bonus passes roll over for a year.</span>' + bonusLine() + "</div>" +
       inviteCard() +
+      (state.lastEmail ? '<details class="card email-preview"><summary><b>📧 Your confirmation email</b><span class="muted small">Sent when you joined: your terms and how to cancel</span></summary><p class="muted small"><b>' + esc(state.lastEmail.subject) + "</b></p><pre>" + esc(state.lastEmail.text) + "</pre></details>" : "") +
+      '<button class="card faq-cta" data-a="contact"><span aria-hidden="true" style="font-size:1.6rem">✉️</span><span class="grow stack" style="gap:2px;text-align:left"><b>Contact us</b><span class="muted small">' + esc(S.SITE.supportEmail) + '</span></span><span aria-hidden="true" style="font-size:1.4rem">›</span></button>' +
       '<button class="card faq-cta" data-a="faq"><span aria-hidden="true" style="font-size:1.6rem">❓</span><span class="grow stack" style="gap:2px;text-align:left"><b>Questions?</b><span class="muted small">Passes, orders, billing, rewards and who to contact.</span></span><span aria-hidden="true" style="font-size:1.4rem">›</span></button>' +
       '<div class="card stack"><b>Demo controls</b><span class="muted small">Today in the demo: ' + dateFmt.format(now()) + ". You get one pass a day, so move to the next day to order again.</span>" +
       '<button class="btn line" data-a="new-day">Start the next day</button><button class="btn line" data-a="new-month">Skip to next month</button><button class="btn danger" data-a="reset">Reset the demo</button></div>' +
@@ -990,6 +1015,7 @@
     else if (state.screen === "near") html = nearScreen();
     else if (state.screen === "terms") html = termsScreen();
     else if (state.screen === "faq") html = faqScreen();
+    else if (state.screen === "contact") html = contactScreen();
     else {
       html = appTop();
       if (state.session === "admin") {
@@ -1000,7 +1026,7 @@
         else if (state.detail && state.detail.type === "qr") html += qrDetail(state.detail.id);
         else html += state.tab === "orders" ? ordersTab() : state.tab === "account" ? accountTab() : shopsTab();
       } else {
-        html += state.shopTab === "scan" ? shopScanTab() : state.shopTab === "menu" ? shopMenuTab() : state.shopTab === "dashboard" ? shopDashTab() : state.shopTab === "faq" ? faqList(S.MERCHANT_FAQ, S.MERCHANT_FAQ_FOOTNOTE, "Shop FAQ") : shopOrdersTab();
+        html += state.shopTab === "scan" ? shopScanTab() : state.shopTab === "menu" ? shopMenuTab() : state.shopTab === "dashboard" ? shopDashTab() : state.shopTab === "faq" ? faqList(S.MERCHANT_FAQ, S.MERCHANT_FAQ_FOOTNOTE, "Shop FAQ") + '<button class="btn line" data-a="contact">Contact Sippy Brew</button>' : shopOrdersTab();
       }
       html += tabs();
     }
@@ -1141,6 +1167,8 @@
       case "use-sample-loc": state.locAsked = true; state.loc = null; break;
       case "toggle-beyond": state.showBeyond = !state.showBeyond; break;
       case "faq": state.sheet = null; state.screen = "faq"; render(); return window.scrollTo(0, 0);
+      case "contact": state.sheet = null; state.contactSent = false; state.screen = "contact"; render(); return window.scrollTo(0, 0);
+      case "contact-back": state.screen = state.session ? "app" : "landing"; render(); return window.scrollTo(0, 0);
       case "faq-back": state.screen = state.session ? "app" : "landing"; render(); return window.scrollTo(0, 0);
       case "terms": state.termsFrom = state.screen; state.sheet = null; state.screen = "terms"; render(); return window.scrollTo(0, 0);
       case "terms-back": state.screen = state.termsFrom && state.termsFrom !== "terms" ? state.termsFrom : (state.session ? "app" : "landing"); break;
@@ -1206,10 +1234,12 @@
         var changing = !!state.tierId;
         var t = S.getTier(state.selectedTier);
         state.sheet = null; state.screen = "app"; state.session = "member"; state.tab = changing ? "account" : "shops"; state.detail = null;
+        if (!changing && !state.agreed) return;
+        if (!changing) state.lastEmail = S.confirmationEmail({ name: (state.user && state.user.name) || "", plan: t, renewsOn: new Date(now().getTime() + 30 * 864e5), accountUrl: "sippybrew.com/account", termsUrl: "sippybrew.com/terms" });
         if (!changing) { state.tierId = t.id; state.passesLeft = t.passesPerMonth; state.passDaysUsed = []; state.periodStart = state.dayOffset; state.pendingTier = null; state.refCode = state.refCode || S.makeReferralCode(); }
         else state.pendingTier = t.id === state.tierId ? null : t.id; // takes effect next month
         render(); window.scrollTo(0, 0);
-        return toast(changing ? "Done! " + t.name + " starts " + dateFmt.format(periodEndDate()) + ". This month stays as it is." : "You're in! " + t.passesPerMonth + " Daily Passes loaded.");
+        return toast(changing ? "Done! " + t.name + " starts " + dateFmt.format(periodEndDate()) + ". This month stays as it is." : "You're in! " + t.passesPerMonth + " Daily Passes loaded. We emailed your membership details to " + ((state.user && state.user.email) || "you") + ".");
       }
       case "change-plan": state.selectedTier = state.pendingTier || state.tierId; state.pickSub = S.getTier(state.tierId).subTier; state.screen = "plans"; break;
       case "tab": state.tab = id; state.detail = null; break;
@@ -1339,6 +1369,7 @@
     document.addEventListener("change", function (ev) {
       var el = ev.target, a = el.getAttribute && el.getAttribute("data-a");
       if (a === "confirm-overage") { state.confirmedOverage = el.checked ? Number(el.getAttribute("data-amount")) : null; render(); }
+      else if (a === "agree") { state.agreed = el.checked; render(); }
       else if (a === "use-bonus") { state.useBonus = el.checked; state.confirmedOverage = null; render(); }
       else if (a === "scan-keep") { state.scanRows[Number(el.getAttribute("data-i"))].keep = el.checked; render(); }
       else if (a === "menu-photo" && el.files && el.files[0]) {
@@ -1390,6 +1421,10 @@
         state.session = "shop"; state.counterShop = id; state.shopTab = "dashboard"; state.screen = "app"; state.shopError = null; state.detail = null;
         render(); window.scrollTo(0, 0);
         toast("Your shop is listed! An admin reviews new shops before members can see them.");
+      } else if (kind === "contact") {
+        if ((f.elements.message.value || "").trim().length < 10) { toast("Write a message of at least 10 characters."); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.elements.email.value || "")) { toast("Add an email we can reply to."); return; }
+        state.contactSent = true; render(); toast("Message sent (demo).");
       } else if (kind === "appeal") {
         var note = (f.elements.note.value || "").trim();
         if (note.length < 20) { toast("Tell us what happened in at least 20 characters."); return; }

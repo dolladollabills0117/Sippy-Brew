@@ -22,7 +22,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { CustomizeDialog } from "./CustomizeDialog";
-import { Alert, Button, Card, EmptyState, Money } from "./ui";
+import { Alert, Button, Card, CartIcon, EmptyState, Money } from "./ui";
 
 interface CartLine {
   key: string;
@@ -206,7 +206,10 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
 
       <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
         <Card id="cart" className="scroll-mt-24">
-          <h2 className="text-2xl text-espresso">🛒 Your cart</h2>
+          <h2 className="flex items-center gap-2 text-2xl text-espresso">
+            <CartIcon className="h-7 w-7 text-burnt-sugar" />
+            Your cart
+          </h2>
           {cart.length === 0 ? (
             <p className="mt-3 text-pecan">Your cart is empty. Add a coffee from the menu.</p>
           ) : (
@@ -403,7 +406,9 @@ export function OrderBuilder({ shop, menu, summary }: { shop: Shop; menu: MenuIt
           href="#cart"
           className="sticky bottom-[calc(12px+env(safe-area-inset-bottom))] z-10 flex min-h-14 items-center justify-between rounded-2xl bg-burnt-sugar px-5 text-lg font-extrabold text-cream-swirl shadow-card lg:hidden"
         >
-          <span>🛒 View cart · {cart.reduce((n, l) => n + l.quantity, 0)} item{cart.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"}</span>
+          <span className="flex items-center gap-2">
+            <CartIcon className="h-6 w-6" />
+            View cart · {cart.reduce((n, l) => n + l.quantity, 0)} item{cart.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"}</span>
           <span className="tabular-nums">{money(total)}</span>
         </a>
       )}

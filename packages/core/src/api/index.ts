@@ -72,7 +72,9 @@ export function createApiClient(opts: ApiClientOptions) {
   return {
     // ---- Members ----
     me: () => request<MemberSummary>("GET", "/api/me"),
-    checkout: (tier: TierId, returnUrl?: string) => request<{ url: string }>("POST", "/api/checkout", { tier, returnUrl }),
+    /** `agreed`: the member checked the box agreeing to the Terms and the pre-purchase summary. */
+    checkout: (tier: TierId, returnUrl?: string, agreed?: boolean) => request<{ url: string }>("POST", "/api/checkout", { tier, returnUrl, agreed }),
+    contact: (input: { name: string; email: string; topic: "member" | "shop" | "other"; message: string; website?: string }) => request<{ sent: boolean }>("POST", "/api/contact", input),
     upgradePlan: (toPlan: TierId, confirmedCents: number) =>
       request<{ plan: TierId; chargedCents: number }>("POST", "/api/subscription/upgrade", { toPlan, confirmedCents }),
     /** Switch plans from next month (or pass the current plan to cancel a pending switch). */

@@ -1,5 +1,5 @@
 import "server-only";
-import { describeOptions, formatCents, type Order } from "@sippy/core";
+import { confirmationEmail, describeOptions, formatCents, SITE, type Order, type Tier } from "@sippy/core";
 import { env } from "./env";
 import { supabaseAdmin } from "./supabase/server";
 
@@ -139,4 +139,21 @@ export async function notifyShopRemovedForFood(shopId: string) {
     `${shop.name} was removed from Sippy Brew for selling food. Sippy Brew is drinks only, and selling food through it isn't allowed, with no exceptions.\n\nIf this happened by genuine error rather than misrepresentation, you can appeal once from your shop dashboard: ${env.siteUrl()}/shop`,
   );
   await sendPush([shop.owner_id], "shop", "Shop removed", "Your shop was removed for selling food. Open your dashboard to appeal if it was an error.", { screen: "dashboard" });
+}
+
+/** After the first payment: the terms they agreed to, and how to cancel. */
+export async function sendMembershipConfirmation(memberId: string, plan: Tier, renewsOn: Date) {
+  const { data: p } = await supabaseAdmin().from("profiles").select("email, name").eq("id", memberId).single();
+  if (!p?.email) return;
+  const e = confirmationEmail({ name: p.name, plan, renewsOn, accountUrl: `${env.siteUrl()}/account`, termsUrl: `${env.siteUrl()}/terms` });
+  await sendEmail(p.email, e.subject, e.text);
+}
+
+/** Contact page messages go to support. */
+export async function sendToSupport(from: { name: string; email: string; topic: string; userId: string | null }, message: string) {
+  await sendEmail(
+    SITE.supportEmail,
+    `[${from.topic}] Message from ${from.name}`,
+    `From: ${from.name} <${from.email}>${from.userId ? ` (account ${from.userId})` : ""}\nTopic: ${from.topic}\n\n${message}`,
+  );
 }

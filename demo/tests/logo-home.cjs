@@ -27,7 +27,7 @@ const path = require("path");
   await tap('[data-a="pick-sub"][data-id="decaf"]');
   await tap('[data-a="pick-tier"][data-id="affogato_decaf"]');
   await tap('form[data-form="signup"] button[type="submit"]');
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
   await tap('[data-a="tab"][data-id="account"]'); await logo();
   if ((await p.getAttribute('[data-a="tab"][data-id="shops"]', "aria-current")) !== "page") fail("member logo did not go to Shops");
   await tap('[data-a="open-shop"][data-id="main"]');

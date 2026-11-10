@@ -135,7 +135,7 @@ export default function ShopScreen() {
         cart.length > 0 ? (
           <Button
             big
-            label={`🛒 View cart · ${cart.reduce((n, l) => n + l.quantity, 0)} item${cart.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"} · ${money(total)}`}
+            label={`View cart · ${cart.reduce((n, l) => n + l.quantity, 0)} item${cart.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"} · ${money(total)}`}
             onPress={() => scroller.current?.scrollTo({ y: cartY.current, animated: true })}
           />
         ) : null
@@ -227,7 +227,7 @@ export default function ShopScreen() {
       ) : (
         available.length > 0 && (
           <Card style={{ gap: spacing.md }} onLayout={(e) => (cartY.current = e.nativeEvent.layout.y)}>
-            <Text variant="h2">🛒 Your cart</Text>
+            <Text variant="h2">Your cart</Text>
             {cart.length === 0 ? (
               <Text color={colors.pecan}>Your cart is empty. Add a coffee from the menu.</Text>
             ) : (

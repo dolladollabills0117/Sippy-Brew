@@ -54,7 +54,7 @@ const path = require("path");
   if ((await p.getAttribute('[data-a="select-tier"][data-id="double_espresso_double_shot"]', "aria-pressed")) !== "true") fail("quiz plan not preselected");
   await tap('[data-a="checkout"]');
   if (!(await txt() + (await p.textContent("body"))).includes("Terms")) fail("checkout terms link missing");
-  await tap('[data-a="pay"]');
+  { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
   if (!(await txt()).includes("Shops near you")) fail("member shops tab missing");
 
   // Plan change takes effect next month.
@@ -64,7 +64,7 @@ const path = require("path");
   await tap('[data-a="select-tier"][data-id="affogato_decaf"]');
   await tap('[data-a="checkout"]');
   if (!(await p.textContent("body")).includes("No charge today")) fail("change checkout should say no charge today");
-  await tap('[data-a="pay"]');
+  { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
   const acct = await txt();
   if (!acct.includes("Local · Specialty") || !acct.includes("Switching to Visitor · House")) fail("plan should stay until next month");
   await tap('[data-a="new-month"]');

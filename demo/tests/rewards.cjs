@@ -19,7 +19,7 @@ const path = require("path");
   await tap('[data-a="pick-sub"][data-id="decaf"]');
   await tap('[data-a="pick-tier"][data-id="affogato_decaf"]');
   await tap('form[data-form="signup"] button[type="submit"]');
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
   const home = await txt();
   if (!home.includes("Neighborhood Passport") || !home.includes("Unlocks once more than 50 shops join")) fail("passport card / locked Grand Tour missing");
 

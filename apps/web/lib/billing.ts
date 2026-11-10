@@ -1,10 +1,11 @@
 import "server-only";
-import { getTier, isTierId, planRenewal, RULES, TIERS, upgradeNowCost, upgradeOffer, upgradeTarget, type PassLedgerEntry, type Subscription, type TierId } from "@sippy/core";
+import { getTier, isTierId, planRenewal, RULES, TIERS, upgradeNowCost, upgradeOffer, upgradeTarget, type PassLedgerEntry, type Subscription, type TierId, TERMS_VERSION } from "@sippy/core";
 import Stripe from "stripe";
 import type { Session } from "./auth";
 import { env } from "./env";
 import { AppError, badRequest } from "./http";
 import { notifyMemberRenewal } from "./notify";
+import { sendMembershipConfirmation } from "./notify";
 import { qualifyReferral } from "./rewards";
 import { supabaseAdmin } from "./supabase/server";
 
@@ -43,9 +44,12 @@ function safeReturn(url: string | undefined, fallback: string): string {
 }
 
 /** Stripe Checkout for a subscription. Card details are entered on Stripe's page, never ours. */
-export async function createCheckout(s: Session, tier: unknown, returnUrl?: string) {
+export async function createCheckout(s: Session, tier: unknown, returnUrl?: string, agreed?: unknown) {
   if (!isTierId(tier)) throw badRequest("BAD_TIER", "Pick a plan.");
+  // The member must agree to the Terms and the pre-purchase summary (renewal, expiry, cancellation).
+  if (agreed !== true) throw badRequest("CONSENT_REQUIRED", "Please read the summary and check the box to agree before paying.");
   const db = supabaseAdmin();
+  await db.from("profiles").update({ terms_accepted_at: new Date().toISOString(), terms_version: TERMS_VERSION }).eq("id", s.userId);
   const { data: live } = await db.from("subscriptions").select("id").eq("member_id", s.userId).in("status", ["active", "trialing", "past_due"]).limit(1);
   if (live?.length) throw badRequest("ALREADY_SUBSCRIBED", "You already have a plan. Change it from your account page.");
   const base = safeReturn(returnUrl, `${env.siteUrl()}/account`);
@@ -55,8 +59,8 @@ export async function createCheckout(s: Session, tier: unknown, returnUrl?: stri
     line_items: [{ price: priceIdFor(tier), quantity: 1 }],
     success_url: `${base}${base.includes("?") ? "&" : "?"}checkout=success`,
     cancel_url: `${base}${base.includes("?") ? "&" : "?"}checkout=cancelled`,
-    subscription_data: { metadata: { member_id: s.userId, tier } },
-    metadata: { member_id: s.userId, tier },
+    subscription_data: { metadata: { member_id: s.userId, tier, terms_version: TERMS_VERSION } },
+    metadata: { member_id: s.userId, tier, terms_version: TERMS_VERSION },
   });
   return { url: session.url! };
 }
@@ -134,7 +138,9 @@ export async function syncSubscription(sub: Stripe.Subscription, opts: { grant: 
   // Snapshot this period's allowance so later edits to tiers.json apply from the next renewal.
   await db.from("subscriptions").update({ period_passes: tierCfg.passesPerMonth, period_max_pass_value: tierCfg.maxPassValueCents }).eq("id", saved.id);
   if (!ledgerErr) void notifyMemberRenewal(memberId, tierCfg.name, tierCfg.passesPerMonth).catch(() => {});
-  // First paid month: counts toward the friend who referred them (no-op after the first time).
+  // First paid month: confirmation email (terms + how to cancel), and it counts toward the friend
+  // who referred them. Both happen once: qualifyReferral marks first_paid_at.
+  if (!ledgerErr && !existing) await sendMembershipConfirmation(memberId, tierCfg, new Date(period.end)).catch((e) => console.error("confirmation email", e));
   if (!ledgerErr) await qualifyReferral(memberId).catch((e) => console.error("referral", e));
 }
 

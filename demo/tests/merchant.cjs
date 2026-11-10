@@ -19,7 +19,7 @@ const path = require("path");
   // Member orders with an allergy and a note.
   await tap('[data-a="pick-tier"][data-id="macchiato_double_shot"]');
   await tap('form[data-form="signup"] button[type="submit"]');
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
   await tap('.shop-card[data-id="main"]');
   await tap('[data-a="add-plain"]');
   await tap('[data-a="view-cart"]');

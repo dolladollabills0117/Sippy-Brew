@@ -3,6 +3,7 @@ import { DEFAULT_TIER, formatCents, getTier, isTierId, type TierId } from "@sipp
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { PlanCards } from "./PlanCards";
+import { PurchaseSummary } from "./PurchaseSummary";
 import { Alert, Button, Card } from "./ui";
 
 /** Pick a tier and sub-tier, then go to Stripe Checkout. Card details never touch the app. */
@@ -10,13 +11,14 @@ export function PlanPicker({ preselect }: { preselect?: string }) {
   const [plan, setPlan] = useState<TierId>(isTierId(preselect) ? preselect : DEFAULT_TIER);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const t = getTier(plan);
 
   async function checkout() {
     setBusy(true);
     setError(null);
     try {
-      const { url } = await api.checkout(plan, `${window.location.origin}/account`);
+      const { url } = await api.checkout(plan, `${window.location.origin}/account`, agreed);
       window.location.assign(url);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't start checkout. Please try again.");
@@ -34,7 +36,8 @@ export function PlanPicker({ preselect }: { preselect?: string }) {
           {formatCents(t.maxPassValueCents, { showZeroCents: true })} of that day&apos;s order; anything more is an overage you confirm before paying.
           Unused passes expire at renewal.
         </p>
-        <Button onClick={checkout} disabled={busy} aria-busy={busy}>
+        <PurchaseSummary plan={t} agreed={agreed} onAgree={setAgreed} />
+        <Button onClick={checkout} disabled={busy || !agreed} aria-busy={busy}>
           {busy ? "Opening checkout…" : `Continue · ${formatCents(t.priceCents)}/month`}
         </Button>
       </Card>

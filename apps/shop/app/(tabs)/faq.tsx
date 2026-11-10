@@ -1,7 +1,7 @@
-import { MERCHANT_FAQ, MERCHANT_FAQ_FOOTNOTE } from "@sippy/core";
-import { Card, colors, Screen, spacing, Text } from "@sippy/mobile-ui";
+import { MERCHANT_FAQ, MERCHANT_FAQ_FOOTNOTE, SITE } from "@sippy/core";
+import { Button, Card, colors, Screen, spacing, Text } from "@sippy/mobile-ui";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 
 /** Merchant FAQ: tap a question to reveal the answer. Copy lives in packages/core/src/faq.ts. */
 export default function FaqScreen() {
@@ -45,6 +45,7 @@ export default function FaqScreen() {
       <Text variant="small" color={colors.pecan}>
         {MERCHANT_FAQ_FOOTNOTE}
       </Text>
+      <Button label={`Email ${SITE.supportEmail}`} variant="secondary" onPress={() => Linking.openURL(`mailto:${SITE.supportEmail}?subject=Shop%20question`)} />
     </Screen>
   );
 }

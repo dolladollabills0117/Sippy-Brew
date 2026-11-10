@@ -1,9 +1,30 @@
-import { DEFAULT_SUB_TIER, DEFAULT_TIER_GROUP, formatCents, QUIZ, quizResult, recommendPlan, RULES, SUB_TIERS, TIER_GROUPS, type SubTierId, type TierId } from "@sippy/core";
+import { CONSENT_LABEL, DEFAULT_SUB_TIER, getTier, DEFAULT_TIER_GROUP, formatCents, purchaseSummary, QUIZ, quizResult, recommendPlan, RULES, SUB_TIERS, TIER_GROUPS, type SubTierId, type Tier, type TierId } from "@sippy/core";
 import { api, Badge, Button, Card, Chip, colors, ErrorNote, errorMessage, radii, Row, Screen, spacing, Text, useLoad } from "@sippy/mobile-ui";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, Pressable, View } from "react-native";
+import { AccessibilityInfo, Animated, Easing, Pressable, Switch, View } from "react-native";
+
+/** Before paying: price, renewal, expiry and cancellation, and a required "I agree". */
+function PurchaseSummary({ plan, agreed, onAgree }: { plan: Tier; agreed: boolean; onAgree: (v: boolean) => void }) {
+  const s = purchaseSummary(plan);
+  return (
+    <View style={{ gap: spacing.sm, borderWidth: 2, borderColor: colors.espresso, borderRadius: radii.lg, padding: spacing.md, backgroundColor: colors.vanillaBean, alignSelf: "stretch" }}>
+      <Text variant="bodyBold">{s.title}</Text>
+      {s.lines.map((l) => (
+        <Text key={l} variant="small">
+          • {l}
+        </Text>
+      ))}
+      <Row style={{ justifyContent: "space-between", minHeight: 48 }}>
+        <Text variant="bodyBold" style={{ flex: 1 }} nativeID="agree-label">
+          {CONSENT_LABEL}
+        </Text>
+        <Switch accessibilityLabelledBy="agree-label" value={agreed} onValueChange={onAgree} trackColor={{ true: colors.burntSugar, false: colors.latte }} />
+      </Row>
+    </View>
+  );
+}
 
 type Answers = { drink?: string; often?: string };
 const STEPS = [
@@ -29,6 +50,9 @@ export default function PlansScreen() {
   const [answers, setAnswers] = useState<Answers>({});
   const [subTier, setSubTier] = useState<SubTierId>(DEFAULT_SUB_TIER);
   const [busy, setBusy] = useState<TierId | null>(null);
+  // Required before paying (the server checks too). The plan the member has selected to buy.
+  const [agreed, setAgreed] = useState(false);
+  const [buying, setBuying] = useState<TierId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const slide = useRef(new Animated.Value(0)).current;
   const current = SUB_TIERS.find((s) => s.id === subTier)!;
@@ -42,7 +66,12 @@ export default function PlansScreen() {
         router.replace("/account");
         return;
       }
-      const { url } = await api.checkout(plan, "sippybrew://account");
+      if (!agreed) {
+        setBuying(plan);
+        setBusy(null);
+        return;
+      }
+      const { url } = await api.checkout(plan, "sippybrew://account", true);
       const result = await WebBrowser.openAuthSessionAsync(url, "sippybrew://account");
       if (result.type === "success" && result.url.includes("checkout=success")) router.replace("/");
     } catch (e) {
@@ -147,7 +176,8 @@ export default function PlansScreen() {
             </Text>
           </View>
           {error && <ErrorNote message={error} />}
-          <Button label={`Get my pass · ${formatCents(r.plan.priceCents)}/mo`} loading={busy === r.plan.id} disabled={busy !== null} onPress={() => choose(r.plan.id)} />
+          <PurchaseSummary plan={r.plan} agreed={agreed} onAgree={setAgreed} />
+          <Button label={`Get my pass · ${formatCents(r.plan.priceCents)}/mo`} loading={busy === r.plan.id} disabled={busy !== null || !agreed} onPress={() => choose(r.plan.id)} />
           <Text variant="small" color={colors.pecan} style={{ textAlign: "center" }}>
             Change your pass any time. Changes kick in at the start of your next month. After you join, the Shops tab maps every participating shop within{" "}
             {RULES.maxRadiusMiles} miles.
@@ -183,6 +213,13 @@ export default function PlansScreen() {
       </Text>
       <Text variant="bodyBold">2. How often do you go?</Text>
       {error && <ErrorNote message={error} />}
+      {!changing && buying && (
+        <Card style={{ gap: spacing.sm }}>
+          <PurchaseSummary plan={getTier(buying)} agreed={agreed} onAgree={setAgreed} />
+          <Button label={`Continue to payment · ${formatCents(getTier(buying).priceCents)}/mo`} disabled={!agreed || busy !== null} loading={busy === buying} onPress={() => choose(buying)} />
+          <Button label="Pick a different pass" variant="ghost" onPress={() => setBuying(null)} />
+        </Card>
+      )}
       {TIER_GROUPS.map((g) => {
         const plan = g.plans[subTier];
         const hl = g.id === DEFAULT_TIER_GROUP;

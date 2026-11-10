@@ -17,7 +17,7 @@ const path = require("path");
 
   await tap('[data-a="pick-tier"][data-id="macchiato_double_shot"]');
   await tap('form[data-form="signup"] button[type="submit"]');
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
 
   // Add a latte with oat milk, leave the shop, come back: still in the cart.
   await tap('.shop-card[data-id="main"]');

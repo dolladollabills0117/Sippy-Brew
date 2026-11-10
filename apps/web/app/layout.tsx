@@ -47,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <p>
             © {new Date().getFullYear()} · Coffee only. Daily Passes reset monthly and do not roll over. ·{" "}
             <Link href="/faq" className="font-bold underline underline-offset-4">FAQ</Link> ·{" "}
+            <Link href="/contact" className="font-bold underline underline-offset-4">Contact</Link> ·{" "}
             <Link href="/terms" className="font-bold underline underline-offset-4">Terms</Link>
           </p>
           <p className="mt-1">{PLATFORM_ROLE_SHORT}</p>

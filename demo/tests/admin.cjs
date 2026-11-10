@@ -28,7 +28,7 @@ const fs = require('fs');
   // Member: pending shop is hidden; no admin anywhere.
   await tap('[data-a="pick-tier"][data-id="macchiato_double_shot"]');
   await tap('form[data-form="signup"] button[type="submit"]');
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
   out.memberSeesPendingShop = (await text()).includes('corner cup');
   out.memberMentionsAdmin = (await text()).includes('admin');
   await tap('[data-a="tab"][data-id="account"]');

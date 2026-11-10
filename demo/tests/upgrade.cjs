@@ -23,7 +23,7 @@ const fs = require('fs');
   await tap('[data-a="pick-tier"][data-id="affogato_decaf"]');
   await tap('form[data-form="signup"] button[type="submit"]');
   out.plansSelected = await p.$eval('.tier.selected .name', (e) => e.textContent);
-  await tap('[data-a="checkout"]'); await tap('[data-a="pay"]');
+  await tap('[data-a="checkout"]'); { if (await p.locator("#agree").count()) await p.check("#agree"); } await tap('[data-a="pay"]');
 
   const orderLatte = async () => {
     await tap('[data-a="tab"][data-id="shops"]');

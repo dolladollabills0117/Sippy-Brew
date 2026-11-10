@@ -73,6 +73,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <span className="flex flex-1 flex-col">
           <b className="text-espresso">Questions?</b>
           <span className="text-sm text-pecan">Passes, orders, billing, rewards and who to contact.</span>
+          <span className="text-sm text-pecan">Need us? Message us on the Contact page.</span>
         </span>
         <span aria-hidden="true" className="text-2xl text-pecan">›</span>
       </Link>

@@ -20,6 +20,7 @@ export * from "./rules/rewards";
 export * from "./rules/merchant";
 export { FOOD_POLICY, foodProblemInCustomization, foodProblemInMenuItem, foodWordIn } from "./rules/food";
 export { PLATFORM_ROLE_TERMS, PLATFORM_ROLE_SHORT } from "./legal";
+export { CONSENT_LABEL, confirmationEmail, purchaseSummary, TERMS_VERSION } from "./disclosure";
 export { FAQ, FAQ_FOOTNOTE, MERCHANT_FAQ, MERCHANT_FAQ_FOOTNOTE, type FaqItem, type FaqSection } from "./faq";
 export { LOGO_SVG, logoSvg, BACKGROUND_BEANS_SVG, BEAN_TILE_SVG } from "./logo";
 export { brand, colors, gradient, fonts, radii, spacing, shadows, focusRing, touchTarget } from "./brand";

@@ -1,5 +1,10 @@
 {
-  "$comment": "Marketing copy settings. launchCity fills the landing page's \"New in [City]\" sticker. launchCenter is where the local-shops map starts when a visitor doesn't share their location.",
+  "$comment": "Marketing copy settings. launchCity fills the landing page's \"New in [City]\" sticker. launchCenter is where the local-shops map starts when a visitor doesn't share their location. supportEmail is where members and shops can reach you.",
   "launchCity": "West Orange",
-  "launchCenter": { "lat": 40.7987, "lng": -74.2391, "label": "West Orange, NJ" }
+  "launchCenter": {
+    "lat": 40.7987,
+    "lng": -74.2391,
+    "label": "West Orange, NJ"
+  },
+  "supportEmail": "support@sippybrew.com"
 }
